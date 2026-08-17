@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Dashboard de backups NyxCloud em versao de teste">
+  <title>NyxCloud Backups - Teste</title>
+  <link rel="icon" href="../assets/img/fav.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=20260811-01">
+</head>
+<body>
+  <div class="dashboard-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <a href="../index.html" aria-label="NyxCloud">
+          <img src="../assets/img/icone.png" alt="">
+          <span>NyxCloud</span>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Menu lateral">
+        <a class="nav-item is-active" href="#overview">
+          <span class="nav-icon">◫</span>
+          <span>Visao geral</span>
+        </a>
+        <a class="nav-item" href="#activity">
+          <span class="nav-icon">◌</span>
+          <span>Backups</span>
+        </a>
+        <a class="nav-item" href="#recent">
+          <span class="nav-icon">◌</span>
+          <span>Atividade</span>
+        </a>
+        <a class="nav-item" href="#restores">
+          <span class="nav-icon">◌</span>
+          <span>Restauracoes</span>
+        </a>
+        <a class="nav-item" href="#policies">
+          <span class="nav-icon">◌</span>
+          <span>Politicas</span>
+        </a>
+        <a class="nav-item" href="#storage">
+          <span class="nav-icon">◌</span>
+          <span>Armazenamento</span>
+        </a>
+        <a class="nav-item" href="#reports">
+          <span class="nav-icon">◌</span>
+          <span>Relatorios</span>
+        </a>
+        <a class="nav-item" href="#settings">
+          <span class="nav-icon">◌</span>
+          <span>Configuracoes</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-status">
+        <span class="status-dot"></span>
+        <div>
+          <strong>Todos os sistemas</strong>
+          <small>Operacionais</small>
+        </div>
+      </div>
+    </aside>
+
+    <main class="content" id="overview">
+      <header class="topbar">
+        <div>
+          <h1>Visao geral</h1>
+          <p>Acompanhe o estado dos seus backups em tempo real.</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="topbar-icon" type="button" aria-label="Notificacoes">◌</button>
+          <div class="user-chip">
+            <span class="user-name">NyxCloud Corp.</span>
+            <span class="user-avatar">N</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="stats-grid">
+        <article class="stat-card">
+          <div class="stat-copy">
+            <span>Backups realizados hoje</span>
+            <strong id="backupsToday">0</strong>
+            <small id="backupsTrend">Atualizando dados</small>
+          </div>
+          <div class="stat-icon">▣</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-copy">
+            <span>Dados protegidos</span>
+            <strong id="protectedData">0 B</strong>
+            <small id="protectedTrend">Ambiente monitorado</small>
+          </div>
+          <div class="stat-icon">◍</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-copy">
+            <span>Sucesso dos backups</span>
+            <strong id="successRate">0%</strong>
+            <small>Ultimos 7 dias</small>
+          </div>
+          <div class="stat-icon">◔</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-copy">
+            <span>Restauracoes hoje</span>
+            <strong id="restoresToday">0</strong>
+            <small id="restoreHint">Tudo certo por aqui</small>
+          </div>
+          <div class="stat-icon">✓</div>
+        </article>
+      </section>
+
+      <section class="highlight-strip">
+        <article class="highlight-card">
+          <span class="highlight-label">Empresas monitoradas</span>
+          <strong id="companiesCount">0</strong>
+          <small>Base total cadastrada no painel</small>
+        </article>
+        <article class="highlight-card">
+          <span class="highlight-label">Dispositivos protegidos</span>
+          <strong id="devicesCount">0</strong>
+          <small>Maquinas com leitura ativa</small>
+        </article>
+        <article class="highlight-card">
+          <span class="highlight-label">Backups com falha</span>
+          <strong id="failedBackups">0</strong>
+          <small>Itens que merecem revisao imediata</small>
+        </article>
+      </section>
+
+      <section class="main-grid">
+        <article class="panel panel-chart" id="activity">
+          <div class="panel-head">
+            <div>
+              <h2>Atividade de backups</h2>
+              <p>Ultimas 24 horas</p>
+            </div>
+          </div>
+          <div id="activityChart" class="chart-host"></div>
+        </article>
+
+        <article class="panel panel-donut" id="storage">
+          <div class="panel-head">
+            <div>
+              <h2>Armazenamento por tipo</h2>
+              <p>Distribuicao atual</p>
+            </div>
+          </div>
+          <div id="storageChart" class="chart-host donut-host"></div>
+          <ul class="storage-legend" id="storageLegend"></ul>
+        </article>
+      </section>
+
+      <section class="bottom-grid">
+        <article class="panel panel-list" id="recent">
+          <div class="panel-head">
+            <div>
+              <h2>Atividade recente</h2>
+              <p>Ultimos eventos identificados</p>
+            </div>
+          </div>
+          <div class="recent-list" id="recentList"></div>
+        </article>
+
+        <article class="panel panel-status" id="reports">
+          <div class="panel-head">
+            <div>
+              <h2>Status dos sistemas</h2>
+              <p>Panorama geral do ambiente</p>
+            </div>
+          </div>
+          <div class="system-status">
+            <div class="status-ring">
+              <div class="status-ring-inner">
+                <strong id="systemHealth">100%</strong>
+                <span>Operacionais</span>
+              </div>
+            </div>
+            <div class="status-map">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel panel-full-list" id="all-backups">
+        <div class="panel-head panel-head-spread">
+          <div>
+            <h2>Todos os backups das empresas</h2>
+            <p>Rolagem completa para acompanhar cliente, maquina, plano, ultimo backup e status.</p>
+          </div>
+          <div class="section-pill" id="backupListCount">0 registros</div>
+        </div>
+        <div class="company-columns" id="companyColumns"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.1"></script>
+  <script src="app.js?v=20260811-01"></script>
+</body>
+</html>

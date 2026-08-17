@@ -1,0 +1,120 @@
+/* RESET */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #ffffff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    color: #111111;
+}
+
+/* CARD PRINCIPAL */
+.painel-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.painel-card {
+    width: 100%;
+    max-width: 620px;
+    background: #ffffff;
+    border: 1px solid #ececec;
+    border-radius: 28px;
+    padding: 60px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+}
+
+/* BADGE */
+.badge {
+    display: inline-flex;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: rgba(113, 63, 169, 0.08);
+    color: #713fa9;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-bottom: 28px;
+}
+
+/* TITULO */
+.painel-card h1 {
+    font-size: 3rem;
+    line-height: 1.1;
+    letter-spacing: -2px;
+    margin-bottom: 20px;
+    font-weight: 700;
+}
+
+.painel-card h1 span {
+    color: #713fa9;
+}
+
+/* TEXTO */
+.painel-card p {
+    color: #6b6b6b;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    margin-bottom: 40px;
+}
+
+/* BOTÕES */
+.painel-buttons {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.painel-buttons a {
+    text-decoration: none;
+    padding: 14px 24px;
+    border-radius: 14px;
+    font-weight: 600;
+    transition: 0.25s ease;
+    font-size: 0.95rem;
+}
+
+/* BOTÃO PRINCIPAL */
+.btn-primary {
+    background: #713fa9;
+    color: #ffffff;
+}
+
+.btn-primary:hover {
+    background: #5f3193;
+    transform: translateY(-2px);
+}
+
+/* BOTÃO SECUNDÁRIO */
+.btn-secondary {
+    border: 1px solid #e5e5e5;
+    background: #ffffff;
+    color: #111111;
+}
+
+.btn-secondary:hover {
+    background: #f8f8f8;
+}
+
+/* RESPONSIVO */
+@media(max-width: 768px) {
+
+    .painel-card {
+        padding: 40px 28px;
+        border-radius: 22px;
+    }
+
+    .painel-card h1 {
+        font-size: 2.2rem;
+    }
+
+}

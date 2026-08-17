@@ -1,0 +1,483 @@
+/* =========================================
+   SOLUÇÕES PAGE
+========================================= */
+
+.nav a.nav-active {
+  color: #ffffff;
+  position: relative;
+}
+
+.nav a.nav-active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -18px;
+  width: 100%;
+  height: 2px;
+  background: #713fa9;
+  border-radius: 999px;
+}
+
+.mobile-menu .nav-active-mobile {
+  color: #ffffff;
+}
+
+/* HERO */
+
+.solutions-hero {
+  padding: 120px 0 90px;
+}
+
+.solutions-hero-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 80px;
+  align-items: center;
+}
+
+.solutions-hero-content h1 {
+  font-size: clamp(2.6rem, 5vw, 4.4rem);
+  line-height: 1.05;
+  letter-spacing: -0.05em;
+  margin-bottom: 24px;
+  color: #111111;
+}
+
+.solutions-hero-content h1 span {
+  color: #713fa9;
+}
+
+.solutions-hero-content p {
+  font-size: 1.05rem;
+  color: #5e5e5e;
+  line-height: 1.9;
+  margin-bottom: 40px;
+  max-width: 680px;
+}
+
+.hero-card {
+  background: #111111;
+  border-radius: 24px;
+  padding: 28px;
+  color: white;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+
+.hero-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 28px;
+  font-size: 0.9rem;
+}
+
+.status-live {
+  width: 10px;
+  height: 10px;
+  background: #22c55e;
+  border-radius: 50%;
+}
+
+.hero-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.hero-metric {
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.05);
+}
+
+.hero-metric span {
+  display: block;
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 8px;
+}
+
+.hero-metric strong {
+  font-size: 2rem;
+  font-family: "DM Mono", monospace;
+}
+
+.hero-card-alert {
+  margin-top: 10px;
+  padding: 18px;
+  border-radius: 14px;
+  background: rgba(113, 63, 169, 0.15);
+  border: 1px solid rgba(113, 63, 169, 0.4);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  line-height: 1.7;
+}
+
+.alert-dot {
+  width: 10px;
+  height: 10px;
+  background: #713fa9;
+  border-radius: 50%;
+  margin-top: 7px;
+}
+
+/* INTRO */
+
+.intro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.intro-card {
+  background: white;
+  border: 1px solid #ececec;
+  border-radius: 20px;
+  padding: 32px;
+}
+
+.intro-card h3 {
+  font-size: 1.2rem;
+  margin-bottom: 18px;
+  color: #111111;
+}
+
+.intro-card p {
+  color: #666666;
+  line-height: 1.9;
+}
+
+/* SOLUTION DETAILS */
+
+.solution-detail {
+  display: grid;
+  grid-template-columns: 1fr 0.9fr;
+  gap: 80px;
+  align-items: center;
+  margin-bottom: 120px;
+}
+
+.solution-detail:last-child {
+  margin-bottom: 0;
+}
+
+.solution-detail.reverse {
+  grid-template-columns: 0.9fr 1fr;
+}
+
+.solution-tag {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(113,63,169,0.08);
+  color: #713fa9;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.solution-detail-text h3 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.15;
+  margin-bottom: 26px;
+  color: #111111;
+  letter-spacing: -0.04em;
+}
+
+.solution-detail-text p {
+  color: #5f5f5f;
+  line-height: 1.95;
+  margin-bottom: 22px;
+  font-size: 1rem;
+}
+
+.solution-list {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  list-style: none;
+}
+
+.solution-list li {
+  position: relative;
+  padding-left: 28px;
+  color: #444444;
+}
+
+.solution-list li::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  background: #713fa9;
+  border-radius: 50%;
+  position: absolute;
+  left: 0;
+  top: 9px;
+}
+
+/* VISUALS */
+
+.visual-card {
+  background: white;
+  border: 1px solid #ececec;
+  border-radius: 24px;
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.visual-line {
+  padding: 18px;
+  border-radius: 14px;
+  background: #f8f8f8;
+  color: #444444;
+}
+
+.visual-line.success {
+  background: rgba(34,197,94,0.08);
+  color: #15803d;
+}
+
+.dashboard-preview {
+  background: #111111;
+  border-radius: 24px;
+  padding: 28px;
+  overflow: hidden;
+}
+
+.dashboard-bar {
+  width: 120px;
+  height: 10px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 999px;
+  margin-bottom: 26px;
+}
+
+.dashboard-grid {
+  display: grid;
+ grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+/* CARDS DAS IMAGENS */
+.dashboard-box,
+.dashboard-chart {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 18px;
+  overflow: hidden;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* TAMANHOS */
+.dashboard-box {
+  height: auto;
+}
+
+.dashboard-chart {
+  grid-column: span 2;
+  height: auto;
+}
+
+/* IMAGENS */
+.dashboard-box img,
+.dashboard-chart img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+
+  transition: transform 0.3s ease;
+}
+
+/* HOVER */
+.dashboard-box:hover img,
+.dashboard-chart:hover img {
+  transform: scale(1.03);
+}
+
+.iot-card {
+  background: #111111;
+  color: white;
+  border-radius: 24px;
+  padding: 40px;
+  text-align: center;
+}
+
+.iot-plug {
+  width: 100px;
+  height: 140px;
+  background: #713fa9;
+  border-radius: 30px;
+  margin: 0 auto 30px;
+  position: relative;
+}
+
+.iot-plug::before,
+.iot-plug::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 26px;
+  background: white;
+  top: -20px;
+  border-radius: 10px;
+}
+
+.iot-plug::before {
+  left: 28px;
+}
+
+.iot-plug::after {
+  right: 28px;
+}
+
+.iot-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  font-weight: 600;
+}
+
+.iot-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+.iot-card p {
+  color: rgba(255,255,255,0.7);
+  line-height: 1.8;
+}
+
+/* METHOD */
+
+.method-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.method-card {
+  background: #f8f8f8;
+  border-radius: 22px;
+  padding: 34px;
+}
+
+.method-card span {
+  font-size: 3rem;
+  font-weight: 700;
+  color: rgba(113,63,169,0.2);
+  display: block;
+  margin-bottom: 14px;
+}
+
+.method-card h3 {
+  margin-bottom: 16px;
+  font-size: 1.2rem;
+}
+
+.method-card p {
+  color: #666666;
+  line-height: 1.85;
+}
+
+/* CTA */
+
+.solutions-cta {
+  padding: 0 0 100px;
+}
+
+.cta-box {
+  background: #111111;
+  color: white;
+  border-radius: 32px;
+  padding: 70px;
+  text-align: center;
+}
+
+.cta-box h2 {
+  font-size: clamp(2rem,4vw,3.2rem);
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+  max-width: 900px;
+  margin: 0 auto 24px;
+}
+
+.cta-box p {
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 32px;
+  font-size: 1.05rem;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 1024px) {
+
+  .solutions-hero-grid,
+  .solution-detail,
+  .solution-detail.reverse {
+    grid-template-columns: 1fr;
+    gap: 50px;
+  }
+
+  .intro-grid,
+  .method-grid {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+@media (max-width: 768px) {
+
+  .solutions-hero {
+    padding: 90px 0 70px;
+  }
+
+  .cta-box {
+    padding: 40px 28px;
+  }
+
+  .solution-detail {
+    margin-bottom: 80px;
+  }
+
+}
+
+/* ==========================================================================
+   AJUSTE CIRÚRGICO DO LOGO (PRESERVA TODO O COMPORTAMENTO DA NAVBAR)
+   ========================================================================== */
+
+/* Ajuste no Desktop: Controla apenas a imagem dentro do link do logo */
+.header .nav-container a.logo img {
+  height: 48px !important;       /* Altura ideal para o logo aparecer bem */
+  max-height: 48px !important;
+  width: auto !important;         /* Mantém a proporção sem distorcer */
+  display: block !important;
+}
+
+/* Garante que o link em volta da imagem não empurre a navbar para baixo */
+.header .nav-container a.logo {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+}
+
+/* Ajuste no Mobile: Diminui apenas o logo, sem mexer no contêiner ou no menu */
+@media (max-width: 768px) {
+  .header .nav-container a.logo img {
+    height: 36px !important;     /* Tamanho perfeito para telas de celular */
+    max-height: 36px !important;
+  }
+}

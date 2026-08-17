@@ -1,0 +1,274 @@
+/* ==========================================
+   JURÍDICO NYXCLOUD
+========================================== */
+
+:root {
+  --ink: #111111;
+  --white: #ffffff;
+
+  --gray-50: #f7f7f7;
+  --gray-100: #f2f2f2;
+  --gray-200: #e8e8e8;
+  --gray-400: #a3a3a3;
+  --gray-500: #737373;
+
+  --primary: #713fa9;
+
+  --border: 1px solid #e8e8e8;
+
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.05);
+  --shadow-md: 0 12px 30px rgba(0,0,0,0.08);
+
+  --r-md: 12px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+
+  --max-w: 1100px;
+}
+
+/* RESET */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "DM Sans", sans-serif;
+  background: #fff;
+  color: var(--ink);
+  line-height: 1.7;
+}
+
+/* HEADER */
+
+header {
+  background: linear-gradient(
+    135deg,
+    #111111 0%,
+    #1d1d1d 100%
+  );
+  color: white;
+  text-align: center;
+  padding: 90px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+header::before {
+  content: "";
+  position: absolute;
+  width: 450px;
+  height: 450px;
+  background: rgba(113, 63, 169, 0.15);
+  border-radius: 50%;
+  top: -180px;
+  right: -120px;
+  filter: blur(40px);
+}
+
+header h1 {
+  position: relative;
+  z-index: 2;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  margin-bottom: 15px;
+  letter-spacing: -0.03em;
+}
+
+header p {
+  position: relative;
+  z-index: 2;
+  max-width: 650px;
+  margin: auto;
+  color: rgba(255,255,255,0.75);
+  font-size: 1.05rem;
+}
+
+/* CONTAINER */
+
+.container {
+  max-width: var(--max-w);
+  margin: auto;
+  padding: 80px 24px;
+}
+
+/* GRID DOS CARDS */
+
+.container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+/* CARDS */
+
+.card {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--r-lg);
+  padding: 30px;
+  transition: all 0.25s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(113,63,169,0.25);
+}
+
+.card h2 {
+  color: var(--primary);
+  font-size: 1.2rem;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.card h2::after {
+  content: "";
+  display: block;
+  width: 45px;
+  height: 3px;
+  background: var(--primary);
+  margin-top: 10px;
+  border-radius: 999px;
+}
+
+.card p {
+  color: var(--gray-500);
+  font-size: 0.95rem;
+}
+
+.card strong {
+  color: var(--ink);
+}
+
+/* CONTATO */
+
+.card:last-child {
+  background: linear-gradient(
+    135deg,
+    #faf8ff,
+    #ffffff
+  );
+}
+
+/* FOOTER */
+
+footer {
+  margin-top: 20px;
+  border-top: var(--border);
+  text-align: center;
+  padding: 28px 20px;
+  color: var(--gray-400);
+  font-size: 0.9rem;
+}
+
+/* RESPONSIVO TABLET */
+
+@media (max-width: 900px) {
+  .container {
+    grid-template-columns: 1fr;
+    padding: 60px 20px;
+  }
+
+  header {
+    padding: 70px 20px;
+  }
+}
+
+/* RESPONSIVO CELULAR */
+
+@media (max-width: 768px) {
+
+  header h1 {
+    font-size: 2rem;
+  }
+
+  header p {
+    font-size: 0.95rem;
+  }
+
+  .card {
+    padding: 24px;
+  }
+
+  .card h2 {
+    font-size: 1.1rem;
+  }
+
+  .card p {
+    font-size: 0.9rem;
+  }
+
+}
+
+/* CELULARES PEQUENOS */
+
+@media (max-width: 480px) {
+
+  .container {
+    padding: 40px 16px;
+    gap: 16px;
+  }
+
+  .card {
+    padding: 20px;
+    border-radius: 14px;
+  }
+
+}
+/* ==========================================
+   BOTÃO VOLTAR
+========================================== */
+.btn-voltar {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  z-index: 999;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 12px 20px;
+
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(12px);
+
+  border: 1px solid #e8e8e8;
+  border-radius: 999px;
+
+  color: #111111;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+
+  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+
+  transition: all 0.25s ease;
+}
+
+.btn-voltar:hover {
+  background: #713fa9;
+  border-color: #713fa9;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(113,63,169,0.30);
+}
+
+.btn-voltar:active {
+  transform: translateY(0);
+}
+
+/* Mobile */
+
+@media (max-width: 768px) {
+  .btn-voltar {
+    top: 16px;
+    left: 16px;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+}

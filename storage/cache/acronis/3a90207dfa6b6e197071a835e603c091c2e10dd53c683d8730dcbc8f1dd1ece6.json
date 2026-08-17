@@ -1,0 +1,32 @@
+{
+    "expires_at": 1786473715,
+    "value": {
+        "date": "2026-05-17",
+        "mode": "rules",
+        "rules_count": 1,
+        "items": [
+            {
+                "empresa": "Frigo Service (frigoservice)",
+                "maquina": "W-45602-AP-01",
+                "janela": "08:00 - 18:00 \u00b7 a cada 3h \u00b7 seg-sab",
+                "meta": 0,
+                "realizado": 0,
+                "faltando": 0,
+                "status": "observed",
+                "ultimo_backup": "",
+                "base": "rule",
+                "planos": [
+                    {
+                        "nome": "FileServer",
+                        "meta": 0,
+                        "realizado": 0,
+                        "faltando": 0,
+                        "status": "observed",
+                        "ultimo_backup": ""
+                    }
+                ],
+                "planos_count": 1
+            }
+        ]
+    }
+}

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="0;url=../back/index.php">
+  <title>Redirecionando - NyxCloud</title>
+</head>
+<body>
+  <p>Redirecionando para o login...</p>
+  <script>
+    const next = location.pathname.replace(/alertas\.html$/i, 'alertas.php') + location.search + location.hash;
+    const login = new URL('../back/index.php', location.href);
+    login.searchParams.set('next', next);
+    location.replace(login.href);
+  </script>
+</body>
+</html>

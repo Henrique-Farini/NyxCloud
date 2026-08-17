@@ -1,0 +1,1586 @@
+{
+    "expires_at": 1786472958,
+    "value": {
+        "date": "2026-05-17",
+        "mode": "historical_reference",
+        "rules_count": 0,
+        "items": [
+            {
+                "empresa": "Caelmo Mococa (caelmomococa)",
+                "maquina": "srvWTGG",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-16T22:18:05.034246203Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SIGCOM - Caelmo",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:18:05.034246203Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Caelmo Mococa (caelmomococa)",
+                "maquina": "srvcaelmo-dc01",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-16T23:25:27.073908789Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "Samba-Full-Dados",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T23:25:27.073908789Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Casa Marques (casamarquesmoc)",
+                "maquina": "WIN10-BACKUP",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-16T23:08:12.028394183Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SIGCOM-CM",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T23:08:12.028394183Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Concrepool Mococa (concrepool)",
+                "maquina": "ServerGoGlobal",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-16T22:08:16.032243196Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SIGCOM-MOC",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:08:16.032243196Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "DaFlora (dafloramococa)",
+                "maquina": "srvdaflora-dc01",
+                "janela": "12:00 - 18:00",
+                "meta": 3,
+                "realizado": 3,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T14:08:54.050159805Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "DADOS",
+                        "meta": 3,
+                        "realizado": 3,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T14:08:54.050159805Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "DaFlora (dafloramococa)",
+                "maquina": "srvdaflora-dc01",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-16T22:08:53.010382053Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "DADOS",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:08:53.010382053Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Diferragens (diferragens)",
+                "maquina": "WINSERVER-GG",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-16T22:23:22.065204576Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD SIGCOM - TESTE",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:23:22.065204576Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Dinatex (dinatex)",
+                "maquina": "ServerFiles",
+                "janela": "12:00 - 18:00",
+                "meta": 3,
+                "realizado": 3,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T15:42:07.06264802Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "Arquivos-DADOS",
+                        "meta": 3,
+                        "realizado": 3,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T15:42:07.06264802Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Dinatex (dinatex)",
+                "maquina": "srvSHPGroup",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T15:22:07.064621514Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-JAD",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T15:22:07.064621514Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Frigo Service (frigoservice)",
+                "maquina": "W-45602-AP-01",
+                "janela": "12:00 - 18:00",
+                "meta": 3,
+                "realizado": 1,
+                "faltando": 2,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T15:43:01.027813972Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD Sigcom - FS",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T15:43:01.027813972Z"
+                    },
+                    {
+                        "nome": "FileServer",
+                        "meta": 2,
+                        "realizado": 0,
+                        "faltando": 2,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T14:08:21.028861942Z"
+                    }
+                ],
+                "planos_count": 2
+            },
+            {
+                "empresa": "Frigo Service (frigoservice)",
+                "maquina": "W-45602-AP-01",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-16T23:43:01.096331836Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD Sigcom - FS",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T23:43:01.096331836Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Gplus Sistemas (gplussistemas)",
+                "maquina": "ip-10-0-3-104.ec2.internal",
+                "janela": "06:00 - 12:00",
+                "meta": 2,
+                "realizado": 2,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T04:23:28.015229563Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "MongoDB",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T04:23:28.015229563Z"
+                    },
+                    {
+                        "nome": "Redis",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T04:10:14.024902244Z"
+                    }
+                ],
+                "planos_count": 2
+            },
+            {
+                "empresa": "Gplus Sistemas (gplussistemas)",
+                "maquina": "ip-10-0-3-104.ec2.internal",
+                "janela": "12:00 - 18:00",
+                "meta": 2,
+                "realizado": 2,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T10:23:05.046622294Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "MongoDB",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T10:23:05.046622294Z"
+                    },
+                    {
+                        "nome": "Redis",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T10:10:11.002953898Z"
+                    }
+                ],
+                "planos_count": 2
+            },
+            {
+                "empresa": "Gplus Sistemas (gplussistemas)",
+                "maquina": "ip-10-0-3-104.ec2.internal",
+                "janela": "00:00 - 06:00",
+                "meta": 2,
+                "realizado": 2,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-16T22:23:31.055018763Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "MongoDB",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:23:31.055018763Z"
+                    },
+                    {
+                        "nome": "Redis",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:10:10.047631379Z"
+                    }
+                ],
+                "planos_count": 2
+            },
+            {
+                "empresa": "Guidorizzi Mococa (guidorizzimococa)",
+                "maquina": "WinServer-GG",
+                "janela": "12:00 - 18:00",
+                "meta": 3,
+                "realizado": 1,
+                "faltando": 2,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T14:17:18.030049065Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SIGCOM-BATTLO",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T15:22:05.02787151Z"
+                    },
+                    {
+                        "nome": "BD-SIGCOM-GUIDORIZZISS",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T15:33:05.054291088Z"
+                    },
+                    {
+                        "nome": "BD-TID",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T14:17:18.030049065Z"
+                    }
+                ],
+                "planos_count": 3
+            },
+            {
+                "empresa": "JS Gas (jsgasmococa)",
+                "maquina": "WinServer-GG",
+                "janela": "12:00 - 18:00",
+                "meta": 9,
+                "realizado": 8,
+                "faltando": 1,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T15:55:46.034532653Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-Acommerce-PTG",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T15:40:44.027655969Z"
+                    },
+                    {
+                        "nome": "BD-Dw_Alpha-PTG",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T15:53:06.082742458Z"
+                    },
+                    {
+                        "nome": "BD-Gas-Oracle",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T15:40:15.066480841Z"
+                    },
+                    {
+                        "nome": "BD-Gas-PTG",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T15:55:46.034532653Z"
+                    },
+                    {
+                        "nome": "BD-Portal_Parceiro_Gasbel-PTG",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T15:50:46.091884873Z"
+                    },
+                    {
+                        "nome": "BD-Portaljsgas-PTG",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T15:56:14.002313189Z"
+                    },
+                    {
+                        "nome": "BD-Sigcom-Oracle",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T15:47:29.087937826Z"
+                    },
+                    {
+                        "nome": "DADOS-ARQUIVOS",
+                        "meta": 2,
+                        "realizado": 2,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T14:16:04.042262492Z"
+                    }
+                ],
+                "planos_count": 8
+            },
+            {
+                "empresa": "JS Gas (jsgasmococa)",
+                "maquina": "WinServer-GG",
+                "janela": "00:00 - 06:00",
+                "meta": 8,
+                "realizado": 8,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-16T23:16:03.085897495Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-Acommerce-PTG",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:40:52.096369573Z"
+                    },
+                    {
+                        "nome": "BD-Dw_Alpha-PTG",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:53:07.032203132Z"
+                    },
+                    {
+                        "nome": "BD-Gas-Oracle",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:40:20.085724038Z"
+                    },
+                    {
+                        "nome": "BD-Gas-PTG",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:55:42.037216703Z"
+                    },
+                    {
+                        "nome": "BD-Portal_Parceiro_Gasbel-PTG",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:50:45.087793358Z"
+                    },
+                    {
+                        "nome": "BD-Portaljsgas-PTG",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:56:15.078521857Z"
+                    },
+                    {
+                        "nome": "BD-Sigcom-Oracle",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:49:48.056858003Z"
+                    },
+                    {
+                        "nome": "DADOS-ARQUIVOS",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T23:16:03.085897495Z"
+                    }
+                ],
+                "planos_count": 8
+            },
+            {
+                "empresa": "Loja Mirtes (lojamirtesmococa)",
+                "maquina": "srv-mirtesmoc.localdomain",
+                "janela": "12:00 - 18:00",
+                "meta": 3,
+                "realizado": 3,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T15:17:04.051745289Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "DADOS",
+                        "meta": 3,
+                        "realizado": 3,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T15:17:04.051745289Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Loja Mirtes (lojamirtesmococa)",
+                "maquina": "RDS-GOGLOBAL",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-16T22:43:33.025216162Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SIGCOM",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:43:33.025216162Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Loja Mirtes (lojamirtesmococa)",
+                "maquina": "srv-mirtesmoc.localdomain",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-16T23:17:05.081288631Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "DADOS",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T23:17:05.081288631Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "MP TINTAS (mptintasmococa)",
+                "maquina": "srvLinux",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T03:54:45.086466476Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD Autcom",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T03:54:45.086466476Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Madeireira Modesto (madeireiramodesto)",
+                "maquina": "WinServer-GOGlobal",
+                "janela": "12:00 - 18:00",
+                "meta": 4,
+                "realizado": 1,
+                "faltando": 3,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T15:35:42.062858617Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SIGCOM",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T15:35:42.062858617Z"
+                    },
+                    {
+                        "nome": "DADOS",
+                        "meta": 3,
+                        "realizado": 0,
+                        "faltando": 3,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-15T14:25:08.09680484Z"
+                    }
+                ],
+                "planos_count": 2
+            },
+            {
+                "empresa": "Marest  Distribuidora - MG (marestmg)",
+                "maquina": "srvMarestMG-AD.marestmg.local",
+                "janela": "06:00 - 12:00",
+                "meta": 6,
+                "realizado": 6,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T09:30:25.07782405Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "Dados-Servidor-AD",
+                        "meta": 6,
+                        "realizado": 6,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T09:30:25.07782405Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Marest  Distribuidora - MG (marestmg)",
+                "maquina": "srvMarestMG-AD.marestmg.local",
+                "janela": "12:00 - 18:00",
+                "meta": 6,
+                "realizado": 6,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T15:31:02.036612491Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "Dados-Servidor-AD",
+                        "meta": 6,
+                        "realizado": 6,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T15:31:02.036612491Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Marest  Distribuidora - MG (marestmg)",
+                "maquina": "srvMarestMG-AD.marestmg.local",
+                "janela": "00:00 - 06:00",
+                "meta": 5,
+                "realizado": 5,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T02:30:26.074563619Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "Dados-Servidor-AD",
+                        "meta": 5,
+                        "realizado": 5,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T02:30:26.074563619Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Marest  Distribuidora - MG (marestmg)",
+                "maquina": "MARESTMG-APP",
+                "janela": "06:00 - 12:00",
+                "meta": 2,
+                "realizado": 2,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T07:41:59.060872648Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-ECOMMERCE",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T05:01:10.077307541Z"
+                    },
+                    {
+                        "nome": "BD-SIGCOM",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T07:41:59.060872648Z"
+                    }
+                ],
+                "planos_count": 2
+            },
+            {
+                "empresa": "Marest  Distribuidora - MG (marestmg)",
+                "maquina": "MARESTMG-APP",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T10:41:37.050868036Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "APLICACOES",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T10:41:37.050868036Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Marest  Distribuidora - MG (marestmg)",
+                "maquina": "MARESTMG-APP",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-16T22:41:11.036047136Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "APLICACOES",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:41:11.036047136Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Marest Distribuidora SP (marestdistsp)",
+                "maquina": "MARESTSERVER.marestdt.com",
+                "janela": "06:00 - 12:00",
+                "meta": 5,
+                "realizado": 5,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T09:29:31.07626853Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD - GLPI",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T04:15:40.020438306Z"
+                    },
+                    {
+                        "nome": "SRV - ARQUIVOS",
+                        "meta": 4,
+                        "realizado": 4,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T09:29:31.07626853Z"
+                    }
+                ],
+                "planos_count": 2
+            },
+            {
+                "empresa": "Marest Distribuidora SP (marestdistsp)",
+                "maquina": "MARESTSERVER.marestdt.com",
+                "janela": "12:00 - 18:00",
+                "meta": 4,
+                "realizado": 4,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T15:29:30.06786127Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD \u2013 HSSATURNO",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T14:30:59.085690232Z"
+                    },
+                    {
+                        "nome": "SRV - ARQUIVOS",
+                        "meta": 3,
+                        "realizado": 3,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T15:29:30.06786127Z"
+                    }
+                ],
+                "planos_count": 2
+            },
+            {
+                "empresa": "Marest Distribuidora SP (marestdistsp)",
+                "maquina": "MARESTSERVER.marestdt.com",
+                "janela": "00:00 - 06:00",
+                "meta": 4,
+                "realizado": 4,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T03:57:05.031428227Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD \u2013 ORACLE",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T03:57:05.031428227Z"
+                    },
+                    {
+                        "nome": "BD \u2013 POSTGRESQL",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T23:50:25.058104291Z"
+                    },
+                    {
+                        "nome": "SRV - ARQUIVOS",
+                        "meta": 2,
+                        "realizado": 2,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T01:29:27.081864402Z"
+                    }
+                ],
+                "planos_count": 3
+            },
+            {
+                "empresa": "Rotart (rotartmococa)",
+                "maquina": "srvdcrotart",
+                "janela": "12:00 - 18:00",
+                "meta": 2,
+                "realizado": 2,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T13:31:37.034366885Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "Backup DADOS",
+                        "meta": 2,
+                        "realizado": 2,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T13:31:37.034366885Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Rotart (rotartmococa)",
+                "maquina": "srvdcrotart",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-16T22:31:37.070217922Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "Backup DADOS",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:31:37.070217922Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Transfavero",
+                "maquina": "Communication site",
+                "janela": "06:00 - 12:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T05:29:18.220599638Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "SharePoint - Transfavero",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T05:29:18.220599638Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Transfavero",
+                "maquina": "https:\/\/transfavero.sharepoint.com\/search",
+                "janela": "06:00 - 12:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T05:44:18.013927381Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "SharePoint - Transfavero",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T05:44:18.013927381Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Transfavero",
+                "maquina": "FAVERO",
+                "janela": "06:00 - 12:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-17T06:05:32.944908624Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "SharePoint - Transfavero",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-17T06:05:32.944908624Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Tutti Frutti Hortel\u00e3 (tuttifruttimococa)",
+                "maquina": "WinServer-GG",
+                "janela": "00:00 - 06:00",
+                "meta": 2,
+                "realizado": 2,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-05-16T22:20:19.023149468Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD - Tuti Fruti",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:18:33.083937724Z"
+                    },
+                    {
+                        "nome": "BD - Verde Lim\u00e3o",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T22:20:19.023149468Z"
+                    }
+                ],
+                "planos_count": 2
+            },
+            {
+                "empresa": "wtsuportimococa",
+                "maquina": "W-27409-AP-02",
+                "janela": "00:00 - 06:00",
+                "meta": 4,
+                "realizado": 1,
+                "faltando": 3,
+                "status": "success",
+                "ultimo_backup": "2026-05-16T23:48:21.027912212Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD - ACOMMERCE | MELHOR GAS",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-15T23:05:53.051705955Z"
+                    },
+                    {
+                        "nome": "BD - SIGCOM | DMDISTMOCOCA",
+                        "meta": 1,
+                        "realizado": 1,
+                        "faltando": 0,
+                        "status": "success",
+                        "ultimo_backup": "2026-05-16T23:48:21.027912212Z"
+                    },
+                    {
+                        "nome": "BD - SIGCOM | Hidrogeral",
+                        "meta": 2,
+                        "realizado": 0,
+                        "faltando": 2,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-15T23:17:25.081136851Z"
+                    }
+                ],
+                "planos_count": 3
+            },
+            {
+                "empresa": "Aziz (aziz)",
+                "maquina": "servidor",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-05-16T15:31:03.012777428Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD - SIGCOM | AZIZ",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T15:31:03.012777428Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Aziz (aziz)",
+                "maquina": "balcao1",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-05-15T15:41:44.059306941Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD - SIGCOM | HPONTO",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-15T15:41:44.059306941Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Aziz (aziz)",
+                "maquina": "servidor",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-05-16T01:31:00.035741703Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD - SIGCOM | AZIZ",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T01:31:00.035741703Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Caelmo Mococa (caelmomococa)",
+                "maquina": "srvcaelmo-dc01",
+                "janela": "12:00 - 18:00",
+                "meta": 3,
+                "realizado": 0,
+                "faltando": 3,
+                "status": "observed",
+                "ultimo_backup": "2026-05-16T15:24:27.096246731Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "Samba-Full-Dados",
+                        "meta": 3,
+                        "realizado": 0,
+                        "faltando": 3,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T15:24:27.096246731Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Caelmo Mococa (caelmomococa)",
+                "maquina": "srvcaelmo-dc01",
+                "janela": "18:00 - 24:00",
+                "meta": 3,
+                "realizado": 0,
+                "faltando": 3,
+                "status": "observed",
+                "ultimo_backup": "2026-05-16T21:25:15.084197773Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "Samba-Full-Dados",
+                        "meta": 3,
+                        "realizado": 0,
+                        "faltando": 3,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T21:25:15.084197773Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Caelmo Mococa (caelmomococa)",
+                "maquina": "srvWTGG",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-05-16T15:33:55.09253248Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SIGCOM - Caelmo Insteletrica",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T15:33:55.09253248Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Caelmo Mococa (caelmomococa)",
+                "maquina": "srvWTGG",
+                "janela": "18:00 - 24:00",
+                "meta": 2,
+                "realizado": 0,
+                "faltando": 2,
+                "status": "observed",
+                "ultimo_backup": "2026-05-16T21:34:11.046124579Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SIGCOM - Caelmo",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T16:18:07.097718412Z"
+                    },
+                    {
+                        "nome": "BD-SIGCOM - Caelmo Insteletrica",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T21:34:11.046124579Z"
+                    }
+                ],
+                "planos_count": 2
+            },
+            {
+                "empresa": "Casa Marques (casamarquesmoc)",
+                "maquina": "WIN10-BACKUP",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-05-16T15:14:11.074175698Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SIGCOM-FEDK",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T15:14:11.074175698Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Casa Marques (casamarquesmoc)",
+                "maquina": "WIN10-BACKUP",
+                "janela": "18:00 - 24:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-05-16T20:14:05.034481162Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SIGCOM-FEDK",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T20:14:05.034481162Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Cesar (transfaveromococa)",
+                "maquina": "W-27409-AP-03",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-05-15T23:21:26.027002429Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SAT",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-15T23:21:26.027002429Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Concrepool Mococa (concrepool)",
+                "maquina": "servidor",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-05-15T15:28:08.007607233Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SIGCOM-GXP",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-15T15:28:08.007607233Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Concrepool Mococa (concrepool)",
+                "maquina": "ServerGoGlobal",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-05-16T15:08:19.029094965Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SIGCOM-MOC",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T15:08:19.029094965Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Concrepool Mococa (concrepool)",
+                "maquina": "DESKTOP-QUGMF2L",
+                "janela": "18:00 - 24:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-05-13T17:11:13.00152447Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SIGCOM - RIBEIR\u00c3O",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-13T17:11:13.00152447Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Concrepool Mococa (concrepool)",
+                "maquina": "servidor",
+                "janela": "18:00 - 24:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-05-15T21:27:19.012256478Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SIGCOM-GXP",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-15T21:27:19.012256478Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Concrepool Mococa (concrepool)",
+                "maquina": "DESKTOP-QUGMF2L",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-05-15T15:41:20.085154658Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SIGCOM - RIBEIR\u00c3O",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-15T15:41:20.085154658Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "DaFlora (dafloramococa)",
+                "maquina": "srvdaflora-dc01",
+                "janela": "18:00 - 24:00",
+                "meta": 3,
+                "realizado": 0,
+                "faltando": 3,
+                "status": "observed",
+                "ultimo_backup": "2026-05-16T20:08:54.043910325Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "DADOS",
+                        "meta": 3,
+                        "realizado": 0,
+                        "faltando": 3,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T20:08:54.043910325Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "DaFlora (dafloramococa)",
+                "maquina": "PowerBI-GW",
+                "janela": "18:00 - 24:00",
+                "meta": 3,
+                "realizado": 0,
+                "faltando": 3,
+                "status": "observed",
+                "ultimo_backup": "2026-05-16T21:30:02.096563464Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SIGCOM-F",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T20:31:24.009704651Z"
+                    },
+                    {
+                        "nome": "BD-SIGCOM-G",
+                        "meta": 2,
+                        "realizado": 0,
+                        "faltando": 2,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T21:30:02.096563464Z"
+                    }
+                ],
+                "planos_count": 2
+            },
+            {
+                "empresa": "DaFlora (dafloramococa)",
+                "maquina": "PowerBI-GW",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-05-16T15:31:27.036968761Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD-SIGCOM-F",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T15:31:27.036968761Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "De Pauli Centro Automotivo (depauli)",
+                "maquina": "DESKTOP-0Q98UG8",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-05-15T22:52:51.037910458Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD -  Acommerce",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-15T22:52:51.037910458Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Diferragens (diferragens)",
+                "maquina": "WINSERVER-GG",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-05-16T15:50:01.003179434Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD SIGCOM - PRODUCAO",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T15:50:01.003179434Z"
+                    }
+                ],
+                "planos_count": 1
+            },
+            {
+                "empresa": "Diferragens (diferragens)",
+                "maquina": "WINSERVER-GG",
+                "janela": "18:00 - 24:00",
+                "meta": 2,
+                "realizado": 0,
+                "faltando": 2,
+                "status": "observed",
+                "ultimo_backup": "2026-05-16T21:49:59.029707239Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "BD SIGCOM - PRODUCAO",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T21:49:59.029707239Z"
+                    },
+                    {
+                        "nome": "BD SIGCOM - TESTE",
+                        "meta": 1,
+                        "realizado": 0,
+                        "faltando": 1,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T16:23:22.027114515Z"
+                    }
+                ],
+                "planos_count": 2
+            },
+            {
+                "empresa": "Dinatex (dinatex)",
+                "maquina": "ServerFiles",
+                "janela": "18:00 - 24:00",
+                "meta": 3,
+                "realizado": 0,
+                "faltando": 3,
+                "status": "observed",
+                "ultimo_backup": "2026-05-16T21:43:22.006770531Z",
+                "base": "historical_reference",
+                "planos": [
+                    {
+                        "nome": "Arquivos-DADOS",
+                        "meta": 3,
+                        "realizado": 0,
+                        "faltando": 3,
+                        "status": "observed",
+                        "ultimo_backup": "2026-05-16T21:43:22.006770531Z"
+                    }
+                ],
+                "planos_count": 1
+            }
+        ]
+    }
+}

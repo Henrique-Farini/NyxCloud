@@ -1,0 +1,49 @@
+{
+    "expires_at": 1786999718,
+    "value": {
+        "total": 7301707661312,
+        "clients": [
+            {
+                "cliente": "Marest Distribuidora - SP",
+                "bytes": 1131234324480
+            },
+            {
+                "cliente": "MP TINTAS",
+                "bytes": 753394401280
+            },
+            {
+                "cliente": "Caelmo",
+                "bytes": 558009487360
+            },
+            {
+                "cliente": "Rotart",
+                "bytes": 507050266624
+            },
+            {
+                "cliente": "Marest Distribuidora - MG",
+                "bytes": 496829317120
+            },
+            {
+                "cliente": "DaFlora ",
+                "bytes": 484325040128
+            },
+            {
+                "cliente": "Casa Marques",
+                "bytes": 405603254272
+            },
+            {
+                "cliente": "Loja Mirtes",
+                "bytes": 391104311296
+            },
+            {
+                "cliente": "Transfavero",
+                "bytes": 342855684096
+            },
+            {
+                "cliente": "Hering",
+                "bytes": 282390519808
+            }
+        ],
+        "available": true
+    }
+}

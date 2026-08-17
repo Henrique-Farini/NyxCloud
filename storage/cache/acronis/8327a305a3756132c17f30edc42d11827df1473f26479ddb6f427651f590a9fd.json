@@ -1,0 +1,49 @@
+{
+    "expires_at": 1786998963,
+    "value": {
+        "total": 21467603202048,
+        "clients": [
+            {
+                "cliente": "WT Solucoes",
+                "bytes": 7287248076800
+            },
+            {
+                "cliente": "Marest Distribuidora - SP",
+                "bytes": 1131234324480
+            },
+            {
+                "cliente": "Marest Distribuidora SP (marestdistsp)",
+                "bytes": 1131234324480
+            },
+            {
+                "cliente": "MP TINTAS",
+                "bytes": 753394401280
+            },
+            {
+                "cliente": "MP TINTAS (mptintasmococa)",
+                "bytes": 753394401280
+            },
+            {
+                "cliente": "Caelmo",
+                "bytes": 556669505536
+            },
+            {
+                "cliente": "Caelmo Mococa (caelmomococa)",
+                "bytes": 556669505536
+            },
+            {
+                "cliente": "Rotart",
+                "bytes": 507046924288
+            },
+            {
+                "cliente": "Rotart (rotartmococa)",
+                "bytes": 507046924288
+            },
+            {
+                "cliente": "Marest Distribuidora - MG",
+                "bytes": 496829317120
+            }
+        ],
+        "available": true
+    }
+}
