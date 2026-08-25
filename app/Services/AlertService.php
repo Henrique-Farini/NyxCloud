@@ -6,7 +6,7 @@ namespace NyxCloud\Services;
 
 final class AlertService extends AbstractAcronisService
 {
-    private const CACHE_VERSION = 'v6';
+    private const CACHE_VERSION = 'v10';
 
     public function listAlerts(array $filters = []): array
     {
@@ -22,14 +22,24 @@ final class AlertService extends AbstractAcronisService
                 'order' => 'desc(created_at)',
                 'limit' => 100,
             ], $filters));
+            $tasks = [];
+            $taskIndex = [];
+            $alertItems = $this->items($payload);
+            $taskLookbackDays = $this->taskLookbackDaysForAlerts($alertItems);
+            try {
+                $tasks = $this->taskItems($taskLookbackDays);
+                $taskIndex = $this->buildTaskIndex($tasks, $tenantMap);
+            } catch (\Throwable $e) {
+                error_log('Acronis: tarefas recentes indisponiveis para enriquecer alertas: ' . $e->getMessage());
+            }
 
             $native = array_map(
-                fn (array $alert): array => $this->mapAlert($alert, $tenantMap, $workloadMap),
-                $this->items($payload)
+                fn (array $alert): array => $this->mapAlert($alert, $tenantMap, $workloadMap, $taskIndex),
+                $alertItems
             );
 
             try {
-                $operational = $this->operationalAlerts($this->taskItems(30), $workloadMap);
+                $operational = $this->operationalAlerts($tasks !== [] ? $tasks : $this->taskItems(max(30, $taskLookbackDays)), $workloadMap);
             } catch (\Throwable $e) {
                 error_log('Acronis: alertas operacionais indisponiveis: ' . $e->getMessage());
                 $operational = [];
@@ -45,7 +55,7 @@ final class AlertService extends AbstractAcronisService
         });
     }
 
-    private function mapAlert(array $alert, array $tenantMap, array $workloadMap): array
+    private function mapAlert(array $alert, array $tenantMap, array $workloadMap, array $taskIndex = []): array
     {
         $createdAt = $this->firstString($alert, ['createdAt', 'created_at', 'receivedAt', 'updatedAt']);
         $timestamp = $createdAt !== '' ? strtotime($createdAt) : false;
@@ -154,15 +164,16 @@ final class AlertService extends AbstractAcronisService
             $recurso = $maquina;
         }
 
-        return [
+        $normalized = $this->normalizeAlertTexts($tipo, $codigo, $mensagem, $causa);
+        $mapped = [
             'cliente' => $cliente,
             'maquina' => $maquina,
             'severidade' => $this->firstString($alert, ['severity'], 'unknown'),
-            'mensagem' => $mensagem,
-            'tipo' => $tipo,
+            'mensagem' => $normalized['mensagem'],
+            'tipo' => $normalized['tipo'],
             'origem' => $origem,
-            'causa' => $causa,
-            'codigo' => $codigo,
+            'causa' => $normalized['causa'],
+            'codigo' => $normalized['codigo'],
             'recurso' => $recurso,
             'plano' => $recurso,
             'ip' => (string) ($workload['ip'] ?? ''),
@@ -174,6 +185,8 @@ final class AlertService extends AbstractAcronisService
             'status' => empty($alert['deletedAt']) && empty($alert['deleted_at']) ? 'open' : 'dismissed',
             'raw' => $alert,
         ];
+
+        return $this->finalizeAlertSizeLabel($this->enrichAlertFromTasks($mapped, $alert, $taskIndex));
     }
 
     private function operationalAlerts(array $tasks, array $workloadMap): array
@@ -225,16 +238,23 @@ final class AlertService extends AbstractAcronisService
             $reason = '';
             $severity = 'warning';
             $code = '';
+            $isDataPlan = $this->isDataPlan($latest['plano']);
 
             if ($latest['status'] === 'failed') {
                 $reason = 'A ultima execucao do backup falhou.';
                 $severity = 'critical';
                 $code = 'BACKUP_FAILED';
-            } elseif ($latest['bytes'] === 0) {
+            } elseif (!$isDataPlan && $latest['bytes'] === 0) {
                 $reason = 'A execucao foi concluida com tamanho zerado.';
                 $severity = 'high';
                 $code = 'BACKUP_ZERO_SIZE';
-            } elseif (is_int($latest['bytes']) && $latest['bytes'] > 0 && $baseline !== null && $latest['bytes'] < ($baseline * 0.60)) {
+            } elseif (
+                !$isDataPlan
+                && is_int($latest['bytes'])
+                && $latest['bytes'] > 0
+                && $baseline !== null
+                && $latest['bytes'] < ($baseline * 0.60)
+            ) {
                 $reason = 'Tamanho abaixo de 60% do padrao historico (' . $this->formatBytes($baseline) . ').';
                 $severity = 'warning';
                 $code = 'BACKUP_BELOW_BASELINE';
@@ -336,11 +356,298 @@ final class AlertService extends AbstractAcronisService
         return $map;
     }
 
+    private function buildTaskIndex(array $tasks, array $tenantMap): array
+    {
+        $index = [];
+        foreach ($tasks as $task) {
+            if (!is_array($task) || !$this->isBackupTask($task)) {
+                continue;
+            }
+
+            $completedAt = $this->firstString($task, ['completedAt', 'updatedAt', 'startedAt']);
+            $timestamp = $completedAt !== '' ? strtotime($completedAt) : false;
+            if ($timestamp === false) {
+                continue;
+            }
+
+            $cliente = $this->firstString($task, ['tenant.name']);
+            if ($cliente === '') {
+                foreach (['tenant.uuid', 'tenant.id', 'tenantID', 'tenant_id'] as $path) {
+                    $tenantValue = $this->firstString($task, [$path]);
+                    if ($tenantValue !== '' && isset($tenantMap[$tenantValue])) {
+                        $cliente = $tenantMap[$tenantValue];
+                        break;
+                    }
+                }
+            }
+
+            $keys = array_filter([
+                $this->lookupKey($cliente . '|' . $this->firstString($task, ['context.ProtectionPlanID', 'policy.id']) . '|' . $this->firstString($task, ['resource.id', 'context.resourceId', 'context.Persistent.ID'])),
+                $this->lookupKey($cliente . '|' . $this->firstString($task, ['context.ProtectionPlanID', 'policy.id']) . '|' . $this->firstString($task, ['resource.name', 'context.Persistent.Name', 'context.MachineName'])),
+                $this->lookupKey($cliente . '|' . $this->firstString($task, ['context.BackupPlanName', 'policy.name']) . '|' . $this->firstString($task, ['resource.name', 'context.Persistent.Name', 'context.MachineName'])),
+                $this->lookupKey($cliente . '|' . $this->firstString($task, ['policy.id']) . '|' . $this->firstString($task, ['resource.id'])),
+                $this->lookupKey($this->firstString($task, ['context.ProtectionPlanID', 'policy.id']) . '|' . $this->firstString($task, ['resource.id', 'context.resourceId', 'context.Persistent.ID'])),
+                $this->lookupKey($this->firstString($task, ['context.ProtectionPlanID', 'policy.id']) . '|' . $this->firstString($task, ['resource.name', 'context.Persistent.Name', 'context.MachineName'])),
+                $this->lookupKey($this->firstString($task, ['context.BackupPlanName', 'policy.name']) . '|' . $this->firstString($task, ['resource.name', 'context.Persistent.Name', 'context.MachineName'])),
+                $this->lookupKey($this->firstString($task, ['policy.id']) . '|' . $this->firstString($task, ['resource.id'])),
+            ]);
+
+            foreach ($keys as $key) {
+                if ($key === '') {
+                    continue;
+                }
+
+                if (!isset($index[$key]) || (($index[$key]['timestamp'] ?? 0) < $timestamp)) {
+                    $index[$key] = [
+                        'timestamp' => $timestamp,
+                        'task' => $task,
+                    ];
+                }
+            }
+        }
+
+        return $index;
+    }
+
     private function findWorkload(array $workloadMap, string $cliente, string $maquina): array
     {
         return $workloadMap[$this->lookupKey($cliente . '|' . $maquina)]
             ?? $workloadMap[$this->lookupKey($maquina)]
             ?? [];
+    }
+
+    private function enrichAlertFromTasks(array $mapped, array $alert, array $taskIndex): array
+    {
+        if ($taskIndex === []) {
+            return $mapped;
+        }
+
+        $cliente = (string) ($mapped['cliente'] ?? '');
+        $planId = $this->firstString($alert, ['details.planId', 'details.planID']);
+        $resourceId = $this->firstString($alert, ['details.resourceId', 'details.deviceId', 'details.agentId', 'entity.id']);
+        $planName = $this->firstString($alert, ['details.planName', 'details.fields.Backup plan', 'details.fields.Plan'], (string) ($mapped['plano'] ?? ''));
+        $resourceName = $this->firstString($alert, ['details.resourceName', 'resourceName', 'entity.name'], (string) ($mapped['maquina'] ?? ''));
+
+        $candidates = array_filter([
+            $this->lookupKey($cliente . '|' . $planId . '|' . $resourceId),
+            $this->lookupKey($cliente . '|' . $planName . '|' . $resourceName),
+            $this->lookupKey($cliente . '|' . $planId . '|' . $resourceName),
+            $this->lookupKey($cliente . '|' . $planName . '|' . $resourceId),
+            $this->lookupKey($planId . '|' . $resourceId),
+            $this->lookupKey($planName . '|' . $resourceName),
+            $this->lookupKey($planId . '|' . $resourceName),
+            $this->lookupKey($planName . '|' . $resourceId),
+        ]);
+
+        $task = null;
+        foreach ($candidates as $candidate) {
+            if (isset($taskIndex[$candidate]['task']) && is_array($taskIndex[$candidate]['task'])) {
+                $task = $taskIndex[$candidate]['task'];
+                break;
+            }
+        }
+
+        if (!is_array($task)) {
+            return $mapped;
+        }
+
+        $bytes = $this->taskBytes($task);
+        if (($mapped['tamanho'] ?? '') === 'Nao informado pela Acronis' && is_int($bytes)) {
+            $mapped['tamanho_bytes'] = $bytes;
+            $mapped['tamanho'] = $bytes > 0 ? $this->formatBytes($bytes) : '0 B';
+        }
+
+        $rawReason = $this->firstString($task, [
+            'result.payload.error.localizedMessage',
+            'result.payload.error.message',
+            'result.payload.error.debug.msg',
+            'result.payload.error.reason',
+            'result.payload.error.cause',
+            'result.payload.error.context.cause_str',
+            'result.payload.UnresolvedItemsWarning.0.message',
+            'result.payload.UnresolvedItemsWarning.0',
+            'result.error.localizedMessage',
+            'result.error.message',
+            'result.error.debug.msg',
+            'result.error.reason',
+            'result.error.cause',
+            'context.Result',
+        ]);
+
+        if ($rawReason !== '') {
+            $humanReason = $this->humanizeAlertText($rawReason, (string) ($mapped['codigo'] ?? ''), (string) ($mapped['causa'] ?? ''));
+            if ($humanReason !== '') {
+                $currentCause = trim((string) ($mapped['causa'] ?? ''));
+                if ($currentCause === '' || $currentCause === (string) ($mapped['mensagem'] ?? '')) {
+                    $mapped['causa'] = $humanReason;
+                } elseif (!str_contains(mb_strtolower($currentCause), mb_strtolower($humanReason))) {
+                    $mapped['causa'] = $currentCause . ' - ' . $humanReason;
+                }
+            }
+        }
+
+        return $mapped;
+    }
+
+    private function finalizeAlertSizeLabel(array $mapped): array
+    {
+        if (($mapped['tamanho'] ?? '') !== 'Nao informado pela Acronis') {
+            return $mapped;
+        }
+
+        $code = trim((string) ($mapped['codigo'] ?? ''));
+        $cause = mb_strtolower(trim((string) ($mapped['causa'] ?? '')));
+        $type = mb_strtolower(trim((string) ($mapped['tipo'] ?? '')));
+
+        if (in_array($code, ['AgentAutoUpdateFailed', 'M365ApplicationConsentRequired'], true)) {
+            $mapped['tamanho'] = 'Nao se aplica';
+            return $mapped;
+        }
+
+        if (
+            str_contains($cause, 'nenhuma origem de backup')
+            || str_contains($cause, 'no sources found for planid')
+            || str_contains($cause, 'failed to find archive')
+        ) {
+            $mapped['tamanho'] = 'Nao gerado';
+            return $mapped;
+        }
+
+        if (str_contains($type, 'atualizacao') || str_contains($type, 'microsoft 365')) {
+            $mapped['tamanho'] = 'Nao se aplica';
+        }
+
+        return $mapped;
+    }
+
+    private function taskLookbackDaysForAlerts(array $alerts): int
+    {
+        $oldestTimestamp = time();
+
+        foreach ($alerts as $alert) {
+            if (!is_array($alert)) {
+                continue;
+            }
+
+            $createdAt = $this->firstString($alert, ['createdAt', 'created_at', 'receivedAt', 'updatedAt']);
+            $timestamp = $createdAt !== '' ? strtotime($createdAt) : false;
+            if ($timestamp !== false && $timestamp < $oldestTimestamp) {
+                $oldestTimestamp = $timestamp;
+            }
+        }
+
+        $days = (int) ceil(max(0, time() - $oldestTimestamp) / 86400) + 7;
+        return max(30, min(365, $days));
+    }
+
+    private function normalizeAlertTexts(string $tipo, string $codigo, string $mensagem, string $causa): array
+    {
+        $normalizedCode = trim($codigo) !== '' ? trim($codigo) : trim($tipo);
+        $translatedType = $this->translateAlertCode($tipo);
+
+        return [
+            'tipo' => $translatedType,
+            'codigo' => $normalizedCode,
+            'mensagem' => $this->humanizeAlertText($mensagem, $normalizedCode, $translatedType),
+            'causa' => $this->humanizeAlertText($causa, $normalizedCode, $translatedType),
+        ];
+    }
+
+    private function humanizeAlertText(string $text, string $fallbackCode = '', string $fallbackText = ''): string
+    {
+        $text = trim($text);
+        if ($text === '') {
+            $fallback = $this->translateAlertCode($fallbackCode);
+            return $fallback !== '' ? $fallback : $fallbackText;
+        }
+
+        $jsonText = $this->translateJsonAlertPayload($text);
+        if ($jsonText !== null) {
+            return $jsonText;
+        }
+
+        $translated = $this->translateAlertCode($text);
+        if ($translated !== $text) {
+            return $translated;
+        }
+
+        if (preg_match('/^No sources found for planID=([A-F0-9-]+)$/i', $text)) {
+            return 'Nenhuma origem de backup foi encontrada para o plano configurado.';
+        }
+
+        return $text;
+    }
+
+    private function translateJsonAlertPayload(string $text): ?string
+    {
+        if (!str_starts_with($text, '{')) {
+            return null;
+        }
+
+        try {
+            $payload = json_decode($text, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
+
+        if (!is_array($payload)) {
+            return null;
+        }
+
+        $code = trim((string) ($payload['code'] ?? ''));
+        $address = trim((string) ($payload['context']['address'] ?? ''));
+        $debug = trim((string) ($payload['debug']['msg'] ?? ''));
+
+        if ($code === 'NETWORK_ERROR') {
+            $parts = ['Falha de comunicacao com a nuvem Acronis'];
+            if ($address !== '') {
+                $parts[] = 'destino ' . $address;
+            }
+
+            $message = implode(' - ', $parts);
+            if ($debug !== '') {
+                if (str_contains(strtolower($debug), 'i/o timeout')) {
+                    $message .= '. Tempo limite de conexao esgotado.';
+                } else {
+                    $message .= '. ' . $debug;
+                }
+            } else {
+                $message .= '.';
+            }
+
+            return $message;
+        }
+
+        return $code !== '' ? $this->translateAlertCode($code) : null;
+    }
+
+    private function translateAlertCode(string $value): string
+    {
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return '';
+        }
+
+        $translations = [
+            'AgentAutoUpdateFailed' => 'Falha na atualizacao do agente',
+            'PlanDeploymentFailed' => 'Falha ao aplicar o plano de backup',
+            'BackupDidNotStart' => 'Backup nao iniciado',
+            'BackupNotResponding' => 'Backup sem resposta',
+            'BackupStatusUnknown' => 'Status do backup desconhecido',
+            'MachineOffline30' => 'Maquina offline ha mais de 30 minutos',
+            'M365ApplicationConsentRequired' => 'Microsoft 365 sem consentimento do aplicativo',
+            'NETWORK_ERROR' => 'Falha de comunicacao com a nuvem Acronis',
+            'BACKUP_FAILED' => 'Falha na execucao do backup',
+            'BACKUP_ZERO_SIZE' => 'Backup concluido com tamanho zerado',
+            'BACKUP_BELOW_BASELINE' => 'Backup com tamanho abaixo do padrao historico',
+        ];
+
+        return $translations[$trimmed] ?? $trimmed;
+    }
+
+    private function isDataPlan(string $plan): bool
+    {
+        return (bool) preg_match('/\bdados\b/i', $plan);
     }
 
     private function lookupKey(string $value): string

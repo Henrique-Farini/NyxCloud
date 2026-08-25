@@ -108,7 +108,10 @@ function obterTokensDaRequisicao(): array
 {
     $tokens = [];
 
-    $cabecalho = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    // Apache may expose Authorization through REDIRECT_HTTP_AUTHORIZATION.
+    $cabecalho = $_SERVER['HTTP_AUTHORIZATION']
+        ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+        ?? '';
     if (preg_match('/^Bearer\s+(.+)$/i', $cabecalho, $matches)) {
         $tokens[] = trim($matches[1]);
     }

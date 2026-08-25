@@ -1,0 +1,1182 @@
+{
+    "expires_at": 1787247908,
+    "value": [
+        {
+            "cliente": "Marest Distribuidora SP (marestdistsp)",
+            "maquina": "MARESTSERVER.marestdt.com",
+            "severidade": "warning",
+            "mensagem": "Tamanho abaixo de 60% do padrao historico (3 MB).",
+            "tipo": "Monitoramento de backup",
+            "origem": "MARESTSERVER.marestdt.com",
+            "causa": "Tamanho abaixo de 60% do padrao historico (3 MB).",
+            "codigo": "BACKUP_BELOW_BASELINE",
+            "recurso": "SRV - ARQUIVOS",
+            "plano": "SRV - ARQUIVOS",
+            "ip": "192.168.10.6",
+            "tamanho": "1 MB",
+            "tamanho_bytes": 1051289,
+            "alerta_origem": "monitoramento",
+            "data": "2026-08-20",
+            "hora": "14:30:30",
+            "status": "open",
+            "raw": {
+                "uuid": "14fc429b-f8e6-47e2-8fd4-2846ac5a6ae1",
+                "type": "D332948D-A7A9-4E07-B76C-253DCF6E17FB",
+                "queue": "legacySync",
+                "priority": "normal",
+                "tenant": {
+                    "id": "88168",
+                    "uuid": "afefcee3-147a-45b2-a0d2-41d07412b6e2",
+                    "name": "Marest Distribuidora SP (marestdistsp)",
+                    "locator": "\/1\/87538\/88168\/"
+                },
+                "cancellable": true,
+                "policy": {
+                    "id": "5e5ad11f-a135-476b-8588-45ca4c7407e9",
+                    "type": "backup",
+                    "name": "SRV - ARQUIVOS"
+                },
+                "resource": {
+                    "id": "6F51D136-C05E-481B-B9AE-C8C3F2FFD69B",
+                    "type": "instance",
+                    "name": "MARESTSERVER.marestdt.com"
+                },
+                "context": {
+                    "title": "Backup plan 'SRV - ARQUIVOS'",
+                    "CommandID": "D332948D-A7A9-4E07-B76C-253DCF6E17FB",
+                    "IsProcessRoot": true,
+                    "ProtectionPlanID": "34A711EC-5D7F-0FAE-0354-CA9FC6B7A095",
+                    "runMode": "Scheduled",
+                    "BackupPlanName": "SRV - ARQUIVOS",
+                    "Specific": "Business",
+                    "UserName": "MARESTDT\\administrador",
+                    "CurrentBackupFrame": "14FC429B-F8E6-47E2-8FD4-2846AC5A6AE1",
+                    "ExecutionQueue": "default_queue",
+                    "MachineName": "MARESTSERVER.marestdt.com",
+                    "isLegacy": true,
+                    "_runtime": {
+                        "bottleneck": {
+                            "destination": 0,
+                            "processing": 0,
+                            "source": 100
+                        },
+                        "bytesProcessed": 1051289,
+                        "bytesSaved": 126976,
+                        "sourceStamp": 48042477
+                    },
+                    "HasChildren": true,
+                    "MessageID": "",
+                    "ProcessID": 10708,
+                    "parentUUID": "14fc429b-f8e6-47e2-8fd4-2846ac5a6ae1"
+                },
+                "progress": {
+                    "current": 100,
+                    "total": 100,
+                    "bytesProcessed": 1051289,
+                    "bytesSaved": 126976,
+                    "bottleneck": {
+                        "source": 100
+                    }
+                },
+                "sustainable": false,
+                "id": 1743219661899972608,
+                "idString": "1743219661899972608",
+                "state": "completed",
+                "issuer": {
+                    "id": "",
+                    "clusterId": ""
+                },
+                "enqueuedAt": "2026-08-20T17:18:56.024805625Z",
+                "startedAt": "2026-08-20T17:18:56.024805625Z",
+                "updatedAt": "2026-08-20T17:30:30.813450698Z",
+                "completedAt": "2026-08-20T17:30:30.064553881Z",
+                "cancelRequested": false,
+                "executor": {
+                    "id": "6afdc0f3-fc4a-48c5-86dc-8f558ac3a77c",
+                    "clusterId": ""
+                },
+                "result": {
+                    "code": "ok",
+                    "payload": {
+                        "BackupActivitiesNumber": 1,
+                        "UnresolvedItemsWarning": []
+                    }
+                }
+            }
+        },
+        {
+            "cliente": "Gplus Sistemas (gplussistemas)",
+            "maquina": "ip-10-0-3-104.ec2.internal",
+            "severidade": "warning",
+            "mensagem": "Status do backup desconhecido",
+            "tipo": "Status do backup desconhecido",
+            "origem": "ip-10-0-3-104.ec2.internal",
+            "causa": "Status do backup desconhecido",
+            "codigo": "BackupStatusUnknown",
+            "recurso": "MongoDB",
+            "plano": "MongoDB",
+            "ip": "10.0.3.104",
+            "tamanho": "Nao informado pela Acronis",
+            "tamanho_bytes": null,
+            "alerta_origem": "acronis",
+            "data": "2026-08-20",
+            "hora": "13:46:04",
+            "status": "open",
+            "raw": {
+                "id": "02FA73A1-5E25-5443-AAD9-92D0CAC6A808",
+                "type": "BackupStatusUnknown",
+                "details": {
+                    "agentId": "a7ec4ef8-93e5-4a9a-9412-2d2dbe75e363",
+                    "backupLocations": [
+                        {
+                            "type": "cloud"
+                        }
+                    ],
+                    "backupSourcesType": "files",
+                    "errorMessage": {
+                        "kbLink": {
+                            "serCode": "BackupStatusUnknown"
+                        }
+                    },
+                    "planId": "26efb556-2865-4eb4-9dd5-89c95d0150d1",
+                    "planName": "MongoDB",
+                    "resourceId": "E6BB84C9-3E32-407E-960D-5BE023D8913C",
+                    "resourceName": "ip-10-0-3-104.ec2.internal"
+                },
+                "createdAt": "2026-08-20T16:46:04.39705844Z",
+                "severity": "warning",
+                "affinity": "",
+                "receivedAt": "2026-07-08T10:41:23.714608859Z",
+                "updatedAt": "2026-08-20T16:46:04.39705844Z",
+                "tenant": {
+                    "id": "187698",
+                    "uuid": "5d9a1bd6-fd8d-4101-ba16-01731d0fab8a",
+                    "locator": "\/1\/14\/2910\/1880\/1937\/3508\/187697\/187698\/"
+                },
+                "category": "Backup"
+            }
+        },
+        {
+            "cliente": "Madeireira Mocoquense (madeireiramoc)",
+            "maquina": "Caixa",
+            "severidade": "warning",
+            "mensagem": "Status do backup desconhecido",
+            "tipo": "Status do backup desconhecido",
+            "origem": "Caixa",
+            "causa": "Status do backup desconhecido",
+            "codigo": "BackupStatusUnknown",
+            "recurso": "BD-SIGCOM-G",
+            "plano": "BD-SIGCOM-G",
+            "ip": "192.168.1.28",
+            "tamanho": "Nao informado pela Acronis",
+            "tamanho_bytes": null,
+            "alerta_origem": "acronis",
+            "data": "2026-08-20",
+            "hora": "13:16:12",
+            "status": "open",
+            "raw": {
+                "id": "6A58C9D0-477E-5485-A374-E2D872FB745A",
+                "type": "BackupStatusUnknown",
+                "details": {
+                    "agentId": "fe9252c1-42c1-4eae-bb04-37dea038aff7",
+                    "backupLocations": [
+                        {
+                            "type": "cloud"
+                        }
+                    ],
+                    "backupSourcesType": "files",
+                    "errorMessage": {
+                        "kbLink": {
+                            "serCode": "BackupStatusUnknown"
+                        }
+                    },
+                    "planId": "bf300964-7e54-4531-b9fd-bbb382c4912a",
+                    "planName": "BD-SIGCOM-G",
+                    "resourceId": "B6648C6D-C63B-4CB9-8729-8E4AEFF5185C",
+                    "resourceName": "Caixa"
+                },
+                "createdAt": "2026-08-20T16:16:12.870142545Z",
+                "severity": "warning",
+                "affinity": "",
+                "receivedAt": "2026-04-08T20:59:06.777931151Z",
+                "updatedAt": "2026-08-20T16:16:12.870142545Z",
+                "tenant": {
+                    "id": "171494",
+                    "uuid": "36731d75-d6a2-40fd-8288-cfb85b0e7d70",
+                    "locator": "\/1\/14\/2910\/1880\/1937\/3508\/171493\/171494\/"
+                },
+                "category": "Backup"
+            }
+        },
+        {
+            "cliente": "Gplus Sistemas (gplussistemas)",
+            "maquina": "ip-10-0-3-104.ec2.internal",
+            "severidade": "warning",
+            "mensagem": "Status do backup desconhecido",
+            "tipo": "Status do backup desconhecido",
+            "origem": "ip-10-0-3-104.ec2.internal",
+            "causa": "Status do backup desconhecido",
+            "codigo": "BackupStatusUnknown",
+            "recurso": "Redis",
+            "plano": "Redis",
+            "ip": "10.0.3.104",
+            "tamanho": "Nao informado pela Acronis",
+            "tamanho_bytes": null,
+            "alerta_origem": "acronis",
+            "data": "2026-08-20",
+            "hora": "13:16:11",
+            "status": "open",
+            "raw": {
+                "id": "1C699F28-3D10-5502-B50D-D293171CD957",
+                "type": "BackupStatusUnknown",
+                "details": {
+                    "agentId": "a7ec4ef8-93e5-4a9a-9412-2d2dbe75e363",
+                    "backupLocations": [
+                        {
+                            "type": "cloud"
+                        }
+                    ],
+                    "backupSourcesType": "files",
+                    "errorMessage": {
+                        "kbLink": {
+                            "serCode": "BackupStatusUnknown"
+                        }
+                    },
+                    "planId": "161bcdfc-57c3-4c7b-a72b-dac2ef7cd2f3",
+                    "planName": "Redis",
+                    "resourceId": "E6BB84C9-3E32-407E-960D-5BE023D8913C",
+                    "resourceName": "ip-10-0-3-104.ec2.internal"
+                },
+                "createdAt": "2026-08-20T16:16:11.160212756Z",
+                "severity": "warning",
+                "affinity": "",
+                "receivedAt": "2026-07-08T10:41:23.698691279Z",
+                "updatedAt": "2026-08-20T16:16:11.160212756Z",
+                "tenant": {
+                    "id": "187698",
+                    "uuid": "5d9a1bd6-fd8d-4101-ba16-01731d0fab8a",
+                    "locator": "\/1\/14\/2910\/1880\/1937\/3508\/187697\/187698\/"
+                },
+                "category": "Backup"
+            }
+        },
+        {
+            "cliente": "Transfavero",
+            "maquina": "39628 - TRANSPORTADORA FAVERO EIRELI",
+            "severidade": "warning",
+            "mensagem": "Microsoft 365 sem consentimento do aplicativo",
+            "tipo": "Microsoft 365 sem consentimento do aplicativo",
+            "origem": "39628 - TRANSPORTADORA FAVERO EIRELI",
+            "causa": "Microsoft 365 sem consentimento do aplicativo",
+            "codigo": "M365ApplicationConsentRequired",
+            "recurso": "39628 - TRANSPORTADORA FAVERO EIRELI",
+            "plano": "39628 - TRANSPORTADORA FAVERO EIRELI",
+            "ip": "",
+            "tamanho": "Nao informado pela Acronis",
+            "tamanho_bytes": null,
+            "alerta_origem": "acronis",
+            "data": "2026-08-19",
+            "hora": "18:52:20",
+            "status": "open",
+            "raw": {
+                "id": "A5FB8CF8-34D5-2D8B-79F7-706884F997D8",
+                "type": "M365ApplicationConsentRequired",
+                "details": {
+                    "resourceId": "62081824-9BEF-4384-BB1A-8EC538EA9A74",
+                    "resourceName": "39628 - TRANSPORTADORA FAVERO EIRELI",
+                    "taskId": ""
+                },
+                "createdAt": "2026-08-19T21:52:20.427826966Z",
+                "severity": "warning",
+                "affinity": "",
+                "receivedAt": "2026-07-14T21:52:19.032723483Z",
+                "updatedAt": "2026-08-19T21:52:20.427826966Z",
+                "tenant": {
+                    "id": "206395",
+                    "uuid": "e3a977a2-14fa-4d57-b211-2ca2161e3f17",
+                    "locator": "\/1\/14\/2910\/1880\/1937\/3508\/206395\/"
+                },
+                "category": "Backup"
+            }
+        },
+        {
+            "cliente": "Microcenter Inform\u00e1tica (microcentermococa)",
+            "maquina": "Servidor-01",
+            "severidade": "warning",
+            "mensagem": "Tamanho abaixo de 60% do padrao historico (2,9 GB).",
+            "tipo": "Monitoramento de backup",
+            "origem": "Servidor-01",
+            "causa": "Tamanho abaixo de 60% do padrao historico (2,9 GB).",
+            "codigo": "BACKUP_BELOW_BASELINE",
+            "recurso": "BD-SGMASTER",
+            "plano": "BD-SGMASTER",
+            "ip": "192.168.1.146",
+            "tamanho": "816 MB",
+            "tamanho_bytes": 855936800,
+            "alerta_origem": "monitoramento",
+            "data": "2026-08-19",
+            "hora": "17:10:10",
+            "status": "open",
+            "raw": {
+                "uuid": "1625e9ec-11b4-4938-98a2-6b4187f94f9e",
+                "type": "D332948D-A7A9-4E07-B76C-253DCF6E17FB",
+                "queue": "legacySync",
+                "priority": "normal",
+                "tenant": {
+                    "id": "3539",
+                    "uuid": "50c5b75e-ace3-456a-8e1d-cc8c5227016b",
+                    "name": "Microcenter Inform\u00e1tica (microcentermococa)",
+                    "locator": "\/1\/3538\/3539\/"
+                },
+                "cancellable": true,
+                "policy": {
+                    "id": "a3fc0c88-14c2-49c1-84da-4871d7020503",
+                    "type": "backup",
+                    "name": "BD-SGMASTER"
+                },
+                "resource": {
+                    "id": "90411EA5-D905-4FCA-A0AB-43BA6D482497",
+                    "type": "instance",
+                    "name": "Servidor-01"
+                },
+                "context": {
+                    "CurrentBackupFrame": "1625E9EC-11B4-4938-98A2-6B4187F94F9E",
+                    "IsProcessRoot": true,
+                    "ProcessID": 6728,
+                    "title": "Backup plan 'BD-SGMASTER'",
+                    "BackupPlanName": "BD-SGMASTER",
+                    "ExecutionQueue": "default_queue",
+                    "MachineName": "Servidor-01",
+                    "Specific": "Business",
+                    "_runtime": {
+                        "bottleneck": {
+                            "destination": 0,
+                            "processing": 0,
+                            "source": 100
+                        },
+                        "bytesProcessed": 855936800,
+                        "bytesSaved": 195764224,
+                        "sourceStamp": 3885066
+                    },
+                    "HasChildren": true,
+                    "UserName": "MICROCENTER\\SERVIDOR-01$",
+                    "CommandID": "D332948D-A7A9-4E07-B76C-253DCF6E17FB",
+                    "MessageID": "",
+                    "ProtectionPlanID": "7A7D824F-A7E0-0EB0-0D4B-CFE547180AB4",
+                    "isLegacy": true,
+                    "parentUUID": "1625e9ec-11b4-4938-98a2-6b4187f94f9e",
+                    "runMode": "Scheduled"
+                },
+                "progress": {
+                    "current": 100,
+                    "total": 100,
+                    "bytesProcessed": 855936800,
+                    "bytesSaved": 195764224,
+                    "bottleneck": {
+                        "source": 100
+                    }
+                },
+                "sustainable": false,
+                "id": 1742914242438643712,
+                "idString": "1742914242438643712",
+                "state": "completed",
+                "issuer": {
+                    "id": "",
+                    "clusterId": ""
+                },
+                "enqueuedAt": "2026-08-19T20:07:54.026752318Z",
+                "startedAt": "2026-08-19T20:07:54.026752318Z",
+                "updatedAt": "2026-08-19T20:08:29.738232591Z",
+                "completedAt": "2026-08-19T20:10:10.045677086Z",
+                "cancelRequested": false,
+                "executor": {
+                    "id": "d9818ec7-b322-4771-8991-8794901a0fb7",
+                    "clusterId": ""
+                },
+                "result": {
+                    "code": "ok",
+                    "payload": {
+                        "BackupActivitiesNumber": 1,
+                        "UnresolvedItemsWarning": []
+                    }
+                }
+            }
+        },
+        {
+            "cliente": "wtsuportimococa",
+            "maquina": "Server-WT",
+            "severidade": "warning",
+            "mensagem": "Falha ao aplicar o plano de backup",
+            "tipo": "Falha ao aplicar o plano de backup",
+            "origem": "Server-WT",
+            "causa": "Nenhuma origem de backup foi encontrada para o plano configurado.",
+            "codigo": "0x00000001",
+            "recurso": "id=55F13B18-B443-0864-2262-4364E54A49AE",
+            "plano": "id=55F13B18-B443-0864-2262-4364E54A49AE",
+            "ip": "169.254.28.161",
+            "tamanho": "Nao informado pela Acronis",
+            "tamanho_bytes": null,
+            "alerta_origem": "acronis",
+            "data": "2026-08-19",
+            "hora": "10:14:30",
+            "status": "open",
+            "raw": {
+                "id": "35A32451-019B-4342-A204-859C8B7E2553",
+                "type": "PlanDeploymentFailed",
+                "details": {
+                    "activity": null,
+                    "agentName": "Server-WT",
+                    "error": {
+                        "code": 1,
+                        "fields": {
+                            "$module": "zmqgw_lxa64_20744"
+                        },
+                        "src": {
+                            "file": "c:\/j\/workspace\/common\/abm-zmqgw\/20744\/product\/zmqgw\/impl\/pc_worker.cpp",
+                            "func": "operator()",
+                            "line": 54,
+                            "tag": "0x6e276f0ba4c7fcdf"
+                        },
+                        "suberror": [],
+                        "text": "No sources found for planID=34A22550-009A-4243-A305-849D8A7F2452",
+                        "types": {
+                            "$module": "A"
+                        }
+                    },
+                    "errorMessage": {
+                        "code": "InternalError",
+                        "context": {
+                            "$module": "zmqgw_lxa64_20744",
+                            "cause_str": "No sources found for planID=34A22550-009A-4243-A305-849D8A7F2452",
+                            "effect_str": "No sources found for planID=34A22550-009A-4243-A305-849D8A7F2452"
+                        },
+                        "debug": {
+                            "msg": "No sources found for planID=34A22550-009A-4243-A305-849D8A7F2452"
+                        },
+                        "domain": "Common",
+                        "kbLink": {
+                            "build": 20744,
+                            "lineTag": "0x6E276F0BA4C7FCDF",
+                            "os": "Windows",
+                            "product": "cloud",
+                            "serCode": "PlanDeploymentFailed+0x00000001",
+                            "version": "17.0"
+                        },
+                        "reason": "InternalError",
+                        "serCode": "0x00000001"
+                    },
+                    "planId": "55F13B18-B443-0864-2262-4364E54A49AE",
+                    "planName": "id=55F13B18-B443-0864-2262-4364E54A49AE",
+                    "resourceId": "00000000-0000-0000-0000-000000000000"
+                },
+                "createdAt": "2026-08-19T13:14:30Z",
+                "_source": "61531E48-B4D9-4A27-8167-C7F96F356DFC",
+                "_sourceTimeStamp": 1787145270,
+                "severity": "warning",
+                "affinity": "",
+                "receivedAt": "2026-08-19T13:10:55.296571081Z",
+                "updatedAt": "2026-08-19T13:14:30.112854102Z",
+                "tenant": {
+                    "id": "158614",
+                    "uuid": "34c17029-133a-4c9e-9b08-37afdbdb5708",
+                    "locator": "\/1\/14\/2910\/1880\/1937\/3508\/158613\/158614\/"
+                },
+                "category": "System"
+            }
+        },
+        {
+            "cliente": "DaFlora (dafloramococa)",
+            "maquina": "srvdaflora-dc01",
+            "severidade": "warning",
+            "mensagem": "Falha ao aplicar o plano de backup",
+            "tipo": "Falha ao aplicar o plano de backup",
+            "origem": "srvdaflora-dc01",
+            "causa": "Nenhuma origem de backup foi encontrada para o plano configurado.",
+            "codigo": "0x00000001",
+            "recurso": "id=3E2B0797-1B97-02D9-23DD-18505BE198BC",
+            "plano": "id=3E2B0797-1B97-02D9-23DD-18505BE198BC",
+            "ip": "192.168.0.11",
+            "tamanho": "Nao informado pela Acronis",
+            "tamanho_bytes": null,
+            "alerta_origem": "acronis",
+            "data": "2026-08-18",
+            "hora": "10:01:27",
+            "status": "open",
+            "raw": {
+                "id": "970DA152-7C82-4704-9811-49E2861AD805",
+                "type": "PlanDeploymentFailed",
+                "details": {
+                    "activity": null,
+                    "agentName": "srvdaflora-dc01",
+                    "error": {
+                        "code": 1,
+                        "fields": {
+                            "$module": "zmqgw_lxa64_20744"
+                        },
+                        "src": {
+                            "file": "c:\/j\/workspace\/common\/abm-zmqgw\/20744\/product\/zmqgw\/impl\/pc_worker.cpp",
+                            "func": "operator()",
+                            "line": 54,
+                            "tag": "0x6e276f0ba4c7fcdf"
+                        },
+                        "suberror": [],
+                        "text": "No sources found for planID=960CA053-7D83-4605-9910-48E3871BD904",
+                        "types": {
+                            "$module": "A"
+                        }
+                    },
+                    "errorMessage": {
+                        "code": "InternalError",
+                        "context": {
+                            "$module": "zmqgw_lxa64_20744",
+                            "cause_str": "No sources found for planID=960CA053-7D83-4605-9910-48E3871BD904",
+                            "effect_str": "No sources found for planID=960CA053-7D83-4605-9910-48E3871BD904"
+                        },
+                        "debug": {
+                            "msg": "No sources found for planID=960CA053-7D83-4605-9910-48E3871BD904"
+                        },
+                        "domain": "Common",
+                        "kbLink": {
+                            "build": 20744,
+                            "lineTag": "0x6E276F0BA4C7FCDF",
+                            "os": "Windows",
+                            "product": "cloud",
+                            "serCode": "PlanDeploymentFailed+0x00000001",
+                            "version": "17.0"
+                        },
+                        "reason": "InternalError",
+                        "serCode": "0x00000001"
+                    },
+                    "planId": "3E2B0797-1B97-02D9-23DD-18505BE198BC",
+                    "planName": "id=3E2B0797-1B97-02D9-23DD-18505BE198BC",
+                    "resourceId": "00000000-0000-0000-0000-000000000000"
+                },
+                "createdAt": "2026-08-18T13:01:27Z",
+                "_source": "A827A7C4-6614-44DC-BACD-50B3DCFA41B8",
+                "_sourceTimeStamp": 1787058087,
+                "severity": "warning",
+                "affinity": "",
+                "receivedAt": "2026-02-04T14:44:48.518358907Z",
+                "updatedAt": "2026-08-18T13:01:27.332548544Z",
+                "tenant": {
+                    "id": "160176",
+                    "uuid": "f1e4d18e-288a-480b-91b2-9101d628e83c",
+                    "locator": "\/1\/14\/2910\/1880\/1937\/3508\/160175\/160176\/"
+                },
+                "category": "System"
+            }
+        },
+        {
+            "cliente": "Frigo Service (frigoservice)",
+            "maquina": "W-45602-AP-01",
+            "severidade": "error",
+            "mensagem": "Falha na atualizacao do agente",
+            "tipo": "Falha na atualizacao do agente",
+            "origem": "W-45602-AP-01",
+            "causa": "Falha na atualizacao do agente",
+            "codigo": "AgentAutoUpdateFailed",
+            "recurso": "W-45602-AP-01",
+            "plano": "W-45602-AP-01",
+            "ip": "10.10.1.103",
+            "tamanho": "Nao informado pela Acronis",
+            "tamanho_bytes": null,
+            "alerta_origem": "acronis",
+            "data": "2026-08-09",
+            "hora": "05:58:23",
+            "status": "open",
+            "raw": {
+                "id": "FB049065-924E-41BE-8846-8EB316CBDDBB",
+                "type": "AgentAutoUpdateFailed",
+                "details": {
+                    "agentCurrentVersion": "26.7.1.42773",
+                    "agentId": "d1b932de-b6b4-4769-ac34-d6475c199ad2",
+                    "agentUpdateVersion": "26.7.1.42848 26.7.42848",
+                    "machineName": "W-45602-AP-01"
+                },
+                "createdAt": "2026-08-09T08:58:23.75883321Z",
+                "_source": "AgentManager",
+                "severity": "error",
+                "affinity": "",
+                "receivedAt": "2026-08-09T08:58:23.75883321Z",
+                "updatedAt": "2026-08-09T08:58:23.75883321Z",
+                "tenant": {
+                    "id": "156783",
+                    "uuid": "522c9cb4-8bb3-4d60-9b8f-4a2f230777ec",
+                    "locator": "\/1\/14\/2910\/1880\/1937\/3508\/156782\/156783\/"
+                },
+                "category": "System"
+            }
+        },
+        {
+            "cliente": "Caelmo Mococa (caelmomococa)",
+            "maquina": "srvWTGG",
+            "severidade": "error",
+            "mensagem": "Falha na atualizacao do agente",
+            "tipo": "Falha na atualizacao do agente",
+            "origem": "srvWTGG",
+            "causa": "Falha na atualizacao do agente",
+            "codigo": "AgentAutoUpdateFailed",
+            "recurso": "srvWTGG",
+            "plano": "srvWTGG",
+            "ip": "10.82.0.75",
+            "tamanho": "Nao informado pela Acronis",
+            "tamanho_bytes": null,
+            "alerta_origem": "acronis",
+            "data": "2026-08-09",
+            "hora": "03:18:19",
+            "status": "open",
+            "raw": {
+                "id": "E2B16A90-778C-49D8-A89D-72163D16AF79",
+                "type": "AgentAutoUpdateFailed",
+                "details": {
+                    "agentCurrentVersion": "26.4.1.42393",
+                    "agentId": "62528aa1-5c58-4639-b5a4-2153b7d52ee0",
+                    "agentUpdateVersion": "26.7.1.42848 26.7.42848",
+                    "machineName": "srvWTGG"
+                },
+                "createdAt": "2026-08-09T06:18:19.940946656Z",
+                "_source": "AgentManager",
+                "severity": "error",
+                "affinity": "",
+                "receivedAt": "2026-08-09T06:18:19.940946656Z",
+                "updatedAt": "2026-08-09T06:18:19.940946656Z",
+                "tenant": {
+                    "id": "10093",
+                    "uuid": "3c6773cf-7ebf-4467-9efd-ca613fb59a71",
+                    "locator": "\/1\/14\/2910\/1880\/1937\/3508\/10092\/10093\/"
+                },
+                "category": "System"
+            }
+        },
+        {
+            "cliente": "mlacourosbr (suporte@wtsuporti.com.br)",
+            "maquina": "DESKTOP-HCDSLSP",
+            "severidade": "warning",
+            "mensagem": "Falha ao aplicar o plano de backup",
+            "tipo": "Falha ao aplicar o plano de backup",
+            "origem": "DESKTOP-HCDSLSP",
+            "causa": "Nenhuma origem de backup foi encontrada para o plano configurado.",
+            "codigo": "0x00000001",
+            "recurso": "id=58A0526E-10BA-0F08-13D9-45D25AB829D8",
+            "plano": "id=58A0526E-10BA-0F08-13D9-45D25AB829D8",
+            "ip": "172.18.96.1",
+            "tamanho": "Nao informado pela Acronis",
+            "tamanho_bytes": null,
+            "alerta_origem": "acronis",
+            "data": "2026-05-28",
+            "hora": "17:10:13",
+            "status": "open",
+            "raw": {
+                "id": "86BC8422-7D55-489B-A51B-6172AC90326D",
+                "type": "PlanDeploymentFailed",
+                "details": {
+                    "activity": null,
+                    "agentName": "DESKTOP-HCDSLSP",
+                    "error": {
+                        "code": 1,
+                        "fields": {
+                            "$module": "zmqgw_lxa64_20742"
+                        },
+                        "src": {
+                            "file": "c:\/ja\/workspace\/common\/abm-zmqgw\/20742\/product\/zmqgw\/impl\/pc_worker.cpp",
+                            "func": "operator()",
+                            "line": 54,
+                            "tag": "0x6e276f0ba4c7fcdf"
+                        },
+                        "suberror": [],
+                        "text": "No sources found for planID=87BD8523-7C54-499A-A41A-6073AD91336C",
+                        "types": {
+                            "$module": "A"
+                        }
+                    },
+                    "errorMessage": {
+                        "code": "InternalError",
+                        "context": {
+                            "$module": "zmqgw_lxa64_20742",
+                            "cause_str": "No sources found for planID=87BD8523-7C54-499A-A41A-6073AD91336C",
+                            "effect_str": "No sources found for planID=87BD8523-7C54-499A-A41A-6073AD91336C"
+                        },
+                        "debug": {
+                            "msg": "No sources found for planID=87BD8523-7C54-499A-A41A-6073AD91336C"
+                        },
+                        "domain": "Common",
+                        "kbLink": {
+                            "build": 20742,
+                            "lineTag": "0x6E276F0BA4C7FCDF",
+                            "os": "Windows",
+                            "product": "cloud",
+                            "serCode": "PlanDeploymentFailed+0x00000001",
+                            "version": "17.0"
+                        },
+                        "reason": "InternalError",
+                        "serCode": "0x00000001"
+                    },
+                    "planId": "58A0526E-10BA-0F08-13D9-45D25AB829D8",
+                    "planName": "id=58A0526E-10BA-0F08-13D9-45D25AB829D8",
+                    "resourceId": "00000000-0000-0000-0000-000000000000"
+                },
+                "createdAt": "2026-05-28T20:10:13Z",
+                "_source": "DF1DD74D-6CEE-4692-B7C3-25A1F7291AB4",
+                "_sourceTimeStamp": 1779999013,
+                "severity": "warning",
+                "affinity": "",
+                "receivedAt": "2026-05-28T20:07:18.601689789Z",
+                "updatedAt": "2026-05-28T20:10:13.238910815Z",
+                "tenant": {
+                    "id": "271519",
+                    "uuid": "1a8c43d8-0ec0-4dc9-a2aa-58e3c9e6e429",
+                    "locator": "\/1\/14\/2910\/1880\/1937\/3508\/271516\/271519\/"
+                },
+                "category": "System"
+            }
+        },
+        {
+            "cliente": "Exata Contabilidade Contabilidade (exatacontabilidademococa)",
+            "maquina": "HPV-EXATA",
+            "severidade": "warning",
+            "mensagem": "Falha ao aplicar o plano de backup",
+            "tipo": "Falha ao aplicar o plano de backup",
+            "origem": "HPV-EXATA",
+            "causa": "Nenhuma origem de backup foi encontrada para o plano configurado.",
+            "codigo": "0x00000001",
+            "recurso": "id=4A6C4E23-2715-0268-170B-94F085A5D53F",
+            "plano": "id=4A6C4E23-2715-0268-170B-94F085A5D53F",
+            "ip": "169.254.26.99",
+            "tamanho": "Nao informado pela Acronis",
+            "tamanho_bytes": null,
+            "alerta_origem": "acronis",
+            "data": "2026-05-20",
+            "hora": "15:37:15",
+            "status": "open",
+            "raw": {
+                "id": "034542DE-4DE7-4AC7-8562-3D7BF8E00AA1",
+                "type": "PlanDeploymentFailed",
+                "details": {
+                    "activity": null,
+                    "agentName": "HPV-EXATA",
+                    "error": {
+                        "code": 1,
+                        "fields": {
+                            "$module": "zmqgw_lxa64_20742"
+                        },
+                        "src": {
+                            "file": "c:\/ja\/workspace\/common\/abm-zmqgw\/20742\/product\/zmqgw\/impl\/pc_worker.cpp",
+                            "func": "operator()",
+                            "line": 54,
+                            "tag": "0x6e276f0ba4c7fcdf"
+                        },
+                        "suberror": [],
+                        "text": "No sources found for planID=024443DF-4CE6-4BC6-8463-3C7AF9E10BA0",
+                        "types": {
+                            "$module": "A"
+                        }
+                    },
+                    "errorMessage": {
+                        "code": "InternalError",
+                        "context": {
+                            "$module": "zmqgw_lxa64_20742",
+                            "cause_str": "No sources found for planID=024443DF-4CE6-4BC6-8463-3C7AF9E10BA0",
+                            "effect_str": "No sources found for planID=024443DF-4CE6-4BC6-8463-3C7AF9E10BA0"
+                        },
+                        "debug": {
+                            "msg": "No sources found for planID=024443DF-4CE6-4BC6-8463-3C7AF9E10BA0"
+                        },
+                        "domain": "Common",
+                        "kbLink": {
+                            "build": 20742,
+                            "lineTag": "0x6E276F0BA4C7FCDF",
+                            "os": "Windows",
+                            "product": "cloud",
+                            "serCode": "PlanDeploymentFailed+0x00000001",
+                            "version": "17.0"
+                        },
+                        "reason": "InternalError",
+                        "serCode": "0x00000001"
+                    },
+                    "planId": "4A6C4E23-2715-0268-170B-94F085A5D53F",
+                    "planName": "id=4A6C4E23-2715-0268-170B-94F085A5D53F",
+                    "resourceId": "00000000-0000-0000-0000-000000000000"
+                },
+                "createdAt": "2026-05-20T18:37:15Z",
+                "_source": "48280DFC-6BF3-49AE-9368-A88A7C44DE9F",
+                "_sourceTimeStamp": 1779302235,
+                "severity": "warning",
+                "affinity": "",
+                "receivedAt": "2025-11-24T13:38:10.11932019Z",
+                "updatedAt": "2026-05-20T18:37:15.220722629Z",
+                "tenant": {
+                    "id": "185874",
+                    "uuid": "456f728b-17d9-417c-8ea7-cf9cd6b3f44a",
+                    "locator": "\/1\/14\/2910\/1880\/1937\/3508\/185873\/185874\/"
+                },
+                "category": "System"
+            }
+        },
+        {
+            "cliente": "Duo Energia (duoenergiabr)",
+            "maquina": "CNX-VM",
+            "severidade": "warning",
+            "mensagem": "Falha ao aplicar o plano de backup",
+            "tipo": "Falha ao aplicar o plano de backup",
+            "origem": "CNX-VM",
+            "causa": "Falha ao iniciar a tarefa pois o sistema est\u00e1 em estado de espera",
+            "codigo": "0x01350006",
+            "recurso": "Novo plano de prote\u00e7\u00e3o",
+            "plano": "Novo plano de prote\u00e7\u00e3o",
+            "ip": "192.168.0.252",
+            "tamanho": "Nao informado pela Acronis",
+            "tamanho_bytes": null,
+            "alerta_origem": "acronis",
+            "data": "2026-05-19",
+            "hora": "17:46:43",
+            "status": "open",
+            "raw": {
+                "id": "5392109D-2825-4ED9-9883-4BF931FDAC2C",
+                "type": "PlanDeploymentFailed",
+                "details": {
+                    "activity": null,
+                    "agentName": "CNX-VM",
+                    "error": {
+                        "code": 20250630,
+                        "fields": {
+                            "$module": "mms_vsa64_42432"
+                        },
+                        "src": {
+                            "file": "c:\\b\\2002\\enterprise\\common\\tol\\command_routine.cpp",
+                            "func": "Tol::CommandRoutine::Run",
+                            "line": 123,
+                            "tag": "0xe083d6465b8400"
+                        },
+                        "suberror": [],
+                        "text": "Falha ao iniciar a tarefa pois o sistema est\u00e1 em estado de espera",
+                        "types": {
+                            "$module": "A"
+                        }
+                    },
+                    "errorMessage": {
+                        "code": "SystemInStandbyState",
+                        "context": {
+                            "cause_str": "Falha ao iniciar a tarefa pois o sistema est\u00e1 em estado de espera",
+                            "effect_str": "Falha ao iniciar a tarefa pois o sistema est\u00e1 em estado de espera"
+                        },
+                        "domain": "environment",
+                        "kbLink": {
+                            "build": 20742,
+                            "lineTag": "0xE083D6465B8400",
+                            "os": "Windows",
+                            "product": "cloud",
+                            "serCode": "PlanDeploymentFailed+0x01350006",
+                            "version": "17.0"
+                        },
+                        "reason": "SystemInStandbyState",
+                        "serCode": "0x01350006"
+                    },
+                    "planId": "8454D2CF-56CE-0DF9-32FF-072C2BDA64D8",
+                    "planName": "Novo plano de prote\u00e7\u00e3o",
+                    "resourceId": "00000000-0000-0000-0000-000000000000"
+                },
+                "createdAt": "2026-05-19T20:46:43Z",
+                "_source": "D6C7C353-7FEA-4221-AB7D-4DD41B26C9F5",
+                "_sourceTimeStamp": 1779223603,
+                "severity": "warning",
+                "affinity": "",
+                "receivedAt": "2026-05-19T20:46:43.384231649Z",
+                "updatedAt": "2026-05-19T20:46:43.384231649Z",
+                "tenant": {
+                    "id": "222736",
+                    "uuid": "22b20c91-ac07-4833-bfa0-8aa61f3a9368",
+                    "locator": "\/1\/14\/2910\/1880\/1937\/3508\/222733\/222736\/"
+                },
+                "category": "System"
+            }
+        },
+        {
+            "cliente": "Concrepool Mococa (concrepool)",
+            "maquina": "servidor",
+            "severidade": "warning",
+            "mensagem": "Falha ao aplicar o plano de backup",
+            "tipo": "Falha ao aplicar o plano de backup",
+            "origem": "servidor",
+            "causa": "Nenhuma origem de backup foi encontrada para o plano configurado.",
+            "codigo": "0x00000001",
+            "recurso": "id=D5ABD1AF-6D2B-05BF-0B2E-81717B0B2F02",
+            "plano": "id=D5ABD1AF-6D2B-05BF-0B2E-81717B0B2F02",
+            "ip": "192.168.0.10",
+            "tamanho": "Nao informado pela Acronis",
+            "tamanho_bytes": null,
+            "alerta_origem": "acronis",
+            "data": "2026-05-07",
+            "hora": "15:34:01",
+            "status": "open",
+            "raw": {
+                "id": "8C0368CF-2B61-4A62-8631-A3074766B3F5",
+                "type": "PlanDeploymentFailed",
+                "details": {
+                    "activity": null,
+                    "agentName": "servidor",
+                    "error": {
+                        "code": 1,
+                        "fields": {
+                            "$module": "zmqgw_lxa64_20742"
+                        },
+                        "src": {
+                            "file": "c:\/ja\/workspace\/common\/abm-zmqgw\/20742\/product\/zmqgw\/impl\/pc_worker.cpp",
+                            "func": "operator()",
+                            "line": 54,
+                            "tag": "0x6e276f0ba4c7fcdf"
+                        },
+                        "suberror": [],
+                        "text": "No sources found for planID=8D0269CE-2A60-4B63-8730-A2064667B2F4",
+                        "types": {
+                            "$module": "A"
+                        }
+                    },
+                    "errorMessage": {
+                        "code": "InternalError",
+                        "context": {
+                            "$module": "zmqgw_lxa64_20742",
+                            "cause_str": "No sources found for planID=8D0269CE-2A60-4B63-8730-A2064667B2F4",
+                            "effect_str": "No sources found for planID=8D0269CE-2A60-4B63-8730-A2064667B2F4"
+                        },
+                        "debug": {
+                            "msg": "No sources found for planID=8D0269CE-2A60-4B63-8730-A2064667B2F4"
+                        },
+                        "domain": "Common",
+                        "kbLink": {
+                            "build": 20742,
+                            "lineTag": "0x6E276F0BA4C7FCDF",
+                            "os": "Windows",
+                            "product": "cloud",
+                            "serCode": "PlanDeploymentFailed+0x00000001",
+                            "version": "17.0"
+                        },
+                        "reason": "InternalError",
+                        "serCode": "0x00000001"
+                    },
+                    "planId": "D5ABD1AF-6D2B-05BF-0B2E-81717B0B2F02",
+                    "planName": "id=D5ABD1AF-6D2B-05BF-0B2E-81717B0B2F02",
+                    "resourceId": "00000000-0000-0000-0000-000000000000"
+                },
+                "createdAt": "2026-05-07T18:34:01Z",
+                "_source": "58A9B861-474B-4EDC-8C1E-23773D6C9DF6",
+                "_sourceTimeStamp": 1778178841,
+                "severity": "warning",
+                "affinity": "",
+                "receivedAt": "2026-05-07T18:34:01.8667474Z",
+                "updatedAt": "2026-05-07T18:34:01.8667474Z",
+                "tenant": {
+                    "id": "159755",
+                    "uuid": "5c4be9ca-6cdb-4a81-86c8-cc8dbc05e82b",
+                    "locator": "\/1\/14\/2910\/1880\/1937\/3508\/159754\/159755\/"
+                },
+                "category": "System"
+            }
+        },
+        {
+            "cliente": "JS Gas (jsgasmococa)",
+            "maquina": "WinServer-GG",
+            "severidade": "warning",
+            "mensagem": "Falha ao aplicar o plano de backup",
+            "tipo": "Falha ao aplicar o plano de backup",
+            "origem": "WinServer-GG",
+            "causa": "Nenhuma origem de backup foi encontrada para o plano configurado.",
+            "codigo": "0x00000001",
+            "recurso": "id=82ABCCB8-B7AA-02D0-26C5-345D9C26D425",
+            "plano": "id=82ABCCB8-B7AA-02D0-26C5-345D9C26D425",
+            "ip": "192.168.192.10",
+            "tamanho": "Nao informado pela Acronis",
+            "tamanho_bytes": null,
+            "alerta_origem": "acronis",
+            "data": "2026-01-29",
+            "hora": "21:34:08",
+            "status": "open",
+            "raw": {
+                "id": "0F225B6B-A766-456C-BF5A-26144CD7A6F0",
+                "type": "PlanDeploymentFailed",
+                "details": {
+                    "activity": null,
+                    "agentName": "WinServer-GG",
+                    "error": {
+                        "code": 1,
+                        "fields": {
+                            "$module": "zmqgw_lxa64_20711"
+                        },
+                        "src": {
+                            "file": "c:\/ja\/workspace\/common\/abm-zmqgw\/20711\/product\/zmqgw\/impl\/pc_worker.cpp",
+                            "func": "operator()",
+                            "line": 54,
+                            "tag": "0x6e276f0ba4c7fcdf"
+                        },
+                        "suberror": [],
+                        "text": "No sources found for planID=0E235A6A-A667-446D-BE5B-27154DD6A7F1",
+                        "types": {
+                            "$module": "A"
+                        }
+                    },
+                    "errorMessage": {
+                        "code": "InternalError",
+                        "context": {
+                            "$module": "zmqgw_lxa64_20711",
+                            "cause_str": "No sources found for planID=0E235A6A-A667-446D-BE5B-27154DD6A7F1",
+                            "effect_str": "No sources found for planID=0E235A6A-A667-446D-BE5B-27154DD6A7F1"
+                        },
+                        "debug": {
+                            "msg": "No sources found for planID=0E235A6A-A667-446D-BE5B-27154DD6A7F1"
+                        },
+                        "domain": "Common",
+                        "kbLink": {
+                            "build": 20711,
+                            "lineTag": "0x6E276F0BA4C7FCDF",
+                            "os": "Windows",
+                            "product": "cloud",
+                            "serCode": "PlanDeploymentFailed+0x00000001",
+                            "version": "17.0"
+                        },
+                        "reason": "InternalError",
+                        "serCode": "0x00000001"
+                    },
+                    "planId": "82ABCCB8-B7AA-02D0-26C5-345D9C26D425",
+                    "planName": "id=82ABCCB8-B7AA-02D0-26C5-345D9C26D425",
+                    "resourceId": "00000000-0000-0000-0000-000000000000"
+                },
+                "createdAt": "2026-01-30T00:34:08Z",
+                "_source": "8C8896D2-11CD-46BD-989E-1348D1F073D4",
+                "_sourceTimeStamp": 1769733248,
+                "severity": "warning",
+                "affinity": "",
+                "receivedAt": "2026-01-27T13:12:56.480941446Z",
+                "updatedAt": "2026-01-30T00:34:08.962389104Z",
+                "tenant": {
+                    "id": "37209",
+                    "uuid": "7b561a2c-eea3-4baa-835d-3f1c962f38ad",
+                    "locator": "\/1\/14\/2910\/1880\/1937\/3508\/37208\/37209\/"
+                },
+                "category": "System"
+            }
+        },
+        {
+            "cliente": "Dinatex (dinatex)",
+            "maquina": "ServerFiles",
+            "severidade": "warning",
+            "mensagem": "Falha ao aplicar o plano de backup",
+            "tipo": "Falha ao aplicar o plano de backup",
+            "origem": "ServerFiles",
+            "causa": "Nenhuma origem de backup foi encontrada para o plano configurado.",
+            "codigo": "0x00000001",
+            "recurso": "id=AE095D33-E4A0-0466-2CAE-0553981405A2",
+            "plano": "id=AE095D33-E4A0-0466-2CAE-0553981405A2",
+            "ip": "192.168.15.20",
+            "tamanho": "Nao informado pela Acronis",
+            "tamanho_bytes": null,
+            "alerta_origem": "acronis",
+            "data": "2025-12-04",
+            "hora": "10:29:10",
+            "status": "open",
+            "raw": {
+                "id": "D31C1E19-F834-4688-B881-196F24BF92F2",
+                "type": "PlanDeploymentFailed",
+                "details": {
+                    "activity": null,
+                    "agentName": "ServerFiles",
+                    "error": {
+                        "code": 1,
+                        "fields": {
+                            "$module": "zmqgw_lxa64_20711"
+                        },
+                        "src": {
+                            "file": "c:\/ja\/workspace\/common\/abm-zmqgw\/20711\/product\/zmqgw\/impl\/pc_worker.cpp",
+                            "func": "operator()",
+                            "line": 54,
+                            "tag": "0x6e276f0ba4c7fcdf"
+                        },
+                        "suberror": [],
+                        "text": "No sources found for planID=D21D1F18-F935-4789-B980-186E25BE93F3",
+                        "types": {
+                            "$module": "A"
+                        }
+                    },
+                    "errorMessage": {
+                        "code": "InternalError",
+                        "context": {
+                            "$module": "zmqgw_lxa64_20711",
+                            "cause_str": "No sources found for planID=D21D1F18-F935-4789-B980-186E25BE93F3",
+                            "effect_str": "No sources found for planID=D21D1F18-F935-4789-B980-186E25BE93F3"
+                        },
+                        "debug": {
+                            "msg": "No sources found for planID=D21D1F18-F935-4789-B980-186E25BE93F3"
+                        },
+                        "domain": "Common",
+                        "kbLink": {
+                            "build": 20711,
+                            "lineTag": "0x6E276F0BA4C7FCDF",
+                            "os": "Windows",
+                            "product": "cloud",
+                            "serCode": "PlanDeploymentFailed+0x00000001",
+                            "version": "17.0"
+                        },
+                        "reason": "InternalError",
+                        "serCode": "0x00000001"
+                    },
+                    "planId": "AE095D33-E4A0-0466-2CAE-0553981405A2",
+                    "planName": "id=AE095D33-E4A0-0466-2CAE-0553981405A2",
+                    "resourceId": "00000000-0000-0000-0000-000000000000"
+                },
+                "createdAt": "2025-12-04T13:29:10Z",
+                "_source": "7C14422B-1D95-43EF-952E-1D3DBDAA9651",
+                "_sourceTimeStamp": 1764854950,
+                "severity": "warning",
+                "affinity": "",
+                "receivedAt": "2025-12-04T13:25:17.8906489Z",
+                "updatedAt": "2025-12-04T13:29:10.420990164Z",
+                "tenant": {
+                    "id": "187704",
+                    "uuid": "117349af-15f6-4390-abe9-b65fb47fdd30",
+                    "locator": "\/1\/14\/2910\/1880\/1937\/3508\/187703\/187704\/"
+                },
+                "category": "System"
+            }
+        },
+        {
+            "cliente": "Diferragens (diferragens)",
+            "maquina": "PBI-GW-Alpha",
+            "severidade": "error",
+            "mensagem": "Falha na atualizacao do agente",
+            "tipo": "Falha na atualizacao do agente",
+            "origem": "PBI-GW-Alpha",
+            "causa": "Falha na atualizacao do agente",
+            "codigo": "AgentAutoUpdateFailed",
+            "recurso": "PBI-GW-Alpha",
+            "plano": "PBI-GW-Alpha",
+            "ip": "",
+            "tamanho": "Nao informado pela Acronis",
+            "tamanho_bytes": null,
+            "alerta_origem": "acronis",
+            "data": "2025-09-12",
+            "hora": "02:22:43",
+            "status": "open",
+            "raw": {
+                "id": "5A59DB61-9DA3-4C6B-9DDB-1E261556CE7F",
+                "type": "AgentAutoUpdateFailed",
+                "details": {
+                    "agentCurrentVersion": "25.8.1.40800 25.8.40800",
+                    "agentId": "9ddf580d-3b3f-4297-bd79-a294e286d173",
+                    "agentUpdateVersion": "25.8.1.40800 25.8.40800",
+                    "machineName": "PBI-GW-Alpha"
+                },
+                "createdAt": "2025-09-12T05:22:43.308506285Z",
+                "_source": "AgentManager",
+                "_sourceTimeStamp": 1757654563,
+                "severity": "error",
+                "affinity": "",
+                "receivedAt": "2025-09-12T05:22:43.308506285Z",
+                "updatedAt": "2025-09-12T05:22:43.308506285Z",
+                "tenant": {
+                    "id": "167168",
+                    "uuid": "c4de6c72-f55d-471e-a7a1-61c73486a163",
+                    "locator": "\/1\/14\/2910\/1880\/1937\/3508\/167167\/167168\/"
+                },
+                "category": "System"
+            }
+        }
+    ]
+}

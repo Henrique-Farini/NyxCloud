@@ -10,11 +10,32 @@ CREATE TABLE IF NOT EXISTS usuario (
     nome VARCHAR(150) NOT NULL,
     email VARCHAR(255) NOT NULL,
     senha_hash VARCHAR(255) NOT NULL,
+    perfil VARCHAR(30) NOT NULL DEFAULT 'admin',
     ativo BOOLEAN NOT NULL DEFAULT TRUE,
     ultimo_login_em TIMESTAMPTZ,
     criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE usuario
+    ADD COLUMN IF NOT EXISTS perfil VARCHAR(30) NOT NULL DEFAULT 'admin';
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'ck_usuario_perfil'
+    ) THEN
+        ALTER TABLE usuario
+            ADD CONSTRAINT ck_usuario_perfil
+            CHECK (perfil IN ('admin', 'operador', 'leitura'));
+    END IF;
+END $$;
+
+UPDATE usuario
+SET perfil = 'admin'
+WHERE perfil IS NULL OR perfil = '';
 
 CREATE UNIQUE INDEX IF NOT EXISTS ux_usuario_email_lower
     ON usuario (LOWER(email));
@@ -27,4 +48,3 @@ VALUES (
     '$2y$12$ebEFYpe8R/DEQgFoOKn1M.RU2lPmtabLFV8RqHqjQ07O9xYuU5y1S'
 )
 ON CONFLICT DO NOTHING;
-

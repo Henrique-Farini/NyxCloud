@@ -1,0 +1,2130 @@
+{
+    "expires_at": 1787249376,
+    "value": {
+        "date": "2026-08-20",
+        "mode": "mixed",
+        "rules_count": 72,
+        "items": [
+            {
+                "empresa": "Casa Marques (casamarquesmoc)",
+                "plano": "BD-SIGCOM-CM",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "20:00 - 20:00 - dom, seg, ter, qua, qui, sex, sab",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "20:00"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "20:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "De Pauli Centro Automotivo (depauli)",
+                "plano": "BD - Acommerce",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "19:30 - 19:30 - seg-sab",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "19:30"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "19:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Hering",
+                "plano": "SERVIDOR BKP - C:",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "09:30 - 15:00 - a cada 4h - seg-sab",
+                "meta": 2,
+                "realizado": 0,
+                "faltando": 2,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "09:30",
+                    "13:30"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "09:30",
+                    "13:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Hering",
+                "plano": "Vendas01 BKP - C:",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "09:30 - 15:00 - a cada 4h - seg-sab",
+                "meta": 2,
+                "realizado": 0,
+                "faltando": 2,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "09:30",
+                    "13:30"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "09:30",
+                    "13:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Laborat\u00f3rio S\u00e3o Sebasti\u00e3o",
+                "plano": "BD - Pleres",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "22:00 - 22:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "22:00"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "22:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "MP TINTAS",
+                "plano": "BD Autcom",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "00:30 - 00:30",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "00:30"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "00:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Madeireira Mocoquense",
+                "plano": "BD-SIGCOM-G",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 20:00 - a cada 5h",
+                "meta": 2,
+                "realizado": 0,
+                "faltando": 2,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "12:30",
+                    "17:30"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "12:30",
+                    "17:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Madeireira Mocoquense",
+                "plano": "BD-SIGCOM-F",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:10 - 22:00 - a cada 5h",
+                "meta": 2,
+                "realizado": 0,
+                "faltando": 2,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "12:10",
+                    "17:10"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "12:10",
+                    "17:10"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Marest Distribuidora - MG",
+                "plano": "BD-SIGCOM",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "04:30 - 04:30",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "04:30"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "04:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Marest Distribuidora - MG",
+                "plano": "BD-ECOMMERCE",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "02:00 - 02:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "02:00"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "02:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Marest Distribuidora - SP",
+                "plano": "BD - HSSATURNO",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "11:00 - 11:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "11:00"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "11:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Marest Distribuidora - SP",
+                "plano": "BD - POSTGRESQL",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "20:00 - 20:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "20:00"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "20:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Marest Distribuidora - SP",
+                "plano": "BD - ORACLE",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "00:00 - 00:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "00:00"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "00:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Marest Distribuidora - SP",
+                "plano": "BD - GLPI",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "01:00 - 01:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "01:00"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "01:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Microcenter",
+                "plano": "BD-SGMASTER",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "17:00 - 17:00 - seg, ter, qua, qui, sex",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "17:00"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "17:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Microcenter",
+                "plano": "Publico",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "08:00 - 18:00 - a cada 3h - seg, ter, qua, qui, sex",
+                "meta": 4,
+                "realizado": 0,
+                "faltando": 4,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "08:00",
+                    "11:00",
+                    "14:00",
+                    "17:00"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "08:00",
+                    "11:00",
+                    "14:00",
+                    "17:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Transfavero",
+                "plano": "BD-SAT",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "20:00 - 20:00 - seg, ter, qua, qui, sex",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "20:00"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "20:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "WT Solucoes em Tecnologia",
+                "plano": "BD - SIGCOM | Hidrogeral",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "14:10 - 21:00 - a cada 1h - seg, ter, qua, qui, sex",
+                "meta": 7,
+                "realizado": 0,
+                "faltando": 7,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "14:10",
+                    "15:10",
+                    "16:10",
+                    "17:10",
+                    "18:10",
+                    "19:10",
+                    "20:10"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "14:10",
+                    "15:10",
+                    "16:10",
+                    "17:10",
+                    "18:10",
+                    "19:10",
+                    "20:10"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "WT Solucoes em Tecnologia",
+                "plano": "BD-SIGCOM l CAPIVARY",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "14:10 - 20:20 - a cada 7h - seg-sab",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "14:10"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "14:10"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "WT Solucoes em Tecnologia",
+                "plano": "BD - SIGCOM | DMDISTMOCOCA",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "13:30 - 20:30 - a cada 7h - seg-sab",
+                "meta": 2,
+                "realizado": 0,
+                "faltando": 2,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "13:30",
+                    "20:30"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "13:30",
+                    "20:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "WT Solucoes em Tecnologia",
+                "plano": "BD - SIGCOM | WT",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:10 - 20:00 - a cada 6h - seg-sab",
+                "meta": 2,
+                "realizado": 0,
+                "faltando": 2,
+                "status": "failed",
+                "ultimo_backup": "",
+                "horarios_esperados": [
+                    "12:10",
+                    "18:10"
+                ],
+                "horarios_realizados": [],
+                "horarios_nao_feitos": [
+                    "12:10",
+                    "18:10"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Aziz (aziz)",
+                "plano": "BD - SIGCOM | HPONTO",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 19:00 - a cada 6h - seg, ter, qua, qui, sex",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:41:56.034715566Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "18:30"
+                ],
+                "horarios_realizados": [
+                    "12:41"
+                ],
+                "horarios_nao_feitos": [
+                    "18:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Aziz (aziz)",
+                "plano": "BD - SIGCOM | AZIZ",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 22:30 - a cada 10h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:34:03.084244353Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "22:30"
+                ],
+                "horarios_realizados": [
+                    "12:34"
+                ],
+                "horarios_nao_feitos": [
+                    "22:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Caelmo Mococa (caelmomococa)",
+                "plano": "Samba-Full-Dados",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "08:00 - 20:00 - a cada 2h - seg-sab",
+                "meta": 7,
+                "realizado": 4,
+                "faltando": 3,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T17:26:10.073528745Z",
+                "horarios_esperados": [
+                    "08:00",
+                    "10:00",
+                    "12:00",
+                    "14:00",
+                    "16:00",
+                    "18:00",
+                    "20:00"
+                ],
+                "horarios_realizados": [
+                    "08:26",
+                    "10:25",
+                    "12:25",
+                    "14:26"
+                ],
+                "horarios_nao_feitos": [
+                    "16:00",
+                    "18:00",
+                    "20:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Caelmo Mococa (caelmomococa)",
+                "plano": "BD-SIGCOM - Caelmo",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "13:00 - 20:00 - a cada 6h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T16:18:07.072891121Z",
+                "horarios_esperados": [
+                    "13:00",
+                    "19:00"
+                ],
+                "horarios_realizados": [
+                    "13:18"
+                ],
+                "horarios_nao_feitos": [
+                    "19:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Caelmo Mococa (caelmomococa)",
+                "plano": "BD-SIGCOM - Caelmo Insteletrica",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 20:00 - a cada 6h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:33:57.044764644Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "18:30"
+                ],
+                "horarios_realizados": [
+                    "12:33"
+                ],
+                "horarios_nao_feitos": [
+                    "18:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Casa Marques (casamarquesmoc)",
+                "plano": "BD-SIGCOM-FEDK",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:00 - 18:00 - a cada 5h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:14:13.084911848Z",
+                "horarios_esperados": [
+                    "12:00",
+                    "17:00"
+                ],
+                "horarios_realizados": [
+                    "12:14"
+                ],
+                "horarios_nao_feitos": [
+                    "17:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Casa Marques (casamarquesmoc)",
+                "plano": "BD-TINTAS",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:00 - 19:00 - a cada 6h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:57:07.060713969Z",
+                "horarios_esperados": [
+                    "12:00",
+                    "18:00"
+                ],
+                "horarios_realizados": [
+                    "12:57"
+                ],
+                "horarios_nao_feitos": [
+                    "12:00",
+                    "18:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Concrepool Mococa (concrepool)",
+                "plano": "BD-SIGCOM-GXP",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:00 - 19:00 - a cada 6h - seg, ter, qua, qui, sex",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:28:08.076886178Z",
+                "horarios_esperados": [
+                    "12:00",
+                    "18:00"
+                ],
+                "horarios_realizados": [
+                    "12:28"
+                ],
+                "horarios_nao_feitos": [
+                    "18:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Concrepool Mococa (concrepool)",
+                "plano": "BD-SIGCOM-MOC",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:00 - 20:00 - a cada 7h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:08:18.065733341Z",
+                "horarios_esperados": [
+                    "12:00",
+                    "19:00"
+                ],
+                "horarios_realizados": [
+                    "12:08"
+                ],
+                "horarios_nao_feitos": [
+                    "19:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Concrepool Mococa (concrepool)",
+                "plano": "BD-SIGCOM - RIBEIR\u00c3O",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 20:00 - a cada 7h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:45:35.030018676Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "19:30"
+                ],
+                "horarios_realizados": [
+                    "12:45"
+                ],
+                "horarios_nao_feitos": [
+                    "19:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "DaFlora (dafloramococa)",
+                "plano": "DADOS",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "07:00 - 19:00 - a cada 2h",
+                "meta": 7,
+                "realizado": 4,
+                "faltando": 3,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T16:10:06.067982907Z",
+                "horarios_esperados": [
+                    "07:00",
+                    "09:00",
+                    "11:00",
+                    "13:00",
+                    "15:00",
+                    "17:00",
+                    "19:00"
+                ],
+                "horarios_realizados": [
+                    "07:08",
+                    "09:08",
+                    "11:08",
+                    "13:10"
+                ],
+                "horarios_nao_feitos": [
+                    "15:00",
+                    "17:00",
+                    "19:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "DaFlora (dafloramococa)",
+                "plano": "BD-SIGCOM-G",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "13:00 - 20:00 - a cada 5h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T16:29:21.098255707Z",
+                "horarios_esperados": [
+                    "13:00",
+                    "18:00"
+                ],
+                "horarios_realizados": [
+                    "13:29"
+                ],
+                "horarios_nao_feitos": [
+                    "18:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "DaFlora (dafloramococa)",
+                "plano": "BD-SIGCOM-F",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 20:00 - a cada 5h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:31:53.058081251Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "17:30"
+                ],
+                "horarios_realizados": [
+                    "12:31"
+                ],
+                "horarios_nao_feitos": [
+                    "17:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "De Pauli Centro Automotivo (depauli)",
+                "plano": "BD - Sigcom",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 23:00 - a cada 9h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:57:14.08054935Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "21:30"
+                ],
+                "horarios_realizados": [
+                    "12:57"
+                ],
+                "horarios_nao_feitos": [
+                    "21:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Diferragens",
+                "plano": "BD SIGCOM - TESTE",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "13:00 - 20:00 - a cada 6h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T16:23:40.083135171Z",
+                "horarios_esperados": [
+                    "13:00",
+                    "19:00"
+                ],
+                "horarios_realizados": [
+                    "13:23"
+                ],
+                "horarios_nao_feitos": [
+                    "19:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Diferragens",
+                "plano": "BD SIGCOM - PRODUCAO",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 20:00 - a cada 6h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:50:13.04106502Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "18:30"
+                ],
+                "horarios_realizados": [
+                    "12:50"
+                ],
+                "horarios_nao_feitos": [
+                    "18:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Dinatex",
+                "plano": "BD-JAD",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:10 - 19:15 - a cada 6h",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:22:28.092654855Z",
+                "horarios_esperados": [
+                    "12:10",
+                    "18:10"
+                ],
+                "horarios_realizados": [
+                    "12:22"
+                ],
+                "horarios_nao_feitos": [
+                    "18:10"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Dinatex",
+                "plano": "Arquivos-DADOS",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "08:00 - 18:00 - a cada 2h",
+                "meta": 6,
+                "realizado": 4,
+                "faltando": 2,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T17:43:34.071765365Z",
+                "horarios_esperados": [
+                    "08:00",
+                    "10:00",
+                    "12:00",
+                    "14:00",
+                    "16:00",
+                    "18:00"
+                ],
+                "horarios_realizados": [
+                    "08:44",
+                    "10:43",
+                    "12:45",
+                    "14:43"
+                ],
+                "horarios_nao_feitos": [
+                    "08:00",
+                    "10:00",
+                    "12:00",
+                    "14:00",
+                    "16:00",
+                    "18:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Duo Energia",
+                "plano": "BD SIGCOM",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 22:00 - a cada 8h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:52:33.031996368Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "20:30"
+                ],
+                "horarios_realizados": [
+                    "12:52"
+                ],
+                "horarios_nao_feitos": [
+                    "20:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Exata Contabilidade",
+                "plano": "DADOS",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "08:00 - 18:00 - a cada 3h - seg-sab",
+                "meta": 4,
+                "realizado": 3,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T17:04:59.019010753Z",
+                "horarios_esperados": [
+                    "08:00",
+                    "11:00",
+                    "14:00",
+                    "17:00"
+                ],
+                "horarios_realizados": [
+                    "08:04",
+                    "11:05",
+                    "14:04"
+                ],
+                "horarios_nao_feitos": [
+                    "17:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Frigo Service (frigoservice)",
+                "plano": "FileServer",
+                "maquina": "W-45602-AP-01",
+                "janela": "08:00 - 18:00 - a cada 3h - seg-sab",
+                "meta": 4,
+                "realizado": 3,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T17:08:32.032414674Z",
+                "horarios_esperados": [
+                    "08:00",
+                    "11:00",
+                    "14:00",
+                    "17:00"
+                ],
+                "horarios_realizados": [
+                    "08:08",
+                    "11:08",
+                    "14:08"
+                ],
+                "horarios_nao_feitos": [
+                    "17:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Frigo-Service",
+                "plano": "BD Sigcom - FS",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 22:00 - a cada 8h",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:43:06.000397024Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "20:30"
+                ],
+                "horarios_realizados": [
+                    "12:43"
+                ],
+                "horarios_nao_feitos": [
+                    "20:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "GPlus Sistemas",
+                "plano": "Redis",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "00:45 - 23:45 - a cada 6h",
+                "meta": 4,
+                "realizado": 2,
+                "faltando": 2,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T10:10:14.001231968Z",
+                "horarios_esperados": [
+                    "00:45",
+                    "06:45",
+                    "12:45",
+                    "18:45"
+                ],
+                "horarios_realizados": [
+                    "01:08",
+                    "07:10"
+                ],
+                "horarios_nao_feitos": [
+                    "12:45",
+                    "18:45"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "GPlus Sistemas",
+                "plano": "MongoDB",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "01:00 - 20:00 - a cada 6h",
+                "meta": 4,
+                "realizado": 2,
+                "faltando": 2,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T10:23:24.016046548Z",
+                "horarios_esperados": [
+                    "01:00",
+                    "07:00",
+                    "13:00",
+                    "19:00"
+                ],
+                "horarios_realizados": [
+                    "01:56",
+                    "07:23"
+                ],
+                "horarios_nao_feitos": [
+                    "01:00",
+                    "13:00",
+                    "19:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Guidorizzi Mococa",
+                "plano": "BD-SIGCOM-LOJA",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "13:30 - 19:00 - a cada 5h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T16:44:54.004601592Z",
+                "horarios_esperados": [
+                    "13:30",
+                    "18:30"
+                ],
+                "horarios_realizados": [
+                    "13:44"
+                ],
+                "horarios_nao_feitos": [
+                    "18:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Guidorizzi Mococa",
+                "plano": "BD-SIGCOM-INDUSTRIA",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "13:00 - 19:00 - a cada 5h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T16:26:13.061355934Z",
+                "horarios_esperados": [
+                    "13:00",
+                    "18:00"
+                ],
+                "horarios_realizados": [
+                    "13:26"
+                ],
+                "horarios_nao_feitos": [
+                    "18:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Guidorizzi Mococa",
+                "plano": "BD-SIGCOM-GUIDORIZZISS",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 18:00 - a cada 5h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:33:12.001869615Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "17:30"
+                ],
+                "horarios_realizados": [
+                    "12:33"
+                ],
+                "horarios_nao_feitos": [
+                    "17:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Guidorizzi Mococa",
+                "plano": "BD-TID",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "11:00 - 20:00 - a cada 7h",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T14:17:23.088533051Z",
+                "horarios_esperados": [
+                    "11:00",
+                    "18:00"
+                ],
+                "horarios_realizados": [
+                    "11:17"
+                ],
+                "horarios_nao_feitos": [
+                    "18:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "JS Gas",
+                "plano": "DADOS-ARQUIVOS",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "08:00 - 20:00 - a cada 3h",
+                "meta": 5,
+                "realizado": 3,
+                "faltando": 2,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T17:16:03.046879906Z",
+                "horarios_esperados": [
+                    "08:00",
+                    "11:00",
+                    "14:00",
+                    "17:00",
+                    "20:00"
+                ],
+                "horarios_realizados": [
+                    "08:16",
+                    "11:16",
+                    "14:16"
+                ],
+                "horarios_nao_feitos": [
+                    "17:00",
+                    "20:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "JS Gas",
+                "plano": "BD-Portaljsgas-PTG",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 21:30 - a cada 7h",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:56:17.080663169Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "19:30"
+                ],
+                "horarios_realizados": [
+                    "12:56"
+                ],
+                "horarios_nao_feitos": [
+                    "19:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "JS Gas",
+                "plano": "BD-Gas-PTG",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 21:30 - a cada 7h",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:55:45.095792401Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "19:30"
+                ],
+                "horarios_realizados": [
+                    "12:55"
+                ],
+                "horarios_nao_feitos": [
+                    "19:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "JS Gas",
+                "plano": "BD-Dw_Alpha-PTG",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 21:30 - a cada 7h",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:53:08.068337787Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "19:30"
+                ],
+                "horarios_realizados": [
+                    "12:53"
+                ],
+                "horarios_nao_feitos": [
+                    "19:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "JS Gas",
+                "plano": "BD-Portal_Parceiro_Gasbel-PTG",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 21:30 - a cada 7h",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:50:46.029415564Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "19:30"
+                ],
+                "horarios_realizados": [
+                    "12:50"
+                ],
+                "horarios_nao_feitos": [
+                    "19:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "JS Gas",
+                "plano": "BD-Sigcom-Oracle",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 21:30 - a cada 7h",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:47:28.094831844Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "19:30"
+                ],
+                "horarios_realizados": [
+                    "12:47"
+                ],
+                "horarios_nao_feitos": [
+                    "19:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "JS Gas",
+                "plano": "BD-Acommerce-PTG",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 21:30 - a cada 7h",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:40:45.092267316Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "19:30"
+                ],
+                "horarios_realizados": [
+                    "12:40"
+                ],
+                "horarios_nao_feitos": [
+                    "19:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "JS Gas",
+                "plano": "BD-Gas-Oracle",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 21:30 - a cada 7h",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:40:14.068783565Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "19:30"
+                ],
+                "horarios_realizados": [
+                    "12:40"
+                ],
+                "horarios_nao_feitos": [
+                    "19:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Loja Mirtes",
+                "plano": "BD-SIGCOM",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 21:00 - a cada 7h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:43:38.077842899Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "19:30"
+                ],
+                "horarios_realizados": [
+                    "12:43"
+                ],
+                "horarios_nao_feitos": [
+                    "19:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Loja Mirtes",
+                "plano": "DADOS",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "08:00 - 20:00 - a cada 2h",
+                "meta": 7,
+                "realizado": 4,
+                "faltando": 3,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T17:17:12.066299599Z",
+                "horarios_esperados": [
+                    "08:00",
+                    "10:00",
+                    "12:00",
+                    "14:00",
+                    "16:00",
+                    "18:00",
+                    "20:00"
+                ],
+                "horarios_realizados": [
+                    "08:17",
+                    "10:17",
+                    "12:17",
+                    "14:17"
+                ],
+                "horarios_nao_feitos": [
+                    "16:00",
+                    "18:00",
+                    "20:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "MLA Couros",
+                "plano": "BD-SIGCOM-NATURALIS",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 21:00 - a cada 6h - seg, ter, qua, qui, sex",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:45:15.02428353Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "18:30"
+                ],
+                "horarios_realizados": [
+                    "12:45"
+                ],
+                "horarios_nao_feitos": [
+                    "18:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "MLA Couros",
+                "plano": "BD-SIGCOM - Fibras",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "13:00 - 21:00 - a cada 6h - seg, ter, qua, qui, sex",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T16:11:14.08520446Z",
+                "horarios_esperados": [
+                    "13:00",
+                    "19:00"
+                ],
+                "horarios_realizados": [
+                    "13:11"
+                ],
+                "horarios_nao_feitos": [
+                    "19:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "MLA Couros",
+                "plano": "BD-SIGCOM-MLA",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 19:30 - a cada 6h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:31:34.047349316Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "18:30"
+                ],
+                "horarios_realizados": [
+                    "12:31"
+                ],
+                "horarios_nao_feitos": [
+                    "18:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "MP TINTAS",
+                "plano": "DADOS",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "08:00 - 18:00 - a cada 2h - seg-sab",
+                "meta": 6,
+                "realizado": 4,
+                "faltando": 2,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T17:04:03.009712817Z",
+                "horarios_esperados": [
+                    "08:00",
+                    "10:00",
+                    "12:00",
+                    "14:00",
+                    "16:00",
+                    "18:00"
+                ],
+                "horarios_realizados": [
+                    "08:04",
+                    "10:04",
+                    "12:04",
+                    "14:04"
+                ],
+                "horarios_nao_feitos": [
+                    "16:00",
+                    "18:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Madeireira Modesto",
+                "plano": "DADOS",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "07:00 - 18:00 - a cada 2h - seg, ter, qua, qui, sex",
+                "meta": 6,
+                "realizado": 4,
+                "faltando": 2,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T16:25:00.017587468Z",
+                "horarios_esperados": [
+                    "07:00",
+                    "09:00",
+                    "11:00",
+                    "13:00",
+                    "15:00",
+                    "17:00"
+                ],
+                "horarios_realizados": [
+                    "07:25",
+                    "09:25",
+                    "11:25",
+                    "13:25"
+                ],
+                "horarios_nao_feitos": [
+                    "15:00",
+                    "17:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Madeireira Modesto",
+                "plano": "BD-SIGCOM",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:15 - 20:00 - a cada 6h",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:35:33.066487239Z",
+                "horarios_esperados": [
+                    "12:15",
+                    "18:15"
+                ],
+                "horarios_realizados": [
+                    "12:35"
+                ],
+                "horarios_nao_feitos": [
+                    "18:15"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Marest  Distribuidora - MG (marestmg)",
+                "plano": "Dados-Servidor-AD",
+                "maquina": "srvMarestMG-AD.marestmg.local",
+                "janela": "12:00 - 18:00",
+                "meta": 6,
+                "realizado": 3,
+                "faltando": 3,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T17:31:10.048348915Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Marest Distribuidora - MG",
+                "plano": "APLICACOES",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "07:00 - 23:00 - a cada 6h",
+                "meta": 3,
+                "realizado": 2,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T16:47:49.062517274Z",
+                "horarios_esperados": [
+                    "07:00",
+                    "13:00",
+                    "19:00"
+                ],
+                "horarios_realizados": [
+                    "07:47",
+                    "13:47"
+                ],
+                "horarios_nao_feitos": [
+                    "07:00",
+                    "13:00",
+                    "19:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Marest Distribuidora - SP",
+                "plano": "SRV - ARQUIVOS",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "00:15 - 23:45 - a cada 2h",
+                "meta": 12,
+                "realizado": 8,
+                "faltando": 4,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T17:30:30.064553881Z",
+                "horarios_esperados": [
+                    "00:15",
+                    "02:15",
+                    "04:15",
+                    "06:15",
+                    "08:15",
+                    "10:15",
+                    "12:15",
+                    "14:15",
+                    "16:15",
+                    "18:15",
+                    "20:15",
+                    "22:15"
+                ],
+                "horarios_realizados": [
+                    "00:56",
+                    "02:30",
+                    "04:30",
+                    "06:30",
+                    "08:30",
+                    "10:30",
+                    "12:30",
+                    "14:30"
+                ],
+                "horarios_nao_feitos": [
+                    "00:15",
+                    "16:15",
+                    "18:15",
+                    "20:15",
+                    "22:15"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Microcenter Inform\u00e1tica (microcentermococa)",
+                "plano": "Publico",
+                "maquina": "Servidor-01",
+                "janela": "12:00 - 18:00",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T17:24:18.00992923Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Romtech",
+                "plano": "BD-Sigcom",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 19:00 - a cada 6h",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:57:52.070327752Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "18:30"
+                ],
+                "horarios_realizados": [
+                    "12:57"
+                ],
+                "horarios_nao_feitos": [
+                    "18:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Rotart",
+                "plano": "BD - SIGCOM",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "12:30 - 20:00 - a cada 6h - seg, ter, qua, qui, sex",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T15:58:28.012042692Z",
+                "horarios_esperados": [
+                    "12:30",
+                    "18:30"
+                ],
+                "horarios_realizados": [
+                    "12:58"
+                ],
+                "horarios_nao_feitos": [
+                    "18:30"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Rotart",
+                "plano": "Backup DADOS",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "07:00 - 21:00 - a cada 3h",
+                "meta": 5,
+                "realizado": 3,
+                "faltando": 2,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T16:31:30.046692651Z",
+                "horarios_esperados": [
+                    "07:00",
+                    "10:00",
+                    "13:00",
+                    "16:00",
+                    "19:00"
+                ],
+                "horarios_realizados": [
+                    "07:31",
+                    "10:31",
+                    "13:31"
+                ],
+                "horarios_nao_feitos": [
+                    "16:00",
+                    "19:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Tutti Frutti Hortel\u00e3",
+                "plano": "BD - Verde Lim\u00e3o",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "13:10 - 20:00 - a cada 6h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T16:18:01.091407746Z",
+                "horarios_esperados": [
+                    "13:10",
+                    "19:10"
+                ],
+                "horarios_realizados": [
+                    "13:18"
+                ],
+                "horarios_nao_feitos": [
+                    "19:10"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "Tutti Frutti Hortel\u00e3",
+                "plano": "BD - Tuti Fruti",
+                "maquina": "Todas as maquinas do plano",
+                "janela": "13:00 - 20:00 - a cada 6h - seg-sab",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T16:16:40.057659858Z",
+                "horarios_esperados": [
+                    "13:00",
+                    "19:00"
+                ],
+                "horarios_realizados": [
+                    "13:16"
+                ],
+                "horarios_nao_feitos": [
+                    "19:00"
+                ],
+                "base": "rule"
+            },
+            {
+                "empresa": "wtsuportimococa",
+                "plano": "BD - SIGCOM | Hidrogeral",
+                "maquina": "W-27409-AP-02",
+                "janela": "12:00 - 18:00",
+                "meta": 3,
+                "realizado": 1,
+                "faltando": 2,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T17:17:30.058145731Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "wtsuportimococa",
+                "plano": "DADOS",
+                "maquina": "Server-WT",
+                "janela": "12:00 - 18:00",
+                "meta": 2,
+                "realizado": 1,
+                "faltando": 1,
+                "status": "warning",
+                "ultimo_backup": "2026-08-20T17:02:14.080962913Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Casa Marques (casamarquesmoc)",
+                "plano": "BD-LUKCOLOR",
+                "maquina": "PC-Tintas",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T16:49:21.04862767Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Guidorizzi Mococa (guidorizzimococa)",
+                "plano": "BD-SIGCOM-BATTLO",
+                "maquina": "WinServer-GG",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T15:22:10.064089563Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Hering Mococa (hering)",
+                "plano": "BKP - C:",
+                "maquina": "Servidor",
+                "janela": "06:00 - 12:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T12:41:55.082138798Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Hering Mococa (hering)",
+                "plano": "BKP - C:",
+                "maquina": "Vendas01",
+                "janela": "06:00 - 12:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T13:19:22.055739433Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Hering Mococa (hering)",
+                "plano": "BKP - C:",
+                "maquina": "Servidor",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T16:41:46.023724654Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Hering Mococa (hering)",
+                "plano": "BKP - C:",
+                "maquina": "Vendas01",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T17:17:45.03306425Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Madeireira Modesto",
+                "plano": "BD - MHZ",
+                "maquina": "terminal",
+                "janela": "06:00 - 12:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T12:44:21.334513038Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Madeireira Modesto",
+                "plano": "BD - mhz5",
+                "maquina": "terminal",
+                "janela": "06:00 - 12:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T12:44:21.361473231Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Marest  Distribuidora - MG (marestmg)",
+                "plano": "Dados-Servidor-AD",
+                "maquina": "srvMarestMG-AD.marestmg.local",
+                "janela": "06:00 - 12:00",
+                "meta": 6,
+                "realizado": 6,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T14:31:18.025143306Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Marest  Distribuidora - MG (marestmg)",
+                "plano": "Dados-Servidor-AD",
+                "maquina": "srvMarestMG-AD.marestmg.local",
+                "janela": "00:00 - 06:00",
+                "meta": 5,
+                "realizado": 5,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T08:31:22.046215496Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Microcenter Inform\u00e1tica (microcentermococa)",
+                "plano": "Publico",
+                "maquina": "Servidor-01",
+                "janela": "06:00 - 12:00",
+                "meta": 2,
+                "realizado": 2,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T14:24:39.014624844Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Transfavero",
+                "plano": "SharePoint - Transfavero",
+                "maquina": "Communication site",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T05:29:19.680778112Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Transfavero",
+                "plano": "SharePoint - Transfavero",
+                "maquina": "https:\/\/transfavero.sharepoint.com\/search",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T05:44:22.824435986Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Transfavero",
+                "plano": "SharePoint - Transfavero",
+                "maquina": "FAVERO",
+                "janela": "00:00 - 06:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T06:05:52.387427Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Transfavero",
+                "plano": "SharePoint - Transfavero",
+                "maquina": "Communication site",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T17:29:23.802814171Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Transfavero",
+                "plano": "SharePoint - Transfavero",
+                "maquina": "https:\/\/transfavero.sharepoint.com\/search",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T17:44:30.491505377Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "wtsuportimococa",
+                "plano": "DADOS",
+                "maquina": "Server-WT",
+                "janela": "06:00 - 12:00",
+                "meta": 2,
+                "realizado": 2,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T14:02:30.056531859Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "wtsuportimococa",
+                "plano": "BD - SIGCOM | WT",
+                "maquina": "W-27409-AP-02",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T15:32:25.019433929Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "wtsuportimococa",
+                "plano": "BD - SIGCOM | DMDISTMOCOCA",
+                "maquina": "W-27409-AP-02",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T16:48:24.044626496Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "wtsuportimococa",
+                "plano": "BD-SIGCOM l CAPIVARY",
+                "maquina": "W-27409-AP-02",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 1,
+                "faltando": 0,
+                "status": "success",
+                "ultimo_backup": "2026-08-20T17:31:51.055938209Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Casa Marques (casamarquesmoc)",
+                "plano": "BD-LUKCOLOR",
+                "maquina": "PC-Tintas",
+                "janela": "18:00 - 24:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-08-19T22:49:22.039263462Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Cesar (transfaveromococa)",
+                "plano": "BD-SAT",
+                "maquina": "W-27409-AP-03",
+                "janela": "18:00 - 24:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-08-19T23:21:24.057084772Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Guidorizzi Mococa (guidorizzimococa)",
+                "plano": "BD-SIGCOM-BATTLO",
+                "maquina": "WinServer-GG",
+                "janela": "18:00 - 24:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-08-19T21:22:04.063176674Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Lab Sao Sebastiao (labsaosebastiao)",
+                "plano": "BD - Pleres",
+                "maquina": "Win10-Cloud",
+                "janela": "18:00 - 24:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-08-20T01:22:23.058660709Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Madeireira Modesto (madeireiramodesto)",
+                "plano": "BD - MHZ",
+                "maquina": "terminal",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-08-18T15:12:39.036805945Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Madeireira Modesto (madeireiramodesto)",
+                "plano": "BD - mhz5",
+                "maquina": "terminal",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-08-18T16:20:47.00092769Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Marest  Distribuidora - MG (marestmg)",
+                "plano": "Dados-Servidor-AD",
+                "maquina": "srvMarestMG-AD.marestmg.local",
+                "janela": "18:00 - 24:00",
+                "meta": 6,
+                "realizado": 0,
+                "faltando": 6,
+                "status": "observed",
+                "ultimo_backup": "2026-08-20T02:31:18.040554501Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Microcenter Inform\u00e1tica (microcentermococa)",
+                "plano": "BD-SGMASTER",
+                "maquina": "Servidor-01",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-08-19T20:10:10.045677086Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "Transfavero",
+                "plano": "SharePoint - Transfavero",
+                "maquina": "FAVERO",
+                "janela": "12:00 - 18:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-08-19T18:05:49.145198023Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "WT Solucoes em Tecnologia",
+                "plano": "DADOS",
+                "maquina": "Server-WT",
+                "janela": "06:00 - 12:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-08-19T13:14:28.680199127Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "wtsuportimococa",
+                "plano": "BD - SIGCOM | Hidrogeral",
+                "maquina": "W-27409-AP-02",
+                "janela": "18:00 - 24:00",
+                "meta": 3,
+                "realizado": 0,
+                "faltando": 3,
+                "status": "observed",
+                "ultimo_backup": "2026-08-19T23:17:29.031711019Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "wtsuportimococa",
+                "plano": "BD - SIGCOM | WT",
+                "maquina": "W-27409-AP-02",
+                "janela": "18:00 - 24:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-08-19T21:32:23.016403051Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "wtsuportimococa",
+                "plano": "BD - SIGCOM | DMDISTMOCOCA",
+                "maquina": "W-27409-AP-02",
+                "janela": "18:00 - 24:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-08-19T23:48:23.041790484Z",
+                "base": "historical_reference"
+            },
+            {
+                "empresa": "wtsuportimococa",
+                "plano": "DADOS",
+                "maquina": "Server-WT",
+                "janela": "18:00 - 24:00",
+                "meta": 1,
+                "realizado": 0,
+                "faltando": 1,
+                "status": "observed",
+                "ultimo_backup": "2026-08-19T23:02:22.074973759Z",
+                "base": "historical_reference"
+            }
+        ]
+    }
+}

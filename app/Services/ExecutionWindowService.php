@@ -9,7 +9,7 @@ use DateTimeZone;
 
 final class ExecutionWindowService extends AbstractAcronisService
 {
-    private const CACHE_VERSION = 'v16';
+    private const CACHE_VERSION = 'v17';
     private ?array $windowsConfigCache = null;
     private ?DateTimeZone $timezoneCache = null;
     private array $lookupKeyCache = [];
@@ -432,6 +432,11 @@ final class ExecutionWindowService extends AbstractAcronisService
         $startMinutes = $this->toMinutes((string) ($rule['inicio'] ?? '00:00'));
         $endMinutes = $this->toMinutes((string) ($rule['fim'] ?? '00:00'));
         $intervalHours = (int) ($rule['intervalo_horas'] ?? 0);
+        $meta = (int) ($rule['meta'] ?? 0);
+
+        if ($meta === 1 || $startMinutes === $endMinutes) {
+            return [sprintf('%02d:%02d', intdiv($startMinutes, 60), $startMinutes % 60)];
+        }
 
         if ($intervalHours <= 0 || $endMinutes < $startMinutes) {
             return [];

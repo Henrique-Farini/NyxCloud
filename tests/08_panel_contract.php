@@ -6,7 +6,7 @@ $root = dirname(__DIR__);
 $html = (string) file_get_contents($root . '/painel-demo/index.php');
 $script = (string) file_get_contents($root . '/painel-demo/app.js');
 $styles = (string) file_get_contents($root . '/painel-demo/styles.css');
-$expected = ['overview', 'executions', 'storage', 'summary', 'windows', 'clients', 'infrastructure', 'analytics'];
+$expected = ['overview', 'executions', 'storage', 'summary', 'windows', 'clients', 'accounts', 'infrastructure', 'analytics'];
 
 preg_match_all('/data-section="([a-z-]+)"/', $html, $navMatches);
 preg_match_all('/data-panel-section="([a-z-]+)"/', $html, $panelMatches);

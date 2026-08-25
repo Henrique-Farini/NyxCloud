@@ -8,6 +8,7 @@
   let toastTimer;
 
   const state = {
+    me: null,
     dashboard: null,
     customers: [],
     devices: [],
@@ -19,6 +20,9 @@
     alertsLoaded: false,
     executionWindows: null,
     executionWindowsError: '',
+    accounts: [],
+    accountsMeta: { perfis: {}, viewer: null },
+    accountsError: '',
     windowsSearch: '',
     globalSearch: ''
   };
@@ -57,29 +61,45 @@
       height,
       background: 'transparent',
       fontFamily: 'Inter, sans-serif',
+      foreColor: colors().text,
       toolbar: { show: false },
-      animations: { enabled: true, easing: 'easeinout', speed: 700 }
+      animations: { enabled: true, easing: 'easeinout', speed: 650 },
+      parentHeightOffset: 0
     },
     dataLabels: { enabled: false },
-    grid: { borderColor: colors().grid, strokeDashArray: 4 },
+    grid: {
+      borderColor: colors().grid,
+      strokeDashArray: 4,
+      padding: { top: 4, right: 10, bottom: 0, left: 8 }
+    },
     xaxis: {
-      labels: { style: { colors: colors().text, fontSize: '10px' } },
+      labels: {
+        hideOverlappingLabels: true,
+        rotate: 0,
+        trim: true,
+        style: { colors: colors().text, fontSize: '10px', fontWeight: 500 }
+      },
       axisBorder: { show: false },
       axisTicks: { show: false }
     },
     yaxis: {
-      labels: { style: { colors: colors().text, fontSize: '10px' } }
+      labels: { style: { colors: colors().text, fontSize: '10px', fontWeight: 500 } }
     },
     legend: {
       position: 'bottom',
       fontSize: '10px',
-      labels: { colors: colors().text }
+      fontWeight: 600,
+      labels: { colors: colors().text },
+      markers: { width: 7, height: 7, radius: 7 },
+      itemMargin: { horizontal: 10, vertical: 4 }
     },
     tooltip: {
       theme: root.dataset.mode,
       shared: true,
-      intersect: false
-    }
+      intersect: false,
+      style: { fontSize: '11px' }
+    },
+    noData: { text: 'Sem dados no periodo', align: 'center', verticalAlign: 'middle' }
   });
 
   const mount = (id, options) => {
@@ -165,14 +185,21 @@
     window.location.replace(login.href);
   };
 
-  const fetchJson = async endpoint => {
+  const fetchJson = async (endpoint, options = {}) => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), options.timeout || 30000);
     const response = await fetch(`../back/api/${endpoint}`, {
+      method: options.method || 'GET',
       headers: {
         Accept: 'application/json',
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
         ...authHeaders()
       },
-      credentials: 'include'
+      credentials: 'include',
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal
     });
+    window.clearTimeout(timeout);
 
     let payload = null;
     try {
@@ -208,6 +235,23 @@
 
   const fmtInt = value => Number(value || 0).toLocaleString('pt-BR');
   const fmtPercent = value => `${Number(value || 0).toFixed(2)}%`;
+  const profileInitial = value => (String(value || '').trim().charAt(0) || 'U').toUpperCase();
+  const formatDateTime = value => {
+    if (!value) return '--';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '--' : date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+  const accountRoleHint = role => ({
+    admin: 'Administrador: acesso total ao painel e ao gerenciamento de contas.',
+    operador: 'Operador: acompanha a operacao do painel sem administrar usuarios.',
+    leitura: 'Somente leitura: visualiza indicadores sem acesso administrativo.'
+  }[String(role || '').toLowerCase()] || 'Selecione um perfil para ver a descricao.');
 
   const countUp = (element, target, suffix = '') => {
     if (!element) {
@@ -436,6 +480,67 @@
     return text === '--' ? text : text.replace(/\s+/g, ' ').trim();
   };
 
+  const canManageAccounts = () => Boolean(state.me?.pode_gerenciar_contas);
+
+  const renderProfile = () => {
+    const user = state.me || {};
+    const name = cleanLabel(user.nome || 'Usuario');
+    const role = cleanLabel(user.perfil_nome || 'Perfil');
+    ['railProfileName', 'commandProfileName'].forEach(id => setText(id, name));
+    ['railProfileRole', 'commandProfileRole'].forEach(id => setText(id, role));
+    ['railProfileAvatar', 'commandProfileAvatar'].forEach(id => setText(id, profileInitial(name)));
+  };
+
+  const renderAccounts = () => {
+    const body = document.getElementById('accountsRows');
+    const notice = document.getElementById('accountsAccessNotice');
+    const form = document.getElementById('accountForm');
+    if (!body) return;
+
+    if (!canManageAccounts()) {
+      body.innerHTML = '<tr><td colspan="6">Acesso restrito a administradores.</td></tr>';
+      if (notice) notice.hidden = false;
+      if (form) {
+        form.querySelectorAll('input, select, button').forEach(field => {
+          field.disabled = true;
+        });
+      }
+      return;
+    }
+
+    if (notice) notice.hidden = true;
+    if (form) {
+      form.querySelectorAll('input, select, button').forEach(field => {
+        field.disabled = false;
+      });
+    }
+
+    body.replaceChildren();
+    if (state.accountsError) {
+      body.innerHTML = `<tr><td colspan="6">${state.accountsError}</td></tr>`;
+      return;
+    }
+    if (!Array.isArray(state.accounts) || !state.accounts.length) {
+      body.innerHTML = '<tr><td colspan="6">Nenhuma conta cadastrada.</td></tr>';
+      return;
+    }
+
+    state.accounts.forEach(account => {
+      const row = document.createElement('tr');
+      const statusClass = account.ativo ? 'success' : 'failed';
+      const statusLabel = account.ativo ? 'Ativa' : 'Inativa';
+      row.innerHTML = `
+        <td><b>${cleanLabel(account.nome)}</b><small>ID ${fmtInt(account.id)}</small></td>
+        <td>${cleanLabel(account.email)}</td>
+        <td><span class="account-role-pill role-${cleanLabel(account.perfil)}">${cleanLabel(account.perfil_nome)}</span></td>
+        <td><em class="job-state ${statusClass}">${statusLabel}</em></td>
+        <td>${formatDateTime(account.ultimo_login_em)}</td>
+        <td>${formatDateTime(account.criado_em)}</td>
+      `;
+      body.append(row);
+    });
+  };
+
   const excelCompanyLabels = {
     'aziz': 'AZIZ',
     'caelmomococa': 'CAELMO',
@@ -523,6 +628,18 @@
   const alertLocation = alert => cleanLabel(alert.origem || alert.maquina || alert.raw?.resourceName || 'Local nao informado');
   const alertCause = alert => cleanLabel(alert.causa || alert.mensagem || 'Causa nao informada');
   const alertResource = alert => cleanLabel(alert.recurso || alert.maquina || 'Recurso nao informado');
+  const alertsInLastDays = (days = 30) => {
+    const today = new Date();
+    const end = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (days - 1));
+    return state.alerts.filter(alert => {
+      const dateText = String(alert.data || '').trim();
+      const timeText = String(alert.hora || '00:00:00').trim();
+      if (!dateText) return true;
+      const eventDate = new Date(dateText.includes('T') ? dateText : `${dateText}T${timeText}`);
+      return !Number.isNaN(eventDate.getTime()) && eventDate >= start && eventDate < end;
+    });
+  };
 
   const resolveCustomer = device => {
     const raw = device?.raw || {};
@@ -734,7 +851,26 @@
       return;
     }
 
-    const companyGroups = items.reduce((groups, item) => {
+    const parseWindowStart = value => {
+      const match = String(value || '').match(/^(\d{2}):(\d{2})/);
+      if (!match) return Number.MAX_SAFE_INTEGER;
+      return (Number(match[1]) * 60) + Number(match[2]);
+    };
+
+    const sortedItems = [...items].sort((left, right) => {
+      const companyCompare = displayCompanyName(normalizeText(left.empresa) || '').localeCompare(
+        displayCompanyName(normalizeText(right.empresa) || ''),
+        'pt-BR'
+      );
+      if (companyCompare !== 0) return companyCompare;
+
+      const windowCompare = parseWindowStart(left.janela) - parseWindowStart(right.janela);
+      if (windowCompare !== 0) return windowCompare;
+
+      return displayPlanName(left.plano || '').localeCompare(displayPlanName(right.plano || ''), 'pt-BR');
+    });
+
+    const companyGroups = sortedItems.reduce((groups, item) => {
       const companyName = displayCompanyName(normalizeText(item.empresa) || 'Cliente sem nome');
       if (!groups.has(companyName)) {
         groups.set(companyName, []);
@@ -774,7 +910,11 @@
       const grid = companyCard.querySelector('.company-window-grid');
       companyItems.forEach(item => {
         const meta = executionWindowMeta(item.status);
+        const expectedTimes = Array.isArray(item.horarios_esperados) ? item.horarios_esperados : [];
         const missingTimes = Array.isArray(item.horarios_nao_feitos) ? item.horarios_nao_feitos : [];
+        const expectedMarkup = expectedTimes.length
+          ? `<div class="window-expected"><small>Horarios previstos</small><div class="window-badges">${expectedTimes.map(time => `<span class="window-badge">${time}</span>`).join('')}</div></div>`
+          : '';
         const missingMarkup = missingTimes.length
           ? `<div class="window-missing"><small>Horarios nao feitos</small><div class="window-badges">${missingTimes.map(time => `<span class="window-badge is-missing">${time}</span>`).join('')}</div></div>`
           : `<div class="window-missing"><small>Horarios nao feitos</small><div class="window-badges"><span class="window-badge is-ok">Nenhum</span></div></div>`;
@@ -792,6 +932,7 @@
           `<span><small>Realizado</small><b>${fmtInt(item.realizado || 0)}</b></span>`,
           `<span><small>Faltando</small><b>${fmtInt(item.faltando || 0)}</b></span>`,
           '</div>',
+          expectedMarkup,
           missingMarkup,
           `<div class="window-foot"><span>${item.base === 'rule' ? 'Regra manual' : 'Referencia historica real'}</span><time>${toShortTime(item.ultimo_backup)}</time></div>`
         ].join('');
@@ -856,7 +997,8 @@
     }
 
     const failures = Number(dashboard.backups_com_falha || 0);
-    const principalAlerta = state.alerts[0] || null;
+    const recentAlerts = alertsInLastDays();
+    const principalAlerta = recentAlerts[0] || null;
     setText('signalTitle', failures > 0 ? 'Operacao com pontos de atencao' : 'Operacao estavel');
     setText(
       'signalText',
@@ -868,7 +1010,7 @@
     const executionCount = document.querySelector('.rail-item[data-section="executions"] em');
     const alertCount = document.querySelector('.danger-count');
     if (executionCount) executionCount.textContent = String(dashboard.total_backups || 0);
-    if (alertCount) alertCount.textContent = state.alertsLoaded ? String(state.alerts.length) : '--';
+    if (alertCount) alertCount.textContent = state.alertsLoaded ? String(recentAlerts.length) : '--';
   };
 
   const updateKpis = () => {
@@ -940,7 +1082,7 @@
       }
     }
     setText('summarySuccess', fmtInt(completed));
-    setText('summaryAlerts', state.alertsLoaded ? fmtInt(state.alerts.length) : '--');
+    setText('summaryAlerts', state.alertsLoaded ? fmtInt(alertsInLastDays().length) : '--');
     setText('summaryClients', fmtInt(dashboard.total_clientes || state.customers.length || 0));
     setText('summaryDevices', fmtInt(dashboard.total_dispositivos || state.devices.length || 0));
     setText('fleetClients', fmtInt(dashboard.total_clientes || state.customers.length || 0));
@@ -969,8 +1111,9 @@
     const clientLabels = topCustomers.map(item => item.nome || 'Cliente');
     const clientSeries = topCustomers.map(item => Number(item.quantidade_dispositivos || 0));
     const dailySeries = Array.isArray(dashboard.series_diarias) ? dashboard.series_diarias : [];
-    const historyLabels = dailySeries.map(item => item.label || '--');
-    const jobsHistory = dailySeries.map(item => Number(item.backups || 0));
+    const chartDailySeries = dailySeries.slice(-21);
+    const historyLabels = chartDailySeries.map(item => item.label || '--');
+    const jobsHistory = chartDailySeries.map(item => Number(item.backups || 0));
     const usedPct = dashboard.armazenamento_disponivel === false ? 0 : 100;
     renderDailyHistory(dailySeries);
 
@@ -997,32 +1140,40 @@
       series: [completed, failed, other],
       labels: ['Sucesso', 'Falha', 'Outros'],
       colors: [c.green, c.red, '#708096'],
-      stroke: { width: 0 },
+      stroke: { width: 3, colors: [root.dataset.mode === 'light' ? '#fff' : '#101b2b'] },
+      states: { hover: { filter: { type: 'lighten', value: .08 } } },
       legend: { ...chartBase(235).legend, show: false },
       plotOptions: {
         pie: {
+          expandOnClick: false,
           donut: {
-            size: '72%',
+            size: '74%',
             labels: {
               show: true,
-              name: { show: true, color: c.text, fontSize: '10px' },
-              value: { show: true, color: '#fff', fontSize: '25px', fontWeight: 700, offsetY: 4 },
-              total: { show: true, label: 'Total de backups', color: c.text, formatter: () => String(dashboard.total_backups || 0) }
+              name: { show: true, color: c.text, fontSize: '11px', offsetY: 18 },
+              value: { show: true, color: root.dataset.mode === 'light' ? '#101827' : '#fff', fontSize: '27px', fontWeight: 700, offsetY: -3, formatter: value => fmtInt(value) },
+              total: { show: true, label: 'Total de backups', color: c.text, fontSize: '10px', formatter: () => fmtInt(dashboard.total_backups || 0) }
             }
           }
         }
-      }
+      },
+      tooltip: { ...chartBase(235).tooltip, y: { formatter: value => `${fmtInt(value)} execucoes` } }
     });
 
     mount('executionLine', {
       ...chartBase(255),
-      chart: { ...chartBase(255).chart, type: 'bar' },
+      chart: { ...chartBase(255).chart, type: 'area' },
       series: [{ name: 'Execucoes', data: jobsHistory }],
       colors: [c.violet2],
-      plotOptions: { bar: { borderRadius: 4, columnWidth: '58%' } },
-      dataLabels: { enabled: false },
-      xaxis: { ...chartBase(255).xaxis, categories: historyLabels },
-      yaxis: { ...chartBase(255).yaxis, min: 0, forceNiceScale: true },
+      stroke: { curve: 'smooth', width: 3, lineCap: 'round' },
+      fill: {
+        type: 'gradient',
+        gradient: { shadeIntensity: .35, opacityFrom: .42, opacityTo: .03, stops: [0, 88, 100] }
+      },
+      markers: { size: 0, hover: { size: 5, sizeOffset: 2 } },
+      grid: { ...chartBase(255).grid, xaxis: { lines: { show: false } } },
+      xaxis: { ...chartBase(255).xaxis, categories: historyLabels, tickAmount: Math.min(6, Math.max(historyLabels.length - 1, 1)) },
+      yaxis: { ...chartBase(255).yaxis, min: 0, forceNiceScale: true, tickAmount: 4, labels: { ...chartBase(255).yaxis.labels, formatter: value => fmtInt(value) } },
       tooltip: { ...chartBase(255).tooltip, y: { formatter: value => `${fmtInt(value)} execucoes` } }
     });
 
@@ -1034,43 +1185,49 @@
       colors: [c.violet2],
       plotOptions: {
         radialBar: {
-          startAngle: -135,
-          endAngle: 135,
-          hollow: { size: '68%' },
-          track: { background: root.dataset.mode === 'light' ? '#e8e8e8' : '#253247' },
+          startAngle: -125,
+          endAngle: 125,
+          hollow: { size: '70%', background: 'transparent' },
+          track: { background: root.dataset.mode === 'light' ? '#e8e8e8' : '#253247', strokeWidth: '98%', margin: 4 },
           dataLabels: {
-            name: { color: c.text, fontSize: '10px', offsetY: 31 },
-            value: { color: root.dataset.mode === 'light' ? '#0f0f0f' : '#fff', fontSize: '25px', offsetY: -5, formatter: () => formatBytes(Number(dashboard.espaco_utilizado || 0)) }
+            name: { color: c.text, fontSize: '10px', offsetY: 35 },
+            value: { color: root.dataset.mode === 'light' ? '#0f0f0f' : '#fff', fontSize: '25px', fontWeight: 700, offsetY: -7, formatter: () => formatBytes(Number(dashboard.espaco_utilizado || 0)) }
           }
         }
       },
+      stroke: { lineCap: 'round' },
       legend: { show: false },
-      subtitle: { text: 'Uso real retornado pela Acronis', align: 'center', offsetY: 14, style: { color: c.text, fontSize: '10px' } }
+      subtitle: { text: 'Volume informado pela Acronis', align: 'center', offsetY: 12, style: { color: c.text, fontSize: '10px', fontWeight: 500 } }
     });
 
     mount('clientBar', {
-      ...chartBase(245),
-      chart: { ...chartBase(245).chart, type: 'bar' },
+      ...chartBase(255),
+      chart: { ...chartBase(255).chart, type: 'bar' },
       series: [{ name: 'Dispositivos protegidos', data: clientSeries.length ? clientSeries : [0] }],
       colors: [c.violet, c.cyan, c.green, c.amber, c.violet2],
-      plotOptions: { bar: { borderRadius: 6, columnWidth: '50%', distributed: true } },
-      xaxis: { ...chartBase(245).xaxis, categories: clientLabels.length ? clientLabels : ['Sem dados'] },
-      yaxis: { ...chartBase(245).yaxis, tickAmount: 4 },
-      legend: { ...chartBase(245).legend, show: true }
+      plotOptions: { bar: { borderRadius: 6, borderRadiusApplication: 'end', barHeight: '56%', distributed: true, horizontal: true } },
+      dataLabels: { enabled: true, offsetX: 7, style: { colors: [c.text], fontSize: '10px', fontWeight: 700 }, formatter: value => fmtInt(value) },
+      grid: { ...chartBase(255).grid, yaxis: { lines: { show: false } }, padding: { top: 2, right: 22, bottom: 0, left: 8 } },
+      xaxis: { ...chartBase(255).xaxis, categories: clientLabels.length ? clientLabels : ['Sem dados'], min: 0, tickAmount: 4, labels: { ...chartBase(255).xaxis.labels, formatter: value => fmtInt(value) } },
+      yaxis: { ...chartBase(255).yaxis, labels: { ...chartBase(255).yaxis.labels, maxWidth: 145, trim: true } },
+      legend: { show: false },
+      tooltip: { ...chartBase(255).tooltip, y: { formatter: value => `${fmtInt(value)} dispositivos` } }
     });
 
     mount('historyArea', {
       ...chartBase(275),
       chart: { ...chartBase(275).chart, type: 'bar', stacked: true },
       series: [
-        { name: 'Sucesso', data: dailySeries.map(item => Number(item.success || 0)) },
-        { name: 'Falha', data: dailySeries.map(item => Number(item.failed || 0)) }
+        { name: 'Sucesso', data: chartDailySeries.map(item => Number(item.success || 0)) },
+        { name: 'Falha', data: chartDailySeries.map(item => Number(item.failed || 0)) }
       ],
       colors: [c.green, c.red],
-      plotOptions: { bar: { borderRadius: 3, columnWidth: '62%' } },
+      plotOptions: { bar: { borderRadius: 3, borderRadiusApplication: 'end', borderRadiusWhenStacked: 'last', columnWidth: '58%' } },
       stroke: { width: 0 },
-      xaxis: { ...chartBase(275).xaxis, categories: historyLabels.length ? historyLabels : ['Sem dados'] },
-      yaxis: { ...chartBase(275).yaxis, min: 0, forceNiceScale: true, title: { text: 'Execucoes', style: { color: c.text } } },
+      grid: { ...chartBase(275).grid, xaxis: { lines: { show: false } } },
+      xaxis: { ...chartBase(275).xaxis, categories: historyLabels.length ? historyLabels : ['Sem dados'], tickAmount: Math.min(6, Math.max(historyLabels.length - 1, 1)) },
+      yaxis: { ...chartBase(275).yaxis, min: 0, forceNiceScale: true, tickAmount: 4, labels: { ...chartBase(275).yaxis.labels, formatter: value => fmtInt(value) } },
+      legend: { ...chartBase(275).legend, position: 'top', horizontalAlign: 'right', offsetY: -4 },
       tooltip: { ...chartBase(275).tooltip, y: { formatter: value => `${fmtInt(value)} execucoes` } }
     });
   };
@@ -1164,6 +1321,8 @@
   };
 
   const renderPartialData = () => {
+    safeRun(renderProfile);
+    safeRun(renderAccounts);
     safeRun(updateHero);
     safeRun(updateKpis);
     safeRun(buildRecentRows);
@@ -1192,6 +1351,12 @@
       notify(error.message || 'Falha ao carregar dashboard.');
       throw error;
     }
+  });
+
+  const loadMe = () => requestOnce('me', async () => {
+    const payload = await fetchJson('me.php');
+    state.me = payload;
+    renderPartialData();
   });
 
   const loadDevices = () => requestOnce('devices', async () => {
@@ -1253,7 +1418,20 @@
   const loadDailyExecutions = () => requestOnce('daily-executions', async () => {
     state.dailyExecutionsError = '';
     try {
-      state.dailyExecutions = await fetchJson('execucoes-diarias.php') || { hoje: [], ontem: [], datas: {} };
+      let lastError;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          state.dailyExecutions = await fetchJson('execucoes-diarias.php', { timeout: 20000 }) || { hoje: [], ontem: [], datas: {} };
+          lastError = null;
+          break;
+        } catch (error) {
+          lastError = error;
+          if (attempt === 0) {
+            await new Promise(resolve => window.setTimeout(resolve, 350));
+          }
+        }
+      }
+      if (lastError) throw lastError;
       safeRun(buildDailyExecutionRows);
     } catch (error) {
       state.dailyExecutionsError = error.message || 'Falha ao carregar execucoes diarias.';
@@ -1263,15 +1441,35 @@
     }
   });
 
+  const loadAccounts = () => requestOnce('accounts', async () => {
+    state.accountsError = '';
+    try {
+      const payload = await fetchJson('contas.php');
+      state.accounts = Array.isArray(payload?.items) ? payload.items : [];
+      state.accountsMeta = {
+        perfis: payload?.perfis || {},
+        viewer: payload?.viewer || null
+      };
+      safeRun(renderAccounts);
+    } catch (error) {
+      state.accounts = [];
+      state.accountsError = error.message || 'Falha ao carregar contas.';
+      safeRun(renderAccounts);
+      throw error;
+    }
+  });
+
   const sectionLoaders = {
-    overview: [loadDashboard],
+    overview: [loadMe, loadDashboard, loadAlerts, loadCustomers],
     executions: [loadDevices],
     storage: [loadDashboard],
     summary: [loadDashboard, loadAlerts],
     windows: [loadExecutionWindows],
     clients: [loadDashboard, loadCustomers],
+    accounts: [loadMe, loadAccounts],
     infrastructure: [loadDailyExecutions],
-    analytics: [loadDashboard, loadCustomers]
+    analytics: [loadDashboard, loadCustomers],
+    alerts: []
   };
 
   const sectionLabels = {
@@ -1281,8 +1479,42 @@
     summary: 'Resumo',
     windows: 'Janelas',
     clients: 'Clientes',
+    accounts: 'Contas',
     infrastructure: 'Infraestrutura',
-    analytics: 'Analises'
+    analytics: 'Analises',
+    alerts: 'Alertas'
+  };
+
+  const sectionDescriptions = {
+    executions: 'Atividade recente por dispositivo, plano, horario, status e volume processado.',
+    storage: 'Volume protegido consolidado e distribuicao do consumo entre clientes.',
+    summary: 'Indicadores essenciais para leitura executiva rapida da operacao.',
+    windows: 'Comparativo entre horarios esperados e execucoes realizadas por empresa e plano.',
+    clients: 'Distribuicao dos dispositivos protegidos e concentracao da carga por cliente.',
+    accounts: 'Gerencie usuarios internos do painel e crie acessos com menos privilegios.',
+    infrastructure: 'Execucoes de hoje e ontem organizadas por dispositivo para verificacao operacional.',
+    analytics: 'Tendencias, taxa de sucesso, falhas e volume diario dos backups.',
+    alerts: 'Central de alertas operacionais.'
+  };
+
+  const setSyncStatus = (message, stateName = 'ready') => {
+    const node = document.getElementById('syncStatus');
+    if (!node) return;
+    node.dataset.state = stateName;
+    const label = node.querySelector('span');
+    if (label) label.textContent = message;
+  };
+
+  const syncTimeLabel = () => `Atualizado ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+
+  const updateSectionIntro = section => {
+    const intro = document.getElementById('sectionIntro');
+    if (!intro) return;
+    const overview = section === 'overview';
+    intro.hidden = overview || section === 'alerts';
+    setText('sectionIntroTitle', sectionLabels[section] || 'Visao geral');
+    setText('sectionIntroText', sectionDescriptions[section] || 'Informacoes operacionais do ambiente protegido.');
+    setText('sectionUpdated', 'Dados sincronizados com a Acronis');
   };
 
   const sectionAliases = {
@@ -1302,11 +1534,22 @@
     (sectionLoaders[section] || sectionLoaders.overview).map(loader => loader())
   );
 
+  const panelMatchesSection = (panel, section) => {
+    const sections = [
+      panel.dataset.panelSection || '',
+      panel.dataset.panelExtraSections || ''
+    ].join(' ');
+    return sections.split(/\s+/).filter(Boolean).includes(section);
+  };
+
   const activateSection = (section, updateHistory = true) => {
     const selected = sectionLabels[section] ? section : 'overview';
     root.dataset.activeSection = selected;
+    root.classList.toggle('alerts-immersive', selected === 'alerts');
+    root.classList.add('is-section-loading');
+    setSyncStatus('Sincronizando', 'loading');
     document.querySelectorAll('[data-panel-section]').forEach(panel => {
-      panel.hidden = panel.dataset.panelSection !== selected;
+      panel.hidden = !panelMatchesSection(panel, selected);
     });
     document.querySelectorAll('[data-section-container]').forEach(container => {
       const visibleChildren = [...container.children].filter(child => child.dataset?.panelSection && !child.hidden);
@@ -1320,12 +1563,16 @@
       else item.removeAttribute('aria-current');
     });
     setText('sectionTitle', sectionLabels[selected]);
+    updateSectionIntro(selected);
 
     if (updateHistory && window.location.hash !== `#${selected}`) {
       window.history.pushState({ section: selected }, '', `#${selected}`);
     }
 
-    loadSectionData(selected).then(() => {
+    loadSectionData(selected).then(results => {
+      const hasFailure = results.some(result => result.status === 'rejected');
+      setSyncStatus(hasFailure ? 'Dados parciais' : syncTimeLabel(), hasFailure ? 'warning' : 'ready');
+      root.classList.remove('is-section-loading');
       requestAnimationFrame(() => {
         if (state.dashboard) safeRun(buildCharts);
         window.dispatchEvent(new Event('resize'));
@@ -1367,7 +1614,7 @@
   railOpenButton?.addEventListener('click', openRail);
   document.getElementById('railClose')?.addEventListener('click', closeRail);
   railScrim?.addEventListener('click', closeRail);
-  document.querySelectorAll('.rail-item[data-section]').forEach(item => item.addEventListener('click', event => {
+  document.querySelectorAll('.rail-item[data-section], [data-section].command-icon').forEach(item => item.addEventListener('click', event => {
     event.preventDefault();
     activateSection(item.dataset.section || 'overview');
     if (!desktopRail.matches) closeRail();
@@ -1377,11 +1624,23 @@
     if (!desktopRail.matches) closeRail();
   }));
   document.querySelectorAll('[data-toast]').forEach(button => button.addEventListener('click', () => notify(button.dataset.toast)));
-  document.getElementById('runBackup')?.addEventListener('click', event => {
-    event.preventDefault();
-    notify('Execucao manual ainda nao integrada a API da Acronis.');
+  document.getElementById('refreshDashboard')?.addEventListener('click', async event => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    button.classList.add('is-refreshing');
+    dataRequests.clear();
+    root.classList.add('is-section-loading');
+    setSyncStatus('Atualizando dados', 'loading');
+    const results = await loadSectionData(root.dataset.activeSection || 'overview');
+    const hasFailure = results.some(result => result.status === 'rejected');
+    setSyncStatus(hasFailure ? 'Dados parciais' : syncTimeLabel(), hasFailure ? 'warning' : 'ready');
+    root.classList.remove('is-section-loading');
+    button.disabled = false;
+    button.classList.remove('is-refreshing');
+    notify(hasFailure ? 'Atualizacao concluida com dados parciais.' : 'Dados atualizados.');
   });
-  document.getElementById('profileButton')?.addEventListener('click', () => notify('Perfil indisponivel neste painel.'));
+  document.getElementById('profileButton')?.addEventListener('click', () => notify(state.me?.email || 'Perfil indisponivel neste painel.'));
+  document.getElementById('commandUserButton')?.addEventListener('click', () => notify(state.me?.email || 'Perfil indisponivel neste painel.'));
   document.getElementById('windowsSearch')?.addEventListener('input', event => {
     state.windowsSearch = String(event.currentTarget.value || '').trim();
     safeRun(buildExecutionWindowRows);
@@ -1390,6 +1649,52 @@
     state.globalSearch = String(event.currentTarget.value || '').trim();
     safeRun(buildRecentRows);
     safeRun(buildDailyExecutionRows);
+  });
+  document.getElementById('globalSearch')?.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' || !String(event.currentTarget.value || '').trim()) return;
+    activateSection('executions');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    notify('Busca aplicada nas execucoes.');
+  });
+  document.getElementById('accountRoleSelect')?.addEventListener('change', event => {
+    setText('accountPermissionHint', accountRoleHint(event.currentTarget.value));
+  });
+  document.getElementById('accountForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (!canManageAccounts()) {
+      notify('Somente administradores podem criar contas.');
+      return;
+    }
+    const submitButton = document.getElementById('accountSubmitButton');
+    const message = document.getElementById('accountFormMessage');
+    const data = new FormData(form);
+    const payload = {
+      nome: String(data.get('nome') || '').trim(),
+      email: String(data.get('email') || '').trim(),
+      perfil: String(data.get('perfil') || 'leitura').trim(),
+      senha: String(data.get('senha') || ''),
+      ativo: data.get('ativo') !== null
+    };
+
+    submitButton.disabled = true;
+    if (message) message.textContent = 'Criando conta...';
+    try {
+      const created = await fetchJson('contas.php', { method: 'POST', body: payload });
+      state.accounts = [created, ...state.accounts].sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'));
+      renderAccounts();
+      form.reset();
+      const roleSelect = document.getElementById('accountRoleSelect');
+      if (roleSelect) roleSelect.value = 'leitura';
+      setText('accountPermissionHint', accountRoleHint('leitura'));
+      if (message) message.textContent = 'Conta criada com sucesso.';
+      notify('Nova conta criada no painel.');
+    } catch (error) {
+      if (message) message.textContent = error.message || 'Falha ao criar conta.';
+      notify(error.message || 'Falha ao criar conta.');
+    } finally {
+      submitButton.disabled = false;
+    }
   });
 
   const restoreSection = () => activateSection(sectionFromLocation(), false);
@@ -1408,6 +1713,7 @@
   if (window.location.hash !== `#${initialSection}`) {
     window.history.replaceState({ section: initialSection }, '', `#${initialSection}`);
   }
+  setText('accountPermissionHint', accountRoleHint('leitura'));
   setRailOpen(desktopRail.matches ? localStorage.getItem('nyxcloud-rail-collapsed') !== '1' : false);
   activateSection(initialSection, false);
 })();

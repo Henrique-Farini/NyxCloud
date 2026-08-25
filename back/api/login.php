@@ -7,44 +7,53 @@ header('Content-Type: application/json; charset=utf-8');
 try {
     require_once __DIR__ . '/../conexao.php';
     require_once __DIR__ . '/../auth/jwt.php';
+    require_once __DIR__ . '/../auth/middleware.php';
 } catch (Throwable $e) {
     error_log('Falha ao inicializar o login: ' . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Serviço de autenticação indisponível. Verifique a configuração do servidor.',
+        'message' => 'Servico de autenticacao indisponivel. Verifique a configuracao do servidor.',
     ]);
     exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    echo json_encode(['success' => false, 'message' => 'Método não permitido.']);
+    echo json_encode(['success' => false, 'message' => 'Metodo nao permitido.']);
     exit;
 }
 
 $dados = json_decode(file_get_contents('php://input'), true);
 $dados = is_array($dados) ? array_merge($_POST, $dados) : $_POST;
-$email = strtolower(trim((string) ($dados['email'] ?? '')));
+$login = trim((string) ($dados['email'] ?? ''));
 $senha = (string) ($dados['senha'] ?? '');
 $lembrar = filter_var($dados['lembrar'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
-if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $senha === '') {
+if ($login === '' || $senha === '') {
     http_response_code(422);
-    echo json_encode(['success' => false, 'message' => 'Informe um e-mail válido e uma senha.']);
+    echo json_encode(['success' => false, 'message' => 'Informe seu e-mail ou usuario e uma senha.']);
     exit;
 }
 
+$perfilSelect = tabelaUsuarioTemPerfil($pdo) ? 'perfil' : "'admin' AS perfil";
 $stmt = $pdo->prepare(
-    'SELECT id, nome, email, senha_hash
-     FROM usuario WHERE LOWER(email) = LOWER(:email) AND ativo = TRUE'
+    "SELECT id, nome, email, {$perfilSelect}, senha_hash
+     FROM usuario
+     WHERE ativo = TRUE
+       AND (
+            LOWER(email) = LOWER(:login)
+            OR LOWER(nome) = LOWER(:login)
+       )
+     ORDER BY id ASC
+     LIMIT 1"
 );
-$stmt->execute(['email' => $email]);
+$stmt->execute(['login' => $login]);
 $usuario = $stmt->fetch();
 
 if (!$usuario || !password_verify($senha, $usuario['senha_hash'])) {
     http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'E-mail ou senha inválidos.']);
+    echo json_encode(['success' => false, 'message' => 'Usuario/e-mail ou senha invalidos.']);
     exit;
 }
 
@@ -63,7 +72,7 @@ try {
 } catch (Throwable $e) {
     error_log($e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Autenticação indisponível.']);
+    echo json_encode(['success' => false, 'message' => 'Autenticacao indisponivel.']);
     exit;
 }
 
@@ -77,5 +86,7 @@ echo json_encode([
         'id' => (int) $usuario['id'],
         'nome' => $usuario['nome'],
         'email' => $usuario['email'],
+        'perfil' => normalizarPerfil((string) ($usuario['perfil'] ?? '')),
+        'perfil_nome' => nomePerfil((string) ($usuario['perfil'] ?? '')),
     ],
-]);
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

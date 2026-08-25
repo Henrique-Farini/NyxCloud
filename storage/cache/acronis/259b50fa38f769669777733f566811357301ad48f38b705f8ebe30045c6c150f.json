@@ -1,47 +1,47 @@
 {
-    "expires_at": 1786999718,
+    "expires_at": 1787679464,
     "value": {
-        "total": 7301707661312,
+        "total": 8497826816000,
         "clients": [
             {
                 "cliente": "Marest Distribuidora - SP",
-                "bytes": 1131234324480
+                "bytes": 1185634418688
+            },
+            {
+                "cliente": "WT Solucoes em Tecnologia",
+                "bytes": 1103321829376
             },
             {
                 "cliente": "MP TINTAS",
-                "bytes": 753394401280
+                "bytes": 773000777728
             },
             {
                 "cliente": "Caelmo",
-                "bytes": 558009487360
+                "bytes": 565018992640
             },
             {
                 "cliente": "Rotart",
-                "bytes": 507050266624
-            },
-            {
-                "cliente": "Marest Distribuidora - MG",
-                "bytes": 496829317120
+                "bytes": 506904608768
             },
             {
                 "cliente": "DaFlora ",
-                "bytes": 484325040128
+                "bytes": 491293249536
+            },
+            {
+                "cliente": "Marest Distribuidora - MG",
+                "bytes": 444134031360
             },
             {
                 "cliente": "Casa Marques",
-                "bytes": 405603254272
+                "bytes": 404149530624
             },
             {
                 "cliente": "Loja Mirtes",
-                "bytes": 391104311296
+                "bytes": 391889547264
             },
             {
                 "cliente": "Transfavero",
-                "bytes": 342855684096
-            },
-            {
-                "cliente": "Hering",
-                "bytes": 282390519808
+                "bytes": 347220639744
             }
         ],
         "available": true
