@@ -8,8 +8,9 @@ interface CacheInterface
 {
     public function get(string $key): mixed;
 
+    public function getStale(string $key): mixed;
+
     public function set(string $key, mixed $value, int $ttlSeconds): void;
 
     public function delete(string $key): void;
 }
-

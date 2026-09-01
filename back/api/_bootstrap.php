@@ -9,6 +9,7 @@ use NyxCloud\Lib\Acronis\AcronisFactory;
 use NyxCloud\Lib\Acronis\Exceptions\AuthenticationException as AcronisAuthenticationException;
 use NyxCloud\Lib\Acronis\Exceptions\CommunicationException;
 use NyxCloud\Lib\Acronis\Exceptions\HttpException;
+use NyxCloud\Lib\Acronis\MultiAcronisApi;
 use NyxCloud\Services\AlertService;
 use NyxCloud\Services\CustomerService;
 use NyxCloud\Services\DashboardService;
@@ -34,6 +35,11 @@ function apiMethod(string $method): void
     if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') !== strtoupper($method)) {
         apiResponse(false, new stdClass(), [], 'Metodo nao permitido.', 405);
     }
+}
+
+function apiMutationGuard(): void
+{
+    exigirCsrfParaMutacao();
 }
 
 function apiFilters(array $allowed = []): array
@@ -69,8 +75,9 @@ function apiFilters(array $allowed = []): array
 
 function apiService(string $service): object
 {
-    $config = AcronisFactory::config();
-    $api = AcronisFactory::api($config);
+    $configs = AcronisFactory::configs();
+    $config = $configs[0] ?? AcronisFactory::config();
+    $api = count($configs) > 1 ? AcronisFactory::multiApi($configs) : AcronisFactory::api($config);
     $cache = AcronisFactory::cache($config);
 
     return match ($service) {

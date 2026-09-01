@@ -3,7 +3,7 @@
 
   const body = document.body;
   const basePageSize = 10;
-  const state = { rows: [] };
+  const state = { rows: [], quickFilter: 'all' };
   let page = 1;
   let sortKey = 'time';
   let sortDir = 'desc';
@@ -18,8 +18,6 @@
   const railOpenButton = document.getElementById('railOpen');
   const railScrim = document.getElementById('railScrim');
   const desktopRail = window.matchMedia('(min-width: 1061px)');
-  const jwtToken = () => localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || '';
-  const authHeaders = () => jwtToken() ? { Authorization: `Bearer ${jwtToken()}` } : {};
   const redirectToLogin = () => {
     const login = new URL('../back/index.php', window.location.href);
     login.searchParams.set('next', window.location.pathname + window.location.search + window.location.hash);
@@ -28,7 +26,7 @@
 
   const fetchJson = async endpoint => {
     const response = await fetch(`../back/api/${endpoint}`, {
-      headers: { Accept: 'application/json', ...authHeaders() },
+      headers: { Accept: 'application/json' },
       credentials: 'include'
     });
     const payload = await response.json().catch(() => null);
@@ -84,12 +82,14 @@
   const syncTimeLabel = () => `Atualizado ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
   const knownStorageKey = 'nyxcloud-known-alerts';
   const hiddenStorageKey = 'nyxcloud-hidden-alerts';
+  const resolvedStorageKey = 'nyxcloud-resolved-alerts';
 
   const statusMeta = {
     failed: ['Falha', 'circle-x'],
     success: ['Resolvido', 'circle-check'],
     running: ['Em andamento', 'clock-3'],
-    known: ['Conhecido', 'shield-check']
+    known: ['Conhecido', 'shield-check'],
+    resolved: ['Resolvido', 'circle-check']
   };
 
   const priorityLabel = {
@@ -110,7 +110,10 @@
     NETWORK_ERROR: 'Falha de comunicacao com a nuvem Acronis',
     BACKUP_FAILED: 'Falha na execucao do backup',
     BACKUP_ZERO_SIZE: 'Backup concluido com tamanho zerado',
-    BACKUP_BELOW_BASELINE: 'Backup com tamanho abaixo do padrao historico'
+    BACKUP_NO_FILES_PROCESSED: 'Backup concluido sem arquivos processados',
+    BACKUP_BELOW_BASELINE: 'Backup com tamanho abaixo do padrao historico',
+    BACKUP_EXPECTED_NOT_RUN: 'Backup esperado nao executado',
+    DEVICE_OFFLINE_BACKUP_MISSING: 'Dispositivo offline e backup esperado nao executado'
   };
 
   const cleanText = value => {
@@ -129,10 +132,27 @@
   const writeStoredSet = (key, values) => localStorage.setItem(key, JSON.stringify([...values]));
   const knownAlertKeys = () => readStoredSet(knownStorageKey);
   const hiddenAlertKeys = () => readStoredSet(hiddenStorageKey);
-  const rowStorageKey = row => [row.sourceId || '', row.client, row.server, row.code, row.sortTime].join('|').toLocaleLowerCase('pt-BR');
-  const isKnownAlert = row => knownAlertKeys().has(rowStorageKey(row));
-  const isHiddenAlert = row => hiddenAlertKeys().has(rowStorageKey(row));
-  const effectiveStatus = row => isKnownAlert(row) ? 'known' : row.status;
+  const resolvedAlertKeys = () => readStoredSet(resolvedStorageKey);
+  const rowStorageKey = row => [row.source || '', row.sourceId || '', row.client, row.server, row.code, row.sortTime].join('|').toLocaleLowerCase('pt-BR');
+  const legacyRowStorageKey = row => [row.sourceId || '', row.client, row.server, row.code, row.sortTime].join('|').toLocaleLowerCase('pt-BR');
+  const hasStoredAlert = (items, row) => items.has(rowStorageKey(row)) || items.has(legacyRowStorageKey(row));
+  const isKnownAlert = row => hasStoredAlert(knownAlertKeys(), row);
+  const isHiddenAlert = row => hasStoredAlert(hiddenAlertKeys(), row);
+  const isResolvedAlert = row => hasStoredAlert(resolvedAlertKeys(), row);
+  const effectiveStatus = row => isResolvedAlert(row) ? 'resolved' : (isKnownAlert(row) ? 'known' : row.status);
+  const rowCodeKey = row => cleanText(row.rawCode || row.code);
+  const rowTypeKey = row => cleanText(row.rawType || row.type);
+  const hasAlertKey = (row, keys) => keys.includes(rowCodeKey(row)) || keys.includes(rowTypeKey(row));
+  const alertCategory = row => {
+    const code = rowCodeKey(row);
+    const type = rowTypeKey(row);
+    if (row.offlineNotice !== '--' || row.deviceOffline || code.includes('OFFLINE') || type.includes('Offline')) return 'offline';
+    if (hasAlertKey(row, ['BACKUP_NO_FILES_PROCESSED', 'BACKUP_ZERO_SIZE'])) return 'nofiles';
+    if (hasAlertKey(row, ['BACKUP_EXPECTED_NOT_RUN', 'DEVICE_OFFLINE_BACKUP_MISSING', 'BackupDidNotStart'])) return 'missing';
+    if (hasAlertKey(row, ['BACKUP_FAILED', 'BACKUP_BELOW_BASELINE', 'PlanDeploymentFailed'])) return 'failedbackup';
+    if ((row.source || '').toLocaleLowerCase('pt-BR') === 'acronis') return 'acronis';
+    return 'other';
+  };
   const toggleKnownAlert = row => {
     const items = knownAlertKeys();
     const key = rowStorageKey(row);
@@ -147,10 +167,72 @@
     items.add(rowStorageKey(row));
     writeStoredSet(hiddenStorageKey, items);
   };
+  const toggleResolvedAlert = row => {
+    const items = resolvedAlertKeys();
+    const key = rowStorageKey(row);
+    const nextResolved = !hasStoredAlert(items, row);
+    if (nextResolved) items.add(key);
+    else {
+      items.delete(key);
+      items.delete(legacyRowStorageKey(row));
+    }
+    writeStoredSet(resolvedStorageKey, items);
+    return nextResolved;
+  };
   const clearHiddenAlerts = () => writeStoredSet(hiddenStorageKey, new Set());
 
   const alertGuidance = row => {
-    if (row.code === 'M365ApplicationConsentRequired') {
+    const code = rowCodeKey(row);
+    if (row.offlineNotice && row.offlineNotice !== '--') {
+      return {
+        reason: 'A Acronis informa que o dispositivo esta offline junto deste alerta.',
+        action: row.offlineNotice
+      };
+    }
+
+    if (hasAlertKey(row, ['BACKUP_NO_FILES_PROCESSED', 'BACKUP_ZERO_SIZE'])) {
+      return {
+        reason: 'Backup executou, mas nao encontrou arquivos validos para enviar ou gerou tamanho zero.',
+        action: 'Verificar origem do plano, permissoes, caminho mapeado e se os arquivos esperados existem neste dispositivo.'
+      };
+    }
+
+    if (hasAlertKey(row, ['BACKUP_EXPECTED_NOT_RUN'])) {
+      return {
+        reason: 'Horario previsto do plano ja passou e nao houve backup valido depois da janela esperada.',
+        action: 'Confirmar se o agente esta online, se o plano esta ativo e se a janela de backup do cliente esta correta.'
+      };
+    }
+
+    if (hasAlertKey(row, ['DEVICE_OFFLINE_BACKUP_MISSING'])) {
+      return {
+        reason: 'Dispositivo ficou offline no periodo em que deveria executar backup.',
+        action: 'Ligar ou reconectar a maquina e acompanhar proxima execucao do plano.'
+      };
+    }
+
+    if (hasAlertKey(row, ['BACKUP_FAILED', 'PlanDeploymentFailed'])) {
+      return {
+        reason: 'Acronis recusou ou interrompeu a execucao do plano.',
+        action: 'Abrir evento na Acronis, validar credenciais, origem do backup e aplicacao do plano no agente.'
+      };
+    }
+
+    if (hasAlertKey(row, ['BACKUP_BELOW_BASELINE'])) {
+      return {
+        reason: 'Backup gerou volume muito menor que o historico normal deste dispositivo.',
+        action: 'Verificar se pastas foram removidas, unidade ficou desconectada ou plano perdeu origem.'
+      };
+    }
+
+    if (hasAlertKey(row, ['AgentAutoUpdateFailed'])) {
+      return {
+        reason: 'Agente tentou atualizar e falhou.',
+        action: 'Verificar conexao, espaco em disco, permissao local e reiniciar atualizacao do agente.'
+      };
+    }
+
+    if (hasAlertKey(row, ['M365ApplicationConsentRequired'])) {
       return {
         reason: 'A Acronis detectou que o tenant Microsoft 365 deste cliente nao concedeu, perdeu ou revogou o consentimento do aplicativo usado no backup.',
         action: 'Reautorizar a integracao Microsoft 365 no tenant do cliente com uma conta administradora global e confirmar que o aplicativo da Acronis esta com consentimento ativo.'
@@ -172,6 +254,28 @@
     element.textContent = text;
     if (className) element.className = className;
     return element;
+  };
+
+  const offlineBadge = (text = 'Offline na Acronis') => {
+    const badge = document.createElement('span');
+    const icon = document.createElement('i');
+    icon.dataset.lucide = 'wifi-off';
+    badge.className = 'offline-badge';
+    badge.append(icon, document.createTextNode(text));
+    return badge;
+  };
+
+  const offlineNoticeBox = row => {
+    const box = document.createElement('div');
+    const title = document.createElement('b');
+    const text = document.createElement('span');
+    const icon = document.createElement('i');
+    icon.dataset.lucide = 'wifi-off';
+    title.textContent = 'Dispositivo offline';
+    text.textContent = row.offlineNotice;
+    box.className = 'offline-notice-box';
+    box.append(icon, title, text);
+    return box;
   };
 
   const readableType = value => {
@@ -242,23 +346,31 @@
     const resource = cleanText(alert.recurso || alert.maquina || alert.raw?.resourceName || 'Recurso não informado');
     const server = cleanText(alert.maquina || resource);
     const sourceId = cleanText(alert.raw?.id || alert.raw?.uuid || alert.raw?.alertId || '');
-    const type = readableType(alert.tipo || alert.raw?.type || 'Acronis');
-    const code = readableCode(alert.codigo || '');
+    const rawCode = cleanText(alert.codigo || alert.raw?.code || '');
+    const rawType = cleanText(alert.tipo || alert.raw?.type || 'Acronis');
+    const type = readableType(rawType);
+    const code = readableCode(rawCode);
+    const source = cleanText(alert.alerta_origem || alert.raw?.source || '');
     return {
       status: statusFromAlert(alert),
       priority: severityToPriority(alert.severidade),
       client: cleanText(alert.cliente || 'Cliente não identificado'),
       server,
       task: cleanText(alert.mensagem || type),
+      rawCode,
+      rawType,
       code,
       type,
       error: cleanText(alert.causa || alert.mensagem || 'Causa não informada'),
+      offlineNotice: cleanText(alert.aviso_offline || ''),
+      deviceOffline: Boolean(alert.dispositivo_offline),
       location: cleanText(alert.ip || alert.origem || server),
       plan: cleanText(alert.plano || resource),
       size: readableSize(alert.tamanho || 'Não informado'),
       time: formatAlertTime(sortTime),
       sortTime,
       sourceId: sourceId === '--' ? '' : sourceId,
+      source: source === '--' ? '' : source,
       id: index + 1
     };
   };
@@ -302,6 +414,98 @@
 
   const periodRows = () => state.rows.filter(isInsidePeriod);
 
+  const matchesQuickFilter = row => {
+    const quick = state.quickFilter || 'all';
+    if (quick === 'all') return true;
+    if (quick === 'hidden') return isHiddenAlert(row);
+    if (quick === 'known') return isKnownAlert(row);
+    if (quick === 'acronis') return (row.source || '').toLocaleLowerCase('pt-BR') === 'acronis';
+    if (quick === 'backup') return ['missing', 'nofiles', 'failedbackup'].includes(alertCategory(row));
+    return alertCategory(row) === quick;
+  };
+
+  const updateQuickFilters = () => {
+    const rows = periodRows();
+    const visibleRows = rows.filter(row => !isHiddenAlert(row));
+    const counts = {
+      all: visibleRows.length,
+      offline: visibleRows.filter(row => alertCategory(row) === 'offline').length,
+      backup: visibleRows.filter(row => ['missing', 'nofiles', 'failedbackup'].includes(alertCategory(row))).length,
+      missing: visibleRows.filter(row => alertCategory(row) === 'missing').length,
+      nofiles: visibleRows.filter(row => alertCategory(row) === 'nofiles').length,
+      failedbackup: visibleRows.filter(row => alertCategory(row) === 'failedbackup').length,
+      acronis: visibleRows.filter(row => (row.source || '').toLocaleLowerCase('pt-BR') === 'acronis').length,
+      known: rows.filter(isKnownAlert).length,
+      resolved: rows.filter(isResolvedAlert).length,
+      hidden: rows.filter(isHiddenAlert).length
+    };
+
+    document.querySelectorAll('[data-quick-count]').forEach(node => {
+      const key = node.dataset.quickCount;
+      node.textContent = Number(counts[key] || 0).toLocaleString('pt-BR');
+    });
+    document.querySelectorAll('[data-quick-filter]').forEach(button => {
+      const selected = button.dataset.quickFilter === state.quickFilter;
+      button.classList.toggle('is-active', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    });
+  };
+
+  const updateActionQueue = () => {
+    const rows = periodRows().filter(row => !isHiddenAlert(row) && !isKnownAlert(row) && !isResolvedAlert(row));
+    const openRows = rows.filter(row => effectiveStatus(row) === 'failed');
+    const counts = {
+      offline: openRows.filter(row => alertCategory(row) === 'offline').length,
+      missing: openRows.filter(row => alertCategory(row) === 'missing').length,
+      nofiles: openRows.filter(row => alertCategory(row) === 'nofiles').length,
+      failedbackup: openRows.filter(row => alertCategory(row) === 'failedbackup').length
+    };
+    const priorityWeight = { critical: 0, high: 1, medium: 2, low: 3 };
+    const first = [...openRows].sort((left, right) => {
+      const priority = (priorityWeight[left.priority] ?? 9) - (priorityWeight[right.priority] ?? 9);
+      if (priority !== 0) return priority;
+      return String(right.sortTime || '').localeCompare(String(left.sortTime || ''), 'pt-BR');
+    })[0];
+
+    const title = document.getElementById('actionQueueTitle');
+    const text = document.getElementById('actionQueueText');
+    const badges = document.getElementById('actionQueueBadges');
+    if (!title || !text || !badges) return;
+
+    if (!first) {
+      title.textContent = 'Sem ação crítica';
+      text.textContent = 'Alertas conhecidos e ocultos ficam fora desta fila.';
+    } else {
+      title.textContent = `${first.client} - ${first.server}`;
+      const guidance = alertGuidance(first);
+      text.textContent = guidance?.action || first.error || 'Abrir detalhes para confirmar tratativa.';
+    }
+
+    if (badges.hidden) return;
+    badges.replaceChildren();
+    [
+      ['offline', 'Offline', counts.offline],
+      ['missing', 'Não executou', counts.missing],
+      ['nofiles', 'Sem arquivos', counts.nofiles],
+      ['failedbackup', 'Falha backup', counts.failedbackup]
+    ].forEach(([key, label, count]) => {
+      const badge = document.createElement('button');
+      badge.type = 'button';
+      badge.dataset.quickFilter = key;
+      badge.className = 'action-queue-chip';
+      badge.classList.toggle('is-active', state.quickFilter === key);
+      badge.setAttribute('aria-pressed', String(state.quickFilter === key));
+      badge.innerHTML = `<span>${label}</span><b>${Number(count).toLocaleString('pt-BR')}</b>`;
+      badge.addEventListener('click', () => {
+        state.quickFilter = key;
+        page = 1;
+        renderRows();
+        document.getElementById('alert-events')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      badges.append(badge);
+    });
+  };
+
   const getFilters = () => ({
     status: document.getElementById('statusFilter').value,
     priority: document.getElementById('priorityFilter').value,
@@ -315,9 +519,10 @@
     const factor = sortDir === 'asc' ? 1 : -1;
 
     return periodRows()
-      .filter(row => !isHiddenAlert(row))
+      .filter(row => state.quickFilter === 'hidden' ? isHiddenAlert(row) : !isHiddenAlert(row))
+      .filter(matchesQuickFilter)
       .filter(row =>
-        (filters.status === 'all' || effectiveStatus(row) === filters.status) &&
+        (filters.status === 'all' || effectiveStatus(row) === filters.status || (filters.status === 'success' && effectiveStatus(row) === 'resolved')) &&
         (filters.priority === 'all' || row.priority === filters.priority) &&
         (filters.client === 'all' || row.client === filters.client) &&
         (filters.server === 'all' || row.server === filters.server) &&
@@ -346,9 +551,11 @@
     document.getElementById('alertDetailsTitle').textContent = `${row.client} - ${row.server}`;
     const content = document.getElementById('alertDetailsContent');
     content.replaceChildren();
-    const known = effectiveStatus(row) === 'known';
+    const status = effectiveStatus(row);
+    const known = status === 'known';
+    const resolved = status === 'resolved';
     [
-      ['Status', statusMeta[known ? 'known' : row.status]?.[0] || row.status],
+      ['Status', statusMeta[status]?.[0] || row.status],
       ['Prioridade', priorityLabel[row.priority] || row.priority],
       ['Cliente', row.client],
       ['Dispositivo', row.server],
@@ -359,7 +566,8 @@
       ['Horário', row.time],
       ['Código', row.code],
       ['Motivo', row.error],
-      ['Tratativa', known ? 'Marcado como conhecido neste painel.' : 'Sem tratativa manual.']
+      ...(row.offlineNotice && row.offlineNotice !== '--' ? [['Aviso offline', row.offlineNotice]] : []),
+      ['Tratativa', resolved ? 'Confirmado como resolvido neste painel.' : (known ? 'Marcado como conhecido neste painel.' : 'Sem tratativa manual.')]
     ].forEach(([label, value]) => {
       const group = document.createElement('div');
       group.append(cell('dt', label), cell('dd', value));
@@ -379,6 +587,14 @@
     const markKnownButton = document.getElementById('markKnownAlert');
     const markKnownLabel = markKnownButton?.querySelector('span');
     if (markKnownLabel) markKnownLabel.textContent = known ? 'Remover conhecido' : 'Marcar conhecido';
+    const resolveButton = document.getElementById('resolveAlert');
+    const resolveLabel = resolveButton?.querySelector('span');
+    if (resolveLabel) resolveLabel.textContent = resolved ? 'Remover resolvido' : 'Confirmar resolvido';
+    const hideButton = document.getElementById('hideAlertFromPanel');
+    const hideLabel = hideButton?.querySelector('span');
+    hideButton?.removeAttribute('disabled');
+    hideButton?.setAttribute('title', 'Ocultar este alerta apenas neste painel.');
+    if (hideLabel) hideLabel.textContent = 'Ocultar do painel';
     detailsDialog.showModal();
     window.lucide?.createIcons();
   };
@@ -458,6 +674,9 @@
       const task = document.createElement('td');
       task.className = 'task-cell';
       task.append(cell('b', row.server));
+      if (row.offlineNotice && row.offlineNotice !== '--') {
+        task.append(offlineBadge());
+      }
 
       const location = document.createElement('td');
       location.className = 'task-cell';
@@ -475,12 +694,17 @@
       details.addEventListener('click', () => showDetails(row));
       actions.append(details);
 
+      const reasonCell = cell('td', row.error);
+      if (row.offlineNotice && row.offlineNotice !== '--') {
+        reasonCell.append(offlineNoticeBox(row));
+      }
+
       const rowCells = [
         statusTd,
         client,
         task,
         location,
-        cell('td', row.error),
+        reasonCell,
         cell('td', row.time, 'alert-mono'),
         cell('td', displayPlan(row)),
         cell('td', row.size),
@@ -510,6 +734,8 @@
     });
     renderPagination(totalPages);
     updateRestoreButton();
+    updateQuickFilters();
+    updateActionQueue();
     window.lucide?.createIcons();
   };
 
@@ -534,7 +760,7 @@
     const visibleRows = rows.filter(row => !isHiddenAlert(row));
     const values = [
       visibleRows.length,
-      visibleRows.filter(row => effectiveStatus(row) === 'success').length,
+      visibleRows.filter(row => ['success', 'resolved'].includes(effectiveStatus(row))).length,
       visibleRows.filter(row => effectiveStatus(row) === 'failed').length,
       visibleRows.filter(row => effectiveStatus(row) === 'running').length
     ];
@@ -626,6 +852,7 @@
     });
     document.getElementById('searchFilter').value = '';
     document.getElementById('globalAlertSearch').value = '';
+    state.quickFilter = 'all';
     page = 1;
     renderRows();
   };
@@ -696,6 +923,13 @@
     renderRows();
   });
   document.getElementById('clearFilters')?.addEventListener('click', resetFilters);
+  document.querySelectorAll('.quick-alert-filters [data-quick-filter]').forEach(button => {
+    button.addEventListener('click', () => {
+      state.quickFilter = button.dataset.quickFilter || 'all';
+      page = 1;
+      renderRows();
+    });
+  });
   document.getElementById('searchFilter')?.addEventListener('input', event => {
     document.getElementById('globalAlertSearch').value = event.currentTarget.value;
     page = 1;
@@ -754,14 +988,24 @@
     showDetails(currentDetailRow);
     notify(nextKnown ? 'Alerta marcado como conhecido.' : 'Marcacao removida.');
   });
+  document.getElementById('resolveAlert')?.addEventListener('click', () => {
+    if (!currentDetailRow) return;
+    const nextResolved = toggleResolvedAlert(currentDetailRow);
+    updateKpis();
+    renderRows();
+    showDetails(currentDetailRow);
+    notify(nextResolved ? 'Alerta confirmado como resolvido.' : 'Resolucao removida.');
+  });
   document.getElementById('hideAlertFromPanel')?.addEventListener('click', () => {
     if (!currentDetailRow) return;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
     hideAlert(currentDetailRow);
     detailsDialog?.close();
     currentDetailRow = null;
-    page = 1;
     updateKpis();
     renderRows();
+    window.scrollTo(scrollX, scrollY);
     updateRestoreButton();
     notify('Alerta ocultado do painel.');
   });
@@ -809,5 +1053,8 @@
 
   loadRows()
     .catch(error => notify(error.message || 'Falha ao carregar alertas.'));
-  setInterval(() => loadRows().catch(error => notify(error.message || 'Falha ao atualizar alertas.')), 30000);
+  setInterval(() => {
+    if (document.hidden || loadingRows) return;
+    loadRows().catch(error => notify(error.message || 'Falha ao atualizar alertas.'));
+  }, 120000);
 })();

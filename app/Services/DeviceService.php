@@ -6,16 +6,12 @@ namespace NyxCloud\Services;
 
 final class DeviceService extends AbstractAcronisService
 {
-    private const CACHE_VERSION = 'v9';
+    private const CACHE_VERSION = 'v10';
 
     public function listDevices(array $filters = []): array
     {
         return $this->remember('acronis.devices.' . self::CACHE_VERSION . '.' . md5(json_encode($filters)), (int) $this->config['cache_ttl']['devices'], function () use ($filters): array {
-            $payload = $this->api->get($this->endpoint('workloads'), array_merge([
-                'include_status' => 'true',
-                'include_all_attributes' => 'true',
-                'limit' => 500,
-            ], $filters));
+            $workloads = $this->workloadItems($filters);
 
             try {
                 $tenants = $this->items($this->api->get($this->endpoint('tenants'), $this->tenantScopeFilters()));
@@ -35,7 +31,7 @@ final class DeviceService extends AbstractAcronisService
 
             return array_values(array_map(
                 fn (array $device): array => $this->mapDevice($device, $tenantMap, $planStats),
-                array_filter($this->items($payload), fn (array $device): bool => $this->isRealDevice($device))
+                array_filter($workloads, fn (array $device): bool => $this->isRealDevice($device))
             ));
         });
     }

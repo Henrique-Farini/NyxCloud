@@ -29,6 +29,17 @@ final class FileCache implements CacheInterface
         return $payload['value'] ?? null;
     }
 
+    public function getStale(string $key): mixed
+    {
+        $file = $this->fileName($key);
+        if (!is_readable($file)) {
+            return null;
+        }
+
+        $payload = json_decode((string) file_get_contents($file), true);
+        return is_array($payload) ? ($payload['value'] ?? null) : null;
+    }
+
     public function set(string $key, mixed $value, int $ttlSeconds): void
     {
         file_put_contents($this->fileName($key), json_encode([
@@ -40,8 +51,8 @@ final class FileCache implements CacheInterface
     public function delete(string $key): void
     {
         $file = $this->fileName($key);
-        if (is_file($file)) {
-            unlink($file);
+        if (is_file($file) && is_writable($file)) {
+            @unlink($file);
         }
     }
 
@@ -50,4 +61,3 @@ final class FileCache implements CacheInterface
         return $this->basePath . DIRECTORY_SEPARATOR . hash('sha256', $key) . '.json';
     }
 }
-

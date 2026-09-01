@@ -1,0 +1,17 @@
+{
+    "active_id": "br-br",
+    "active_ids": [
+        "br-br"
+    ],
+    "accounts": [
+        {
+            "id": "br-br",
+            "name": "BR",
+            "region": "BR",
+            "base_url": "https://br.example.com",
+            "client_id": "b1",
+            "client_secret": "v1:9vAjwVZCNg0ltLkSdIUkCEf4qm+YCDTdj+LP+YkW",
+            "updated_at": "2026-09-01T20:06:03+00:00"
+        }
+    ]
+}

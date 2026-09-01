@@ -38,10 +38,9 @@
     const next = safeNextUrl();
     if (!next) return;
 
-    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || '';
     try {
       const response = await fetch('api/me.php', {
-        headers: token ? { Accept: 'application/json', Authorization: `Bearer ${token}` } : { Accept: 'application/json' },
+        headers: { Accept: 'application/json' },
         credentials: 'same-origin'
       });
       if (response.ok) window.location.replace(next);
@@ -106,12 +105,8 @@
         throw new Error(data.message || 'Nao foi possivel entrar agora.');
       }
 
-      if (data.access_token) {
-        const remember = Boolean(form.elements.lembrar?.checked);
-        localStorage.removeItem('access_token');
-        sessionStorage.removeItem('access_token');
-        (remember ? localStorage : sessionStorage).setItem('access_token', data.access_token);
-      }
+      localStorage.removeItem('access_token');
+      sessionStorage.removeItem('access_token');
 
       window.location.replace(safeNextUrl() || 'painel.php');
     } catch (error) {

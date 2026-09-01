@@ -177,6 +177,41 @@ abstract class AbstractAcronisService
         });
     }
 
+    protected function workloadItems(array $query = []): array
+    {
+        $baseQuery = array_merge([
+            'include_status' => 'true',
+            'include_all_attributes' => 'true',
+            'limit' => 500,
+        ], $query);
+        $cacheKey = 'acronis.workloads.v1.' . md5(json_encode($baseQuery));
+
+        return $this->remember($cacheKey, (int) ($this->config['cache_ttl']['devices'] ?? 300), function () use ($baseQuery): array {
+            $items = [];
+            $after = '';
+
+            for ($page = 0; $page < 100; $page++) {
+                $query = $after === '' ? $baseQuery : array_merge($baseQuery, ['after' => $after]);
+                $payload = $this->api->get($this->endpoint('workloads'), $query);
+                $pageItems = $this->items($payload);
+                foreach ($pageItems as $item) {
+                    if (is_array($item)) {
+                        $items[] = $item;
+                    }
+                }
+
+                $next = is_array($payload) ? (string) ($payload['paging']['cursors']['after'] ?? '') : '';
+                if ($pageItems === [] || $next === '' || $next === $after) {
+                    break;
+                }
+
+                $after = $next;
+            }
+
+            return $items;
+        });
+    }
+
     protected function isRealDevice(array $device): bool
     {
         if (strtolower((string) ($device['type_alias'] ?? '')) === 'resource.machine') {

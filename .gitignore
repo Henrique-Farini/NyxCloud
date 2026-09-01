@@ -1,3 +1,4 @@
 .env
 back/error_log
 tools/php/
+storage/cache/

@@ -4,19 +4,21 @@ declare(strict_types=1);
 
 namespace NyxCloud\Services;
 
+use DateTimeImmutable;
+use DateTimeZone;
+
 final class AlertService extends AbstractAcronisService
 {
-    private const CACHE_VERSION = 'v10';
+    private const CACHE_VERSION = 'v23';
+    private ?array $windowRulesCache = null;
+    private ?DateTimeZone $timezoneCache = null;
 
     public function listAlerts(array $filters = []): array
     {
         return $this->remember('acronis.alerts.' . self::CACHE_VERSION . '.' . md5(json_encode($filters)), (int) $this->config['cache_ttl']['alerts'], function () use ($filters): array {
             $tenants = $this->items($this->api->get($this->endpoint('tenants'), $this->tenantScopeFilters()));
             $tenantMap = $this->buildTenantMap($tenants);
-            $workloads = $this->items($this->api->get($this->endpoint('workloads'), [
-                'include_all_attributes' => 'true',
-                'limit' => 500,
-            ]));
+            $workloads = $this->workloadItems();
             $workloadMap = $this->buildWorkloadMap($workloads, $tenantMap);
             $payload = $this->api->get($this->endpoint('alerts'), array_merge([
                 'order' => 'desc(created_at)',
@@ -28,6 +30,8 @@ final class AlertService extends AbstractAcronisService
             $taskLookbackDays = $this->taskLookbackDaysForAlerts($alertItems);
             try {
                 $tasks = $this->taskItems($taskLookbackDays);
+                $tenantMap = $this->extendTenantMapFromTasks($tenantMap, $tasks);
+                $workloadMap = $this->buildWorkloadMap($workloads, $tenantMap);
                 $taskIndex = $this->buildTaskIndex($tasks, $tenantMap);
             } catch (\Throwable $e) {
                 error_log('Acronis: tarefas recentes indisponiveis para enriquecer alertas: ' . $e->getMessage());
@@ -45,7 +49,17 @@ final class AlertService extends AbstractAcronisService
                 $operational = [];
             }
 
-            $alerts = array_merge($operational, $native);
+            try {
+                $missingBackups = $this->missingBackupAlerts($workloads, $tenantMap, $tasks, $native, $operational);
+            } catch (\Throwable $e) {
+                error_log('Acronis: alertas de backups ausentes indisponiveis: ' . $e->getMessage());
+                $missingBackups = [];
+            }
+
+            $alerts = array_values(array_filter(
+                array_merge($missingBackups, $operational, $native),
+                fn (array $alert): bool => !$this->shouldHideAlertByPlan($alert)
+            ));
             usort($alerts, static fn (array $a, array $b): int => strcmp(
                 (string) ($b['data'] ?? '') . (string) ($b['hora'] ?? ''),
                 (string) ($a['data'] ?? '') . (string) ($a['hora'] ?? '')
@@ -163,8 +177,10 @@ final class AlertService extends AbstractAcronisService
         if ($recurso === '' || $recurso === 'Recurso') {
             $recurso = $maquina;
         }
+        $recurso = $this->humanizeAcronisIdentifier($recurso, 'plan');
 
         $normalized = $this->normalizeAlertTexts($tipo, $codigo, $mensagem, $causa);
+        $offlineContext = $this->offlineContextForAlert($normalized['codigo'], $normalized['mensagem'], $normalized['causa'], $workload);
         $mapped = [
             'cliente' => $cliente,
             'maquina' => $maquina,
@@ -177,6 +193,8 @@ final class AlertService extends AbstractAcronisService
             'recurso' => $recurso,
             'plano' => $recurso,
             'ip' => (string) ($workload['ip'] ?? ''),
+            'dispositivo_offline' => $offlineContext !== '',
+            'aviso_offline' => $offlineContext,
             'tamanho' => 'Nao informado pela Acronis',
             'tamanho_bytes' => null,
             'alerta_origem' => 'acronis',
@@ -186,7 +204,7 @@ final class AlertService extends AbstractAcronisService
             'raw' => $alert,
         ];
 
-        return $this->finalizeAlertSizeLabel($this->enrichAlertFromTasks($mapped, $alert, $taskIndex));
+        return $this->finalizeAlertSizeLabel($this->humanizeAlertIdentifiers($this->enrichAlertFromTasks($mapped, $alert, $taskIndex)));
     }
 
     private function operationalAlerts(array $tasks, array $workloadMap): array
@@ -234,23 +252,25 @@ final class AlertService extends AbstractAcronisService
                 }
             }
 
-            $baseline = count($previousSizes) >= 3 ? $this->median($previousSizes) : null;
+            $historicalBaseline = $previousSizes !== [] ? $this->median($previousSizes) : null;
+            $baseline = count($previousSizes) >= 3 ? $historicalBaseline : null;
             $reason = '';
             $severity = 'warning';
             $code = '';
-            $isDataPlan = $this->isDataPlan($latest['plano']);
-
             if ($latest['status'] === 'failed') {
                 $reason = 'A ultima execucao do backup falhou.';
                 $severity = 'critical';
                 $code = 'BACKUP_FAILED';
-            } elseif (!$isDataPlan && $latest['bytes'] === 0) {
-                $reason = 'A execucao foi concluida com tamanho zerado.';
+            } elseif ($latest['status'] === 'success' && $latest['bytes'] === 0) {
+                $reason = 'A execucao foi concluida, mas nao puxou nenhum arquivo.';
                 $severity = 'high';
                 $code = 'BACKUP_ZERO_SIZE';
+            } elseif ($latest['status'] === 'success' && $latest['bytes'] === null && $historicalBaseline !== null) {
+                $reason = 'A execucao foi concluida, mas a Acronis nao informou arquivos ou tamanho processado. Padrao historico: ' . $this->formatBytes($historicalBaseline) . '.';
+                $severity = 'high';
+                $code = 'BACKUP_NO_FILES_PROCESSED';
             } elseif (
-                !$isDataPlan
-                && is_int($latest['bytes'])
+                is_int($latest['bytes'])
                 && $latest['bytes'] > 0
                 && $baseline !== null
                 && $latest['bytes'] < ($baseline * 0.60)
@@ -279,7 +299,7 @@ final class AlertService extends AbstractAcronisService
                 'ip' => (string) ($workload['ip'] ?? ''),
                 'tamanho' => is_int($latest['bytes'])
                     ? $this->formatBytes($latest['bytes'])
-                    : ($latest['status'] === 'failed' ? 'Nao gerado' : 'Nao informado'),
+                    : (in_array($code, ['BACKUP_FAILED', 'BACKUP_NO_FILES_PROCESSED'], true) ? 'Nao gerado' : 'Nao informado'),
                 'tamanho_bytes' => $latest['bytes'],
                 'alerta_origem' => 'monitoramento',
                 'data' => date('Y-m-d', $latest['timestamp']),
@@ -287,6 +307,117 @@ final class AlertService extends AbstractAcronisService
                 'status' => 'open',
                 'raw' => $latest['raw'],
             ];
+        }
+
+        return $alerts;
+    }
+
+    private function missingBackupAlerts(array $workloads, array $tenantMap, array $tasks, array $nativeAlerts, array $operationalAlerts): array
+    {
+        $taskMap = $this->latestBackupTaskMap($tasks, $tenantMap);
+        $existing = $this->existingMachinePlanAlerts($nativeAlerts, $operationalAlerts);
+        $alerts = [];
+        $defaultMinimumTimestamp = strtotime('yesterday 00:00:00') ?: (time() - 86400);
+        $now = time();
+
+        foreach ($workloads as $workload) {
+            if (!is_array($workload) || !$this->isRealDevice($workload)) {
+                continue;
+            }
+
+            $hostname = $this->firstString($workload, ['name', 'attributes.hostname', 'attributes.host_name']);
+            if ($hostname === '') {
+                continue;
+            }
+            if ($this->ignoreMissingBackupDevice($hostname)) {
+                continue;
+            }
+
+            $tenantId = $this->firstString($workload, ['tenant_id', 'tenant.id', 'tenant.uuid']);
+            $cliente = $tenantMap[$tenantId] ?? $this->firstString($workload, ['tenant.name'], 'Cliente nao identificado');
+            $plans = $this->workloadPlans($workload);
+            if ($plans === []) {
+                continue;
+            }
+
+            $offline = $this->workloadIsOffline($workload);
+            $lastOnline = $this->firstString($workload, [
+                'attributes.agent.last_online',
+                'attributes.last_online',
+                'status.agent.last_online',
+                'last_online',
+            ]);
+            $ip = $this->firstString($workload, [
+                'attributes.agent.ip_addresses.0',
+                'attributes.default.IP.0',
+                'attributes.ip',
+                'attributes.ip_address',
+                'attributes.last_ip',
+            ]);
+
+            foreach ($plans as $plan) {
+                if ($this->ignoreMissingBackupPlan($plan)) {
+                    continue;
+                }
+                $schedule = $this->backupScheduleStatus($cliente, $hostname, $plan, $now, $defaultMinimumTimestamp);
+                if (!$schedule['expected']) {
+                    continue;
+                }
+                $minimumTimestamp = (int) ($schedule['minimum_timestamp'] ?? $defaultMinimumTimestamp);
+
+                $key = $this->lookupKey($cliente . '|' . $hostname . '|' . $plan);
+                if (isset($existing[$key])) {
+                    continue;
+                }
+
+                $latestTimestamp = $taskMap[$key]['timestamp']
+                    ?? $taskMap[$this->lookupKey($hostname . '|' . $plan)]['timestamp']
+                    ?? $this->workloadLastBackupTimestamp($workload);
+
+                if ($latestTimestamp !== null && $latestTimestamp >= $minimumTimestamp) {
+                    continue;
+                }
+
+                $missingSince = $latestTimestamp !== null
+                    ? date('d/m/Y H:i', $latestTimestamp)
+                    : 'sem execucao recente encontrada';
+                $offlineNotice = $offline
+                    ? $this->offlineNoticeFromWorkload($lastOnline)
+                    : '';
+                $reason = $offline
+                    ? 'Backup esperado nao apareceu no relatorio; dispositivo esta offline na Acronis.'
+                    : 'Backup esperado nao apareceu no relatorio; nenhuma execucao recente foi encontrada.';
+
+                $alerts[] = [
+                    'cliente' => $cliente,
+                    'maquina' => $hostname,
+                    'severidade' => $offline ? 'high' : 'warning',
+                    'mensagem' => 'Backup esperado nao apareceu no relatorio.',
+                    'tipo' => 'Monitoramento de backup',
+                    'origem' => $hostname,
+                    'causa' => $reason . ' Ultimo backup: ' . $missingSince . '.',
+                    'codigo' => $offline ? 'DEVICE_OFFLINE_BACKUP_MISSING' : 'BACKUP_EXPECTED_NOT_RUN',
+                    'recurso' => $plan,
+                    'plano' => $plan,
+                    'ip' => $ip,
+                    'dispositivo_offline' => $offline,
+                    'aviso_offline' => $offlineNotice,
+                    'tamanho' => 'Nao gerado',
+                    'tamanho_bytes' => null,
+                    'alerta_origem' => 'monitoramento',
+                    'data' => date('Y-m-d', $now),
+                    'hora' => date('H:i:s', $now),
+                    'status' => 'open',
+                    'raw' => [
+                        'source' => 'workload_missing_backup',
+                        'tenant_id' => $tenantId,
+                        'hostname' => $hostname,
+                        'plan' => $plan,
+                        'last_backup_timestamp' => $latestTimestamp,
+                    ],
+                ];
+                $existing[$key] = true;
+            }
         }
 
         return $alerts;
@@ -317,6 +448,399 @@ final class AlertService extends AbstractAcronisService
         return $map;
     }
 
+    private function extendTenantMapFromTasks(array $tenantMap, array $tasks): array
+    {
+        foreach ($tasks as $task) {
+            if (!is_array($task)) {
+                continue;
+            }
+
+            $name = $this->firstString($task, ['tenant.name']);
+            if ($name === '') {
+                continue;
+            }
+
+            foreach (['tenant.id', 'tenant.uuid', 'tenant_id', 'tenantID'] as $path) {
+                $value = $this->firstString($task, [$path]);
+                if ($value !== '' && !isset($tenantMap[$value])) {
+                    $tenantMap[$value] = $name;
+                }
+            }
+        }
+
+        return $tenantMap;
+    }
+
+    private function latestBackupTaskMap(array $tasks, array $tenantMap): array
+    {
+        $map = [];
+
+        foreach ($tasks as $task) {
+            if (!is_array($task) || !$this->isBackupTask($task)) {
+                continue;
+            }
+
+            $timestamp = $this->taskTimestamp($task);
+            if ($timestamp === null) {
+                continue;
+            }
+
+            $cliente = $this->firstString($task, ['tenant.name']);
+            if ($cliente === '') {
+                foreach (['tenant.id', 'tenant.uuid', 'tenant_id', 'tenantID'] as $path) {
+                    $tenantValue = $this->firstString($task, [$path]);
+                    if ($tenantValue !== '' && isset($tenantMap[$tenantValue])) {
+                        $cliente = $tenantMap[$tenantValue];
+                        break;
+                    }
+                }
+            }
+
+            $hostname = $this->firstString($task, ['resource.name', 'context.Persistent.Name', 'context.MachineName']);
+            $plan = $this->firstString($task, ['policy.name', 'context.BackupPlanName']);
+            if ($hostname === '' || $plan === '') {
+                continue;
+            }
+
+            foreach ([
+                $this->lookupKey($cliente . '|' . $hostname . '|' . $plan),
+                $this->lookupKey($hostname . '|' . $plan),
+            ] as $key) {
+                if ($key === '') {
+                    continue;
+                }
+
+                if (!isset($map[$key]) || (($map[$key]['timestamp'] ?? 0) < $timestamp)) {
+                    $map[$key] = [
+                        'timestamp' => $timestamp,
+                        'task' => $task,
+                    ];
+                }
+            }
+        }
+
+        return $map;
+    }
+
+    private function existingMachinePlanAlerts(array ...$alertGroups): array
+    {
+        $map = [];
+        foreach ($alertGroups as $alerts) {
+            foreach ($alerts as $alert) {
+                if (!is_array($alert)) {
+                    continue;
+                }
+
+                $cliente = (string) ($alert['cliente'] ?? '');
+                $maquina = (string) ($alert['maquina'] ?? '');
+                $plano = (string) ($alert['plano'] ?? $alert['recurso'] ?? '');
+                if ($maquina === '' || $plano === '') {
+                    continue;
+                }
+
+                $map[$this->lookupKey($cliente . '|' . $maquina . '|' . $plano)] = true;
+                $map[$this->lookupKey($maquina . '|' . $plano)] = true;
+            }
+        }
+
+        return $map;
+    }
+
+    private function workloadPlans(array $workload): array
+    {
+        $source = $this->firstString($workload, [
+            'cross_policy_status.names',
+            'attributes.plan_name',
+            'attributes.protection_plan_name',
+            'status.plan.name',
+        ]);
+        $plans = array_values(array_filter(array_map('trim', preg_split('/[;,]+/', $source) ?: [])));
+
+        return array_values(array_filter(array_unique($plans), static fn (string $plan): bool => $plan !== '' && $plan !== 'Sem plano'));
+    }
+
+    private function ignoreMissingBackupPlan(string $plan): bool
+    {
+        $normalized = $this->lookupKey($plan);
+        if ($normalized === '') {
+            return true;
+        }
+
+        return str_contains($normalized, 'dados')
+            || str_contains($normalized, 'desligar')
+            || str_contains($normalized, 'desligado')
+            || str_contains($normalized, 'disabled')
+            || str_contains($normalized, 'naoexecutar')
+            || str_contains($normalized, 'naorodar');
+    }
+
+    private function shouldHideAlertByPlan(array $alert): bool
+    {
+        foreach (['plano', 'recurso'] as $field) {
+            $value = trim((string) ($alert[$field] ?? ''));
+            if ($value !== '' && ($this->isDataPlan($value) || $this->isDisabledPlan($value))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function ignoreMissingBackupDevice(string $hostname): bool
+    {
+        $ignoredDevices = [
+            'tintamazacm',
+        ];
+
+        return in_array($this->lookupKey($hostname), $ignoredDevices, true);
+    }
+
+    private function backupScheduleStatus(string $cliente, string $hostname, string $plan, int $now, int $defaultMinimumTimestamp): array
+    {
+        $rules = array_values(array_filter(
+            $this->windowRules(),
+            fn (array $rule): bool => $this->windowRuleMatches($rule, $cliente, $hostname, $plan)
+        ));
+
+        if ($rules === []) {
+            return [
+                'expected' => true,
+                'minimum_timestamp' => $defaultMinimumTimestamp,
+            ];
+        }
+
+        $minimumTimestamp = null;
+        foreach ($rules as $rule) {
+            $ruleMinimumTimestamp = $this->latestDueWindowMinimumTimestamp($rule, $now);
+            if ($ruleMinimumTimestamp !== null) {
+                $minimumTimestamp = max($minimumTimestamp ?? $ruleMinimumTimestamp, $ruleMinimumTimestamp);
+            }
+        }
+
+        if ($minimumTimestamp !== null) {
+            return [
+                'expected' => true,
+                'minimum_timestamp' => $minimumTimestamp,
+            ];
+        }
+
+        return [
+            'expected' => false,
+            'minimum_timestamp' => $defaultMinimumTimestamp,
+        ];
+    }
+
+    private function backupWasExpectedBySchedule(string $cliente, string $hostname, string $plan, int $now): bool
+    {
+        return $this->backupScheduleStatus($cliente, $hostname, $plan, $now, strtotime('yesterday 00:00:00') ?: ($now - 86400))['expected'];
+    }
+
+    private function windowRules(): array
+    {
+        if ($this->windowRulesCache !== null) {
+            return $this->windowRulesCache;
+        }
+
+        $config = [];
+        $jsonPath = dirname(__DIR__, 2) . '/storage/config/backup_windows.json';
+        if (is_readable($jsonPath)) {
+            try {
+                $decoded = json_decode((string) file_get_contents($jsonPath), true, 512, JSON_THROW_ON_ERROR);
+                $config = is_array($decoded) ? $decoded : [];
+            } catch (\Throwable $e) {
+                error_log('Configuracao JSON de janelas invalida para alertas: ' . $e->getMessage());
+            }
+        }
+
+        if ($config === []) {
+            $fallbackPath = dirname(__DIR__) . '/Config/backup_windows.php';
+            $fallback = is_file($fallbackPath) ? (require $fallbackPath) : [];
+            $config = is_array($fallback) ? $fallback : [];
+        }
+
+        $rules = is_array($config['rules'] ?? null) ? $config['rules'] : [];
+        $this->windowRulesCache = array_values(array_filter(array_map(function (mixed $rule): ?array {
+            if (!is_array($rule)) {
+                return null;
+            }
+
+            $empresa = trim((string) ($rule['empresa'] ?? ''));
+            $plano = trim((string) ($rule['plano'] ?? ''));
+            if ($empresa === '' || $plano === '') {
+                return null;
+            }
+
+            $inicio = $this->normalizeWindowHour((string) ($rule['inicio'] ?? '00:00'));
+            $fim = $this->normalizeWindowHour((string) ($rule['fim'] ?? '23:59'));
+            $dias = is_array($rule['dias_semana'] ?? null)
+                ? array_values(array_filter(array_map('intval', $rule['dias_semana']), static fn (int $day): bool => $day >= 0 && $day <= 6))
+                : [];
+
+            return [
+                'empresa_keys' => $this->lookupKeyList(array_merge([$empresa], is_array($rule['empresa_aliases'] ?? null) ? $rule['empresa_aliases'] : [])),
+                'plano_keys' => $this->lookupKeyList(array_merge([$plano], is_array($rule['plano_aliases'] ?? null) ? $rule['plano_aliases'] : [])),
+                'maquina_key' => $this->lookupKey(trim((string) ($rule['maquina'] ?? ''))),
+                'inicio' => $inicio,
+                'fim' => $fim,
+                'intervalo_horas' => max(0, (int) ($rule['intervalo_horas'] ?? 0)),
+                'meta' => max(0, (int) ($rule['meta'] ?? 0)),
+                'dias_semana' => array_values(array_unique($dias)),
+            ];
+        }, $rules)));
+
+        return $this->windowRulesCache;
+    }
+
+    private function windowRuleMatches(array $rule, string $cliente, string $hostname, string $plan): bool
+    {
+        if (!in_array($this->lookupKey($cliente), $rule['empresa_keys'] ?? [], true)) {
+            return false;
+        }
+
+        if (!in_array($this->lookupKey($plan), $rule['plano_keys'] ?? [], true)) {
+            return false;
+        }
+
+        $machineKey = (string) ($rule['maquina_key'] ?? '');
+        return $machineKey === '' || $machineKey === $this->lookupKey($hostname);
+    }
+
+    private function latestDueWindowMinimumTimestamp(array $rule, int $now): ?int
+    {
+        $localNow = (new DateTimeImmutable('@' . $now))->setTimezone($this->scheduleTimezone());
+        $days = is_array($rule['dias_semana'] ?? null) ? array_map('intval', $rule['dias_semana']) : [];
+        if ($days !== [] && !in_array((int) $localNow->format('w'), $days, true)) {
+            return null;
+        }
+
+        $endMinutes = $this->windowMinutes((string) ($rule['fim'] ?? '23:59'));
+        $startMinutes = $this->windowMinutes((string) ($rule['inicio'] ?? '00:00'));
+        $nowMinutes = ((int) $localNow->format('G') * 60) + (int) $localNow->format('i');
+        $intervalHours = max(0, (int) ($rule['intervalo_horas'] ?? 0));
+        $meta = max(0, (int) ($rule['meta'] ?? 0));
+
+        $dueMinutes = [];
+        if ($meta === 1 || $startMinutes === $endMinutes) {
+            $dueMinutes[] = $startMinutes;
+        } elseif ($intervalHours > 0 && $endMinutes >= $startMinutes) {
+            $step = $intervalHours * 60;
+            for ($minutes = $startMinutes; $minutes <= $endMinutes; $minutes += $step) {
+                $dueMinutes[] = $minutes;
+            }
+        } else {
+            $dueMinutes[] = $endMinutes;
+        }
+
+        $latestDueMinute = null;
+        foreach ($dueMinutes as $minutes) {
+            if ($nowMinutes >= min(1439, $minutes + 35)) {
+                $latestDueMinute = max($latestDueMinute ?? $minutes, $minutes);
+            }
+        }
+
+        if ($latestDueMinute === null) {
+            return null;
+        }
+
+        $dayStart = $localNow->setTime(0, 0);
+        $minimum = $dayStart->modify('+' . max(0, $latestDueMinute - 35) . ' minutes');
+        return $minimum->getTimestamp();
+    }
+
+    private function scheduleTimezone(): DateTimeZone
+    {
+        if ($this->timezoneCache !== null) {
+            return $this->timezoneCache;
+        }
+
+        $timezone = 'America/Sao_Paulo';
+        $jsonPath = dirname(__DIR__, 2) . '/storage/config/backup_windows.json';
+        if (is_readable($jsonPath)) {
+            try {
+                $decoded = json_decode((string) file_get_contents($jsonPath), true, 512, JSON_THROW_ON_ERROR);
+                if (is_array($decoded) && trim((string) ($decoded['timezone'] ?? '')) !== '') {
+                    $timezone = trim((string) $decoded['timezone']);
+                }
+            } catch (\Throwable) {
+                $timezone = 'America/Sao_Paulo';
+            }
+        }
+
+        $this->timezoneCache = new DateTimeZone($timezone);
+        return $this->timezoneCache;
+    }
+
+    private function normalizeWindowHour(string $value): string
+    {
+        if (!preg_match('/^\d{1,2}:\d{2}$/', $value)) {
+            return '00:00';
+        }
+
+        [$hour, $minute] = array_map('intval', explode(':', $value));
+        if ($hour < 0 || $hour > 23 || $minute < 0 || $minute > 59) {
+            return '00:00';
+        }
+
+        return sprintf('%02d:%02d', $hour, $minute);
+    }
+
+    private function windowMinutes(string $hour): int
+    {
+        [$hours, $minutes] = array_map('intval', explode(':', $this->normalizeWindowHour($hour)));
+        return ($hours * 60) + $minutes;
+    }
+
+    private function lookupKeyList(array $values): array
+    {
+        return array_values(array_unique(array_filter(
+            array_map(fn (mixed $value): string => $this->lookupKey((string) $value), $values),
+            static fn (string $value): bool => $value !== ''
+        )));
+    }
+
+    private function workloadLastBackupTimestamp(array $workload): ?int
+    {
+        foreach ([
+            'per_policy_type_statuses.0.last_success_run_time',
+            'attributes.last_successful_backup',
+            'attributes.last_backup',
+            'status.last_success_run_time',
+        ] as $path) {
+            $value = $this->firstString($workload, [$path]);
+            $timestamp = $value !== '' ? strtotime($value) : false;
+            if ($timestamp !== false) {
+                return $timestamp;
+            }
+        }
+
+        return null;
+    }
+
+    private function taskTimestamp(array $task): ?int
+    {
+        foreach (['completedAt', 'updatedAt', 'startedAt'] as $path) {
+            $value = $this->firstString($task, [$path]);
+            $timestamp = $value !== '' ? strtotime($value) : false;
+            if ($timestamp !== false) {
+                return $timestamp;
+            }
+        }
+
+        return null;
+    }
+
+    private function offlineNoticeFromWorkload(string $lastOnline): string
+    {
+        $lastOnline = trim($lastOnline);
+        if ($lastOnline === '') {
+            return 'Possivel fator: dispositivo offline na Acronis.';
+        }
+
+        $timestamp = strtotime($lastOnline);
+        $label = $timestamp !== false ? date('d/m/Y H:i', $timestamp) : $lastOnline;
+        return 'Possivel fator: dispositivo offline na Acronis. Ultima comunicacao: ' . $label . '.';
+    }
+
     private function buildWorkloadMap(array $workloads, array $tenantMap): array
     {
         $map = [];
@@ -335,6 +859,13 @@ final class AlertService extends AbstractAcronisService
             $item = [
                 'cliente' => $cliente,
                 'hostname' => $hostname,
+                'offline' => $this->workloadIsOffline($workload),
+                'last_online' => $this->firstString($workload, [
+                    'attributes.agent.last_online',
+                    'attributes.last_online',
+                    'status.agent.last_online',
+                    'last_online',
+                ]),
                 'ip' => $this->firstString($workload, [
                     'attributes.agent.ip_addresses.0',
                     'attributes.default.IP.0',
@@ -489,6 +1020,65 @@ final class AlertService extends AbstractAcronisService
         return $mapped;
     }
 
+    private function offlineContextForAlert(string $codigo, string $mensagem, string $causa, array $workload): string
+    {
+        if (!$this->isBackupStatusUnknownAlert($codigo, $mensagem, $causa) || empty($workload['offline'])) {
+            return '';
+        }
+
+        $lastOnline = trim((string) ($workload['last_online'] ?? ''));
+        if ($lastOnline !== '') {
+            $timestamp = strtotime($lastOnline);
+            $lastOnlineLabel = $timestamp !== false ? date('d/m/Y H:i', $timestamp) : $lastOnline;
+            return 'Possivel fator: dispositivo offline na Acronis. Ultima comunicacao: ' . $lastOnlineLabel . '.';
+        }
+
+        return 'Possivel fator: dispositivo offline na Acronis.';
+    }
+
+    private function isBackupStatusUnknownAlert(string $codigo, string $mensagem, string $causa): bool
+    {
+        $haystack = mb_strtolower($codigo . ' ' . $mensagem . ' ' . $causa);
+        return str_contains($haystack, 'backupstatusunknown')
+            || str_contains($haystack, 'status do backup desconhecido');
+    }
+
+    private function workloadIsOffline(array $workload): bool
+    {
+        foreach ([
+            'attributes.agent.online',
+            'attributes.online',
+            'status.agent.online',
+            'agent.online',
+            'online',
+        ] as $path) {
+            $value = $this->value($workload, $path);
+            if (is_bool($value)) {
+                return $value === false;
+            }
+            if (is_scalar($value)) {
+                $normalized = mb_strtolower(trim((string) $value));
+                if (in_array($normalized, ['false', '0', 'no', 'offline'], true)) {
+                    return true;
+                }
+                if (in_array($normalized, ['true', '1', 'yes', 'online'], true)) {
+                    return false;
+                }
+            }
+        }
+
+        $statusText = mb_strtolower(json_encode([
+            $this->firstString($workload, ['status.overall']),
+            $this->firstString($workload, ['status.protection']),
+            $this->firstString($workload, ['status.agent.status']),
+            $this->firstString($workload, ['attributes.agent.status']),
+            $this->firstString($workload, ['connection_status']),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '');
+
+        return str_contains($statusText, 'offline')
+            || str_contains($statusText, 'disconnected');
+    }
+
     private function finalizeAlertSizeLabel(array $mapped): array
     {
         if (($mapped['tamanho'] ?? '') !== 'Nao informado pela Acronis') {
@@ -575,7 +1165,44 @@ final class AlertService extends AbstractAcronisService
             return 'Nenhuma origem de backup foi encontrada para o plano configurado.';
         }
 
+        $humanIdentifier = $this->humanizeAcronisIdentifier($text);
+        if ($humanIdentifier !== $text) {
+            return $humanIdentifier;
+        }
+
         return $text;
+    }
+
+    private function humanizeAlertIdentifiers(array $alert): array
+    {
+        foreach (['recurso', 'plano'] as $field) {
+            if (isset($alert[$field])) {
+                $alert[$field] = $this->humanizeAcronisIdentifier((string) $alert[$field], 'plan');
+            }
+        }
+
+        foreach (['mensagem', 'causa', 'tipo'] as $field) {
+            if (isset($alert[$field])) {
+                $alert[$field] = $this->humanizeAcronisIdentifier((string) $alert[$field]);
+            }
+        }
+
+        return $alert;
+    }
+
+    private function humanizeAcronisIdentifier(string $text, string $context = ''): string
+    {
+        $value = trim($text);
+        if (!preg_match('/^id=([A-F0-9-]{20,})$/i', $value, $matches)) {
+            return $text;
+        }
+
+        $id = strtoupper($matches[1]);
+        return match ($context) {
+            'plan' => 'Plano de backup sem nome na Acronis (ID interno: ' . $id . ')',
+            'device' => 'Dispositivo sem nome na Acronis (ID interno: ' . $id . ')',
+            default => 'ID interno da Acronis: ' . $id,
+        };
     }
 
     private function translateJsonAlertPayload(string $text): ?string
@@ -639,7 +1266,10 @@ final class AlertService extends AbstractAcronisService
             'NETWORK_ERROR' => 'Falha de comunicacao com a nuvem Acronis',
             'BACKUP_FAILED' => 'Falha na execucao do backup',
             'BACKUP_ZERO_SIZE' => 'Backup concluido com tamanho zerado',
+            'BACKUP_NO_FILES_PROCESSED' => 'Backup concluido sem arquivos processados',
             'BACKUP_BELOW_BASELINE' => 'Backup com tamanho abaixo do padrao historico',
+            'BACKUP_EXPECTED_NOT_RUN' => 'Backup esperado nao apareceu no relatorio',
+            'DEVICE_OFFLINE_BACKUP_MISSING' => 'Backup ausente com dispositivo offline',
         ];
 
         return $translations[$trimmed] ?? $trimmed;
@@ -648,6 +1278,11 @@ final class AlertService extends AbstractAcronisService
     private function isDataPlan(string $plan): bool
     {
         return (bool) preg_match('/\bdados\b/i', $plan);
+    }
+
+    private function isDisabledPlan(string $plan): bool
+    {
+        return (bool) preg_match('/\bdisabled\b/i', $plan);
     }
 
     private function lookupKey(string $value): string

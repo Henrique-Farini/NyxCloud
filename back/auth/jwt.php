@@ -79,7 +79,7 @@ function definirCookieJwt(string $token, ?int $ttl = null, bool $persistente = f
         'path' => '/',
         'secure' => filter_var(env('COOKIE_SECURE', 'false'), FILTER_VALIDATE_BOOLEAN),
         'httponly' => true,
-        'samesite' => 'Lax',
+        'samesite' => 'Strict',
     ];
     if ($persistente) {
         $options['expires'] = time() + max(60, $ttl ?? (int) env('JWT_TTL', '3600'));
@@ -95,8 +95,9 @@ function limparCookieJwt(): void
         'path' => '/',
         'secure' => filter_var(env('COOKIE_SECURE', 'false'), FILTER_VALIDATE_BOOLEAN),
         'httponly' => true,
-        'samesite' => 'Lax',
+        'samesite' => 'Strict',
     ]);
+    limparCookieCsrf();
 }
 
 function obterTokenDaRequisicao(): ?string
@@ -122,4 +123,64 @@ function obterTokensDaRequisicao(): array
     }
 
     return array_values(array_unique(array_filter($tokens)));
+}
+
+function criarTokenCsrf(): string
+{
+    return bin2hex(random_bytes(32));
+}
+
+function definirCookieCsrf(?string $token = null, ?int $ttl = null): string
+{
+    $token = $token !== null && $token !== '' ? $token : criarTokenCsrf();
+    setcookie('csrf_token', $token, [
+        'expires' => time() + max(60, $ttl ?? (int) env('JWT_REMEMBER_TTL', '2592000')),
+        'path' => '/',
+        'secure' => filter_var(env('COOKIE_SECURE', 'false'), FILTER_VALIDATE_BOOLEAN),
+        'httponly' => false,
+        'samesite' => 'Strict',
+    ]);
+
+    return $token;
+}
+
+function limparCookieCsrf(): void
+{
+    setcookie('csrf_token', '', [
+        'expires' => time() - 3600,
+        'path' => '/',
+        'secure' => filter_var(env('COOKIE_SECURE', 'false'), FILTER_VALIDATE_BOOLEAN),
+        'httponly' => false,
+        'samesite' => 'Strict',
+    ]);
+}
+
+function tokenCsrfAtual(): string
+{
+    $token = trim((string) ($_COOKIE['csrf_token'] ?? ''));
+    return $token !== '' ? $token : definirCookieCsrf();
+}
+
+function exigirCsrfParaMutacao(): void
+{
+    $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+    if (in_array($method, ['GET', 'HEAD', 'OPTIONS'], true)) {
+        return;
+    }
+
+    $cookie = trim((string) ($_COOKIE['csrf_token'] ?? ''));
+    $header = trim((string) ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? ''));
+    if ($cookie !== '' && $header !== '' && hash_equals($cookie, $header)) {
+        return;
+    }
+
+    http_response_code(419);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'success' => false,
+        'data' => new stdClass(),
+        'meta' => new stdClass(),
+        'message' => 'Token CSRF invalido ou ausente.',
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
 }

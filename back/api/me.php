@@ -10,6 +10,7 @@ $perfil = normalizarPerfil((string) ($usuario['perfil'] ?? ''));
 $usuario['perfil'] = $perfil;
 $usuario['perfil_nome'] = nomePerfil($perfil);
 $usuario['pode_gerenciar_contas'] = usuarioPodeGerenciarContas($usuario);
+$usuario['csrf_token'] = tokenCsrfAtual();
 
 echo json_encode([
     'success' => true,

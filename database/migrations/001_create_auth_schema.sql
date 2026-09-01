@@ -40,11 +40,5 @@ WHERE perfil IS NULL OR perfil = '';
 CREATE UNIQUE INDEX IF NOT EXISTS ux_usuario_email_lower
     ON usuario (LOWER(email));
 
--- Credencial inicial: admin@nyxcloud.com.br / admin
-INSERT INTO usuario (nome, email, senha_hash)
-VALUES (
-    'Administrador',
-    'admin@nyxcloud.com.br',
-    '$2y$12$ebEFYpe8R/DEQgFoOKn1M.RU2lPmtabLFV8RqHqjQ07O9xYuU5y1S'
-)
-ON CONFLICT DO NOTHING;
+-- Usuarios iniciais devem ser criados por script operacional local.
+-- Nao manter credenciais padrao em migrations aplicadas em producao.

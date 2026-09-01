@@ -16,10 +16,10 @@ O executor cria `schema_migrations`, aplica os arquivos SQL em ordem alfabética
 registra cada versão e usa um lock do PostgreSQL para evitar duas execuções
 simultâneas. Ele é idempotente: executar novamente aplica somente migrations novas.
 
-No PowerShell com o PHP distribuído neste projeto:
+No PowerShell com o PHP do XAMPP:
 
 ```powershell
-& .\tools\php\php.exe database\migrate.php
+& C:\xampp\php\php.exe database\migrate.php
 ```
 
 As variáveis `DB_DATABASE`/`DB_USERNAME` também são aceitas como aliases de
@@ -39,16 +39,17 @@ O projeto usa PHP. Não abra `index.html` diretamente pelo Explorer nem pelo Liv
 Na raiz do projeto, execute:
 
 ```powershell
-& .\tools\php\php.exe -S 127.0.0.1:8000 -t .
+& C:\xampp\php\php.exe -S 127.0.0.1:8000 -t .
 ```
 
 Depois acesse <http://127.0.0.1:8000/index.html> e clique em **Login**. A página será carregada por `back/index.php` e o formulário usará `back/api/login.php`.
 
-Seed inicial:
+Conta inicial:
 
-```text
-E-mail: admin@nyxcloud.com.br
-Senha: admin
+```powershell
+& C:\xampp\php\php.exe tools\upsert_henriquewt.php
 ```
 
-Altere o seed antes de produção. Nenhuma outra funcionalidade ou tabela foi incluída.
+As migrations não criam mais credenciais padrão. Em produção, crie o primeiro
+administrador por script operacional seguro ou diretamente no banco, depois use
+a aba **Contas** para manter usuários e a aba **Auditoria** para revisar mudanças.

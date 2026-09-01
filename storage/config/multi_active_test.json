@@ -1,0 +1,27 @@
+{
+    "active_id": "us-us",
+    "active_ids": [
+        "us-us",
+        "br-br"
+    ],
+    "accounts": [
+        {
+            "id": "us-us",
+            "name": "US",
+            "region": "US",
+            "base_url": "https://us.example.com",
+            "client_id": "u1",
+            "client_secret": "v1:UK5Fwlx6ZwfgAiupv2jBeRhKvaXZGIOZMULxrthl",
+            "updated_at": "2026-09-01T19:57:18+00:00"
+        },
+        {
+            "id": "br-br",
+            "name": "BR",
+            "region": "BR",
+            "base_url": "https://br.example.com",
+            "client_id": "b1",
+            "client_secret": "v1:Q8+JGdtAzruchroCeM3YdXw8fegYi5YrZ2bOxJXK",
+            "updated_at": "2026-09-01T19:57:18+00:00"
+        }
+    ]
+}

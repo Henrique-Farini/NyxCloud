@@ -23,12 +23,19 @@
     accounts: [],
     accountsMeta: { perfis: {}, viewer: null },
     accountsError: '',
+    integrations: [],
+    integrationsError: '',
+    audit: [],
+    auditError: '',
+    windowRules: null,
+    windowRulesError: '',
     windowsSearch: '',
     globalSearch: ''
   };
 
   const topCustomersLimit = 5;
   const dataRequests = new Map();
+  let sectionActivationId = 0;
 
   const theme = {
     key: 'nyxcloud-console-mode',
@@ -56,34 +63,40 @@
     grid: root.dataset.mode === 'light' ? '#e8e8e8' : 'rgba(164,184,211,.11)'
   });
 
+  const chartHeight = (large, medium = large, small = medium) => {
+    if (window.innerWidth <= 700) return small;
+    if (window.innerWidth <= 1320) return medium;
+    return large;
+  };
+
   const chartBase = height => ({
     chart: {
       height,
       background: 'transparent',
-      fontFamily: 'Inter, sans-serif',
+      fontFamily: 'Space Grotesk, Inter, sans-serif',
       foreColor: colors().text,
       toolbar: { show: false },
-      animations: { enabled: true, easing: 'easeinout', speed: 650 },
+      animations: { enabled: !window.matchMedia('(prefers-reduced-motion: reduce)').matches, easing: 'easeinout', speed: 620, animateGradually: { enabled: true, delay: 70 } },
       parentHeightOffset: 0
     },
     dataLabels: { enabled: false },
     grid: {
       borderColor: colors().grid,
-      strokeDashArray: 4,
-      padding: { top: 4, right: 10, bottom: 0, left: 8 }
+      strokeDashArray: 3,
+      padding: { top: 8, right: 14, bottom: 0, left: 10 }
     },
     xaxis: {
       labels: {
         hideOverlappingLabels: true,
         rotate: 0,
         trim: true,
-        style: { colors: colors().text, fontSize: '10px', fontWeight: 500 }
+        style: { colors: colors().text, fontSize: '10px', fontWeight: 600 }
       },
       axisBorder: { show: false },
       axisTicks: { show: false }
     },
     yaxis: {
-      labels: { style: { colors: colors().text, fontSize: '10px', fontWeight: 500 } }
+      labels: { style: { colors: colors().text, fontSize: '10px', fontWeight: 600 } }
     },
     legend: {
       position: 'bottom',
@@ -97,7 +110,8 @@
       theme: root.dataset.mode,
       shared: true,
       intersect: false,
-      style: { fontSize: '11px' }
+      fillSeriesColor: false,
+      style: { fontSize: '11px', fontFamily: 'Space Grotesk, Inter, sans-serif' }
     },
     noData: { text: 'Sem dados no periodo', align: 'center', verticalAlign: 'middle' }
   });
@@ -174,10 +188,20 @@
     }
   };
 
-  const jwtToken = () => localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || '';
-  const authHeaders = () => {
-    const token = jwtToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
+  const cookieValue = name => document.cookie
+    .split(';')
+    .map(value => value.trim())
+    .find(value => value.startsWith(`${name}=`))
+    ?.slice(name.length + 1) || '';
+  const csrfToken = () => state.me?.csrf_token || decodeURIComponent(cookieValue('csrf_token'));
+  const authHeaders = options => {
+    const method = String(options.method || 'GET').toUpperCase();
+    if (['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      return {};
+    }
+
+    const csrf = csrfToken();
+    return csrf ? { 'X-CSRF-Token': csrf } : {};
   };
   const redirectToLogin = () => {
     const login = new URL('../back/index.php', window.location.href);
@@ -187,19 +211,29 @@
 
   const fetchJson = async (endpoint, options = {}) => {
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), options.timeout || 30000);
-    const response = await fetch(`../back/api/${endpoint}`, {
-      method: options.method || 'GET',
-      headers: {
-        Accept: 'application/json',
-        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-        ...authHeaders()
-      },
-      credentials: 'include',
-      body: options.body ? JSON.stringify(options.body) : undefined,
-      signal: controller.signal
-    });
-    window.clearTimeout(timeout);
+    const timeoutMs = Number(options.timeout || 12000);
+    const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+    let response;
+    try {
+      response = await fetch(`../back/api/${endpoint}`, {
+        method: options.method || 'GET',
+        headers: {
+          Accept: 'application/json',
+          ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+          ...authHeaders(options)
+        },
+        credentials: 'include',
+        body: options.body ? JSON.stringify(options.body) : undefined,
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        throw new Error(`Tempo esgotado ao carregar ${endpoint}.`);
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(timeout);
+    }
 
     let payload = null;
     try {
@@ -479,16 +513,37 @@
     const text = normalizeText(value);
     return text === '--' ? text : text.replace(/\s+/g, ' ').trim();
   };
+  const escapeHtml = value => String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 
   const canManageAccounts = () => Boolean(state.me?.pode_gerenciar_contas);
 
   const renderProfile = () => {
-    const user = state.me || {};
-    const name = cleanLabel(user.nome || 'Usuario');
-    const role = cleanLabel(user.perfil_nome || 'Perfil');
+    if (!state.me) {
+      ['railProfileName', 'commandProfileName'].forEach(id => setText(id, 'Carregando perfil'));
+      ['railProfileRole', 'commandProfileRole'].forEach(id => setText(id, 'Validando sessao'));
+      ['railProfileAvatar', 'commandProfileAvatar'].forEach(id => setText(id, '?'));
+      return;
+    }
+
+    const user = state.me;
+    const name = cleanLabel(user.nome || user.email || 'Sessao sem nome');
+    const role = cleanLabel(user.perfil_nome || user.perfil || 'Perfil nao informado');
     ['railProfileName', 'commandProfileName'].forEach(id => setText(id, name));
     ['railProfileRole', 'commandProfileRole'].forEach(id => setText(id, role));
     ['railProfileAvatar', 'commandProfileAvatar'].forEach(id => setText(id, profileInitial(name)));
+    const manageRules = document.getElementById('manageWindowRules');
+    if (manageRules) manageRules.hidden = !canManageAccounts();
+  };
+
+  const markProfileUnavailable = () => {
+    ['railProfileName', 'commandProfileName'].forEach(id => setText(id, 'Sessao indisponivel'));
+    ['railProfileRole', 'commandProfileRole'].forEach(id => setText(id, 'Recarregue ou faca login'));
+    ['railProfileAvatar', 'commandProfileAvatar'].forEach(id => setText(id, '!'));
   };
 
   const renderAccounts = () => {
@@ -498,7 +553,7 @@
     if (!body) return;
 
     if (!canManageAccounts()) {
-      body.innerHTML = '<tr><td colspan="6">Acesso restrito a administradores.</td></tr>';
+      body.innerHTML = '<tr><td colspan="7">Acesso restrito a administradores.</td></tr>';
       if (notice) notice.hidden = false;
       if (form) {
         form.querySelectorAll('input, select, button').forEach(field => {
@@ -517,11 +572,11 @@
 
     body.replaceChildren();
     if (state.accountsError) {
-      body.innerHTML = `<tr><td colspan="6">${state.accountsError}</td></tr>`;
+      body.innerHTML = `<tr><td colspan="7">${escapeHtml(state.accountsError)}</td></tr>`;
       return;
     }
     if (!Array.isArray(state.accounts) || !state.accounts.length) {
-      body.innerHTML = '<tr><td colspan="6">Nenhuma conta cadastrada.</td></tr>';
+      body.innerHTML = '<tr><td colspan="7">Nenhuma conta cadastrada.</td></tr>';
       return;
     }
 
@@ -529,13 +584,107 @@
       const row = document.createElement('tr');
       const statusClass = account.ativo ? 'success' : 'failed';
       const statusLabel = account.ativo ? 'Ativa' : 'Inativa';
+      const accountId = Number(account.id || 0);
+      const roleOptions = Object.entries(state.accountsMeta.perfis || {})
+        .map(([value, label]) => `<option value="${escapeHtml(value)}"${value === account.perfil ? ' selected' : ''}>${escapeHtml(label)}</option>`)
+        .join('');
       row.innerHTML = `
-        <td><b>${cleanLabel(account.nome)}</b><small>ID ${fmtInt(account.id)}</small></td>
-        <td>${cleanLabel(account.email)}</td>
-        <td><span class="account-role-pill role-${cleanLabel(account.perfil)}">${cleanLabel(account.perfil_nome)}</span></td>
+        <td><b>${escapeHtml(cleanLabel(account.nome))}</b><small>ID ${fmtInt(account.id)}</small></td>
+        <td>${escapeHtml(cleanLabel(account.email))}</td>
+        <td><select class="account-inline-select" data-account-role="${accountId}" aria-label="Perfil">${roleOptions}</select></td>
         <td><em class="job-state ${statusClass}">${statusLabel}</em></td>
         <td>${formatDateTime(account.ultimo_login_em)}</td>
         <td>${formatDateTime(account.criado_em)}</td>
+        <td class="account-actions">
+          <button type="button" data-account-save="${accountId}" data-tooltip="Salvar perfil"><i data-lucide="save"></i></button>
+          <button type="button" data-account-toggle="${accountId}" data-tooltip="${account.ativo ? 'Inativar conta' : 'Ativar conta'}"><i data-lucide="${account.ativo ? 'user-x' : 'user-check'}"></i></button>
+          <button type="button" data-account-password="${accountId}" data-tooltip="Redefinir senha"><i data-lucide="key-round"></i></button>
+        </td>
+      `;
+      body.append(row);
+    });
+    window.lucide?.createIcons();
+  };
+
+  const renderIntegrations = () => {
+    const list = document.getElementById('integrationRows');
+    const notice = document.getElementById('integrationsAccessNotice');
+    const form = document.getElementById('integrationForm');
+    if (!list) return;
+
+    if (!canManageAccounts()) {
+      list.innerHTML = '<div class="accounts-empty">Acesso restrito a administradores.</div>';
+      if (notice) notice.hidden = false;
+      form?.querySelectorAll('input, select, button').forEach(field => {
+        field.disabled = true;
+      });
+      return;
+    }
+
+    if (notice) notice.hidden = true;
+    form?.querySelectorAll('input, select, button').forEach(field => {
+      field.disabled = false;
+    });
+
+    list.replaceChildren();
+    if (state.integrationsError) {
+      list.innerHTML = `<div class="accounts-empty">${escapeHtml(state.integrationsError)}</div>`;
+      return;
+    }
+    if (!state.integrations.length) {
+      list.innerHTML = '<div class="accounts-empty">Nenhuma integracao salva. Ambiente atual ainda usa variaveis do servidor.</div>';
+      return;
+    }
+
+    state.integrations.forEach(item => {
+      const card = document.createElement('article');
+      card.className = `integration-card${item.active ? ' is-active' : ''}`;
+      card.innerHTML = `
+        <div>
+          <span>${escapeHtml(item.region || 'API')}</span>
+          <h3>${escapeHtml(item.name || 'Acronis')}</h3>
+          <p>${escapeHtml(item.base_url || '--')}</p>
+          <small>ID: ${escapeHtml(item.client_id || '--')} · Secret: ${item.secret_set ? 'salvo' : 'ausente'}</small>
+        </div>
+        <div class="integration-actions">
+          <em class="job-state ${item.active ? 'success' : 'queued'}">${item.active ? 'Ativo' : 'Inativo'}</em>
+          <button type="button" data-integration-edit="${escapeHtml(item.id)}"><i data-lucide="pencil"></i><span>Editar</span></button>
+          <button type="button" data-integration-activate="${escapeHtml(item.id)}">${item.active ? '<i data-lucide="power-off"></i><span>Desativar</span>' : '<i data-lucide="power"></i><span>Ativar</span>'}</button>
+          <button type="button" data-integration-delete="${escapeHtml(item.id)}"><i data-lucide="trash-2"></i><span>Remover</span></button>
+        </div>
+      `;
+      list.append(card);
+    });
+    window.lucide?.createIcons();
+  };
+
+  const renderAudit = () => {
+    const body = document.getElementById('auditRows');
+    if (!body) return;
+
+    body.replaceChildren();
+    if (state.auditError) {
+      body.innerHTML = `<tr><td colspan="6">${escapeHtml(state.auditError)}</td></tr>`;
+      return;
+    }
+    if (!Array.isArray(state.audit) || !state.audit.length) {
+      body.innerHTML = '<tr><td colspan="6">Nenhum evento de auditoria encontrado.</td></tr>';
+      return;
+    }
+
+    state.audit.forEach(event => {
+      const details = Object.entries(event.detalhes || {})
+        .filter(([, value]) => value !== null && value !== '')
+        .map(([key, value]) => `${key}: ${String(value)}`)
+        .join(' | ');
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${formatDateTime(event.criado_em)}</td>
+        <td><b>${escapeHtml(cleanLabel(event.acao))}</b></td>
+        <td>${escapeHtml(cleanLabel(event.ator?.nome))}<small>${escapeHtml(cleanLabel(event.ator?.email))}</small></td>
+        <td>${escapeHtml(cleanLabel(event.alvo?.nome))}<small>${escapeHtml(cleanLabel(event.alvo?.email))}</small></td>
+        <td class="mono">${escapeHtml(cleanLabel(event.ip))}</td>
+        <td>${escapeHtml(details || '--')}</td>
       `;
       body.append(row);
     });
@@ -981,6 +1130,65 @@
     });
   };
 
+  const windowRulesShape = payload => ({
+    timezone: payload?.timezone || 'America/Sao_Paulo',
+    rules: Array.isArray(payload?.rules) ? payload.rules : []
+  });
+
+  const renderWindowRulesEditor = () => {
+    const editor = document.getElementById('windowRulesEditor');
+    const meta = document.getElementById('windowRulesMeta');
+    const message = document.getElementById('windowRulesMessage');
+    const payload = state.windowRules;
+    if (!editor || !meta || !payload) return;
+
+    editor.value = JSON.stringify(windowRulesShape(payload), null, 2);
+    meta.textContent = `${payload.rules?.length || 0} regra(s) - fonte ${payload.source || 'json'} - versao ${payload.version || '--'}`;
+    if (message) message.textContent = state.windowRulesError || 'Edite com cuidado. Cada salvamento cria uma versao local.';
+  };
+
+  const loadWindowRules = async () => {
+    state.windowRulesError = '';
+    try {
+      state.windowRules = await fetchJson('window-rules.php', { timeout: 8000 });
+      renderWindowRulesEditor();
+    } catch (error) {
+      state.windowRulesError = error.message || 'Falha ao carregar regras.';
+      setText('windowRulesMessage', state.windowRulesError);
+      throw error;
+    }
+  };
+
+  const saveWindowRules = async () => {
+    const editor = document.getElementById('windowRulesEditor');
+    const button = document.getElementById('saveWindowRules');
+    if (!editor) return;
+
+    let payload;
+    try {
+      payload = JSON.parse(editor.value);
+    } catch (error) {
+      setText('windowRulesMessage', 'JSON invalido. Corrija antes de salvar.');
+      return;
+    }
+
+    button?.setAttribute('disabled', 'disabled');
+    setText('windowRulesMessage', 'Salvando regras...');
+    try {
+      state.windowRules = await fetchJson('window-rules.php', { method: 'PUT', body: payload, timeout: 10000 });
+      renderWindowRulesEditor();
+      dataRequests.delete('execution-windows');
+      dataRequests.delete('execution-windows-stale');
+      await loadExecutionWindows();
+      notify('Regras de janelas salvas.');
+    } catch (error) {
+      setText('windowRulesMessage', error.message || 'Falha ao salvar regras.');
+      notify(error.message || 'Falha ao salvar regras.');
+    } finally {
+      button?.removeAttribute('disabled');
+    }
+  };
+
   const updateHero = () => {
     const dashboard = state.dashboard;
     if (!dashboard) {
@@ -1115,6 +1323,11 @@
     const historyLabels = chartDailySeries.map(item => item.label || '--');
     const jobsHistory = chartDailySeries.map(item => Number(item.backups || 0));
     const usedPct = dashboard.armazenamento_disponivel === false ? 0 : 100;
+    const statusHeight = chartHeight(260, 245, 230);
+    const trendHeight = chartHeight(292, 270, 245);
+    const storageHeight = chartHeight(260, 240, 225);
+    const clientHeight = chartHeight(292, 270, 250);
+    const historyHeight = chartHeight(318, 295, 260);
     renderDailyHistory(dailySeries);
 
     updateLegendsAndSummary({ completed, failed, other });
@@ -1135,51 +1348,51 @@
     }
 
     mount('statusDonut', {
-      ...chartBase(235),
-      chart: { ...chartBase(235).chart, type: 'donut' },
+      ...chartBase(statusHeight),
+      chart: { ...chartBase(statusHeight).chart, type: 'donut' },
       series: [completed, failed, other],
       labels: ['Sucesso', 'Falha', 'Outros'],
       colors: [c.green, c.red, '#708096'],
-      stroke: { width: 3, colors: [root.dataset.mode === 'light' ? '#fff' : '#101b2b'] },
+      stroke: { width: 4, colors: [root.dataset.mode === 'light' ? '#fff' : '#0b1726'] },
       states: { hover: { filter: { type: 'lighten', value: .08 } } },
-      legend: { ...chartBase(235).legend, show: false },
+      legend: { ...chartBase(statusHeight).legend, show: false },
       plotOptions: {
         pie: {
           expandOnClick: false,
           donut: {
-            size: '74%',
+            size: '70%',
             labels: {
               show: true,
-              name: { show: true, color: c.text, fontSize: '11px', offsetY: 18 },
-              value: { show: true, color: root.dataset.mode === 'light' ? '#101827' : '#fff', fontSize: '27px', fontWeight: 700, offsetY: -3, formatter: value => fmtInt(value) },
-              total: { show: true, label: 'Total de backups', color: c.text, fontSize: '10px', formatter: () => fmtInt(dashboard.total_backups || 0) }
+              name: { show: true, color: c.text, fontSize: '12px', fontWeight: 700, offsetY: 20 },
+              value: { show: true, color: root.dataset.mode === 'light' ? '#101827' : '#fff', fontSize: '31px', fontWeight: 800, offsetY: -4, formatter: value => fmtInt(value) },
+              total: { show: true, label: 'Total monitorado', color: c.text, fontSize: '11px', fontWeight: 700, formatter: () => fmtInt(dashboard.total_backups || 0) }
             }
           }
         }
       },
-      tooltip: { ...chartBase(235).tooltip, y: { formatter: value => `${fmtInt(value)} execucoes` } }
+      tooltip: { ...chartBase(statusHeight).tooltip, y: { formatter: value => `${fmtInt(value)} execucoes` } }
     });
 
     mount('executionLine', {
-      ...chartBase(255),
-      chart: { ...chartBase(255).chart, type: 'area' },
+      ...chartBase(trendHeight),
+      chart: { ...chartBase(trendHeight).chart, type: 'area' },
       series: [{ name: 'Execucoes', data: jobsHistory }],
       colors: [c.violet2],
-      stroke: { curve: 'smooth', width: 3, lineCap: 'round' },
+      stroke: { curve: 'smooth', width: 4, lineCap: 'round' },
       fill: {
         type: 'gradient',
-        gradient: { shadeIntensity: .35, opacityFrom: .42, opacityTo: .03, stops: [0, 88, 100] }
+        gradient: { shadeIntensity: .35, opacityFrom: .48, opacityTo: .04, stops: [0, 82, 100] }
       },
-      markers: { size: 0, hover: { size: 5, sizeOffset: 2 } },
-      grid: { ...chartBase(255).grid, xaxis: { lines: { show: false } } },
-      xaxis: { ...chartBase(255).xaxis, categories: historyLabels, tickAmount: Math.min(6, Math.max(historyLabels.length - 1, 1)) },
-      yaxis: { ...chartBase(255).yaxis, min: 0, forceNiceScale: true, tickAmount: 4, labels: { ...chartBase(255).yaxis.labels, formatter: value => fmtInt(value) } },
-      tooltip: { ...chartBase(255).tooltip, y: { formatter: value => `${fmtInt(value)} execucoes` } }
+      markers: { size: 0, strokeWidth: 3, strokeColors: root.dataset.mode === 'light' ? '#fff' : '#0b1726', hover: { size: 6, sizeOffset: 2 } },
+      grid: { ...chartBase(trendHeight).grid, xaxis: { lines: { show: false } } },
+      xaxis: { ...chartBase(trendHeight).xaxis, categories: historyLabels, tickAmount: Math.min(7, Math.max(historyLabels.length - 1, 1)) },
+      yaxis: { ...chartBase(trendHeight).yaxis, min: 0, forceNiceScale: true, tickAmount: 4, labels: { ...chartBase(trendHeight).yaxis.labels, formatter: value => fmtInt(value) } },
+      tooltip: { ...chartBase(trendHeight).tooltip, y: { formatter: value => `${fmtInt(value)} execucoes` } }
     });
 
     mount('storageRadial', {
-      ...chartBase(230),
-      chart: { ...chartBase(230).chart, type: 'radialBar' },
+      ...chartBase(storageHeight),
+      chart: { ...chartBase(storageHeight).chart, type: 'radialBar' },
       series: [usedPct],
       labels: ['Volume protegido'],
       colors: [c.violet2],
@@ -1187,48 +1400,48 @@
         radialBar: {
           startAngle: -125,
           endAngle: 125,
-          hollow: { size: '70%', background: 'transparent' },
+          hollow: { size: '66%', background: 'transparent' },
           track: { background: root.dataset.mode === 'light' ? '#e8e8e8' : '#253247', strokeWidth: '98%', margin: 4 },
           dataLabels: {
-            name: { color: c.text, fontSize: '10px', offsetY: 35 },
-            value: { color: root.dataset.mode === 'light' ? '#0f0f0f' : '#fff', fontSize: '25px', fontWeight: 700, offsetY: -7, formatter: () => formatBytes(Number(dashboard.espaco_utilizado || 0)) }
+            name: { color: c.text, fontSize: '11px', fontWeight: 700, offsetY: 38 },
+            value: { color: root.dataset.mode === 'light' ? '#0f0f0f' : '#fff', fontSize: '27px', fontWeight: 800, offsetY: -8, formatter: () => formatBytes(Number(dashboard.espaco_utilizado || 0)) }
           }
         }
       },
       stroke: { lineCap: 'round' },
       legend: { show: false },
-      subtitle: { text: 'Volume informado pela Acronis', align: 'center', offsetY: 12, style: { color: c.text, fontSize: '10px', fontWeight: 500 } }
+      subtitle: { text: 'Fonte Acronis', align: 'center', offsetY: 14, style: { color: c.text, fontSize: '10px', fontWeight: 700 } }
     });
 
     mount('clientBar', {
-      ...chartBase(255),
-      chart: { ...chartBase(255).chart, type: 'bar' },
+      ...chartBase(clientHeight),
+      chart: { ...chartBase(clientHeight).chart, type: 'bar' },
       series: [{ name: 'Dispositivos protegidos', data: clientSeries.length ? clientSeries : [0] }],
       colors: [c.violet, c.cyan, c.green, c.amber, c.violet2],
-      plotOptions: { bar: { borderRadius: 6, borderRadiusApplication: 'end', barHeight: '56%', distributed: true, horizontal: true } },
-      dataLabels: { enabled: true, offsetX: 7, style: { colors: [c.text], fontSize: '10px', fontWeight: 700 }, formatter: value => fmtInt(value) },
-      grid: { ...chartBase(255).grid, yaxis: { lines: { show: false } }, padding: { top: 2, right: 22, bottom: 0, left: 8 } },
-      xaxis: { ...chartBase(255).xaxis, categories: clientLabels.length ? clientLabels : ['Sem dados'], min: 0, tickAmount: 4, labels: { ...chartBase(255).xaxis.labels, formatter: value => fmtInt(value) } },
-      yaxis: { ...chartBase(255).yaxis, labels: { ...chartBase(255).yaxis.labels, maxWidth: 145, trim: true } },
+      plotOptions: { bar: { borderRadius: 8, borderRadiusApplication: 'end', barHeight: '62%', distributed: true, horizontal: true } },
+      dataLabels: { enabled: true, offsetX: 8, style: { colors: [root.dataset.mode === 'light' ? '#1f2937' : '#dbe8f8'], fontSize: '10px', fontWeight: 800 }, formatter: value => fmtInt(value) },
+      grid: { ...chartBase(clientHeight).grid, yaxis: { lines: { show: false } }, padding: { top: 6, right: 28, bottom: 0, left: 10 } },
+      xaxis: { ...chartBase(clientHeight).xaxis, categories: clientLabels.length ? clientLabels : ['Sem dados'], min: 0, tickAmount: 4, labels: { ...chartBase(clientHeight).xaxis.labels, formatter: value => fmtInt(value) } },
+      yaxis: { ...chartBase(clientHeight).yaxis, labels: { ...chartBase(clientHeight).yaxis.labels, maxWidth: window.innerWidth <= 700 ? 110 : 170, trim: true } },
       legend: { show: false },
-      tooltip: { ...chartBase(255).tooltip, y: { formatter: value => `${fmtInt(value)} dispositivos` } }
+      tooltip: { ...chartBase(clientHeight).tooltip, y: { formatter: value => `${fmtInt(value)} dispositivos` } }
     });
 
     mount('historyArea', {
-      ...chartBase(275),
-      chart: { ...chartBase(275).chart, type: 'bar', stacked: true },
+      ...chartBase(historyHeight),
+      chart: { ...chartBase(historyHeight).chart, type: 'bar', stacked: true },
       series: [
         { name: 'Sucesso', data: chartDailySeries.map(item => Number(item.success || 0)) },
         { name: 'Falha', data: chartDailySeries.map(item => Number(item.failed || 0)) }
       ],
       colors: [c.green, c.red],
-      plotOptions: { bar: { borderRadius: 3, borderRadiusApplication: 'end', borderRadiusWhenStacked: 'last', columnWidth: '58%' } },
+      plotOptions: { bar: { borderRadius: 5, borderRadiusApplication: 'end', borderRadiusWhenStacked: 'last', columnWidth: window.innerWidth <= 700 ? '72%' : '54%' } },
       stroke: { width: 0 },
-      grid: { ...chartBase(275).grid, xaxis: { lines: { show: false } } },
-      xaxis: { ...chartBase(275).xaxis, categories: historyLabels.length ? historyLabels : ['Sem dados'], tickAmount: Math.min(6, Math.max(historyLabels.length - 1, 1)) },
-      yaxis: { ...chartBase(275).yaxis, min: 0, forceNiceScale: true, tickAmount: 4, labels: { ...chartBase(275).yaxis.labels, formatter: value => fmtInt(value) } },
-      legend: { ...chartBase(275).legend, position: 'top', horizontalAlign: 'right', offsetY: -4 },
-      tooltip: { ...chartBase(275).tooltip, y: { formatter: value => `${fmtInt(value)} execucoes` } }
+      grid: { ...chartBase(historyHeight).grid, xaxis: { lines: { show: false } } },
+      xaxis: { ...chartBase(historyHeight).xaxis, categories: historyLabels.length ? historyLabels : ['Sem dados'], tickAmount: Math.min(7, Math.max(historyLabels.length - 1, 1)) },
+      yaxis: { ...chartBase(historyHeight).yaxis, min: 0, forceNiceScale: true, tickAmount: 4, labels: { ...chartBase(historyHeight).yaxis.labels, formatter: value => fmtInt(value) } },
+      legend: { ...chartBase(historyHeight).legend, position: 'top', horizontalAlign: 'right', offsetY: -4 },
+      tooltip: { ...chartBase(historyHeight).tooltip, y: { formatter: value => `${fmtInt(value)} execucoes` } }
     });
   };
 
@@ -1323,6 +1536,7 @@
   const renderPartialData = () => {
     safeRun(renderProfile);
     safeRun(renderAccounts);
+    safeRun(renderAudit);
     safeRun(updateHero);
     safeRun(updateKpis);
     safeRun(buildRecentRows);
@@ -1342,21 +1556,26 @@
     return dataRequests.get(key);
   };
 
-  const loadDashboard = () => requestOnce('dashboard', async () => {
+  const loadDashboard = ({ full = false } = {}) => requestOnce(full ? 'dashboard-full' : 'dashboard-fast', async () => {
     try {
-      state.dashboard = await fetchJson('dashboard.php') || {};
+      state.dashboard = await fetchJson(full ? 'dashboard.php' : 'dashboard.php?fast=1', { timeout: full ? 18000 : 10000 }) || {};
       renderData();
     } catch (error) {
-      markDashboardUnavailable();
+      if (!state.dashboard) markDashboardUnavailable();
       notify(error.message || 'Falha ao carregar dashboard.');
       throw error;
     }
   });
 
   const loadMe = () => requestOnce('me', async () => {
-    const payload = await fetchJson('me.php');
-    state.me = payload;
-    renderPartialData();
+    try {
+      const payload = await fetchJson('me.php', { timeout: 8000 });
+      state.me = payload;
+      renderPartialData();
+    } catch (error) {
+      markProfileUnavailable();
+      throw error;
+    }
   });
 
   const loadDevices = () => requestOnce('devices', async () => {
@@ -1376,9 +1595,9 @@
     }
   });
 
-  const loadAlerts = () => requestOnce('alerts', async () => {
+  const loadAlerts = ({ foreground = true } = {}) => requestOnce('alerts', async () => {
     try {
-      const alerts = await fetchJson('alertas.php');
+      const alerts = await fetchJson('alertas.php', { timeout: foreground ? 12000 : 9000 });
       state.alerts = Array.isArray(alerts) ? alerts : [];
       state.alertsLoaded = true;
       renderPartialData();
@@ -1390,9 +1609,9 @@
     }
   });
 
-  const loadCustomers = () => requestOnce('customers', async () => {
+  const loadCustomers = ({ foreground = true } = {}) => requestOnce('customers', async () => {
     try {
-      const customers = await fetchJson('clientes.php');
+      const customers = await fetchJson('clientes.php', { timeout: foreground ? 12000 : 9000 });
       state.customers = Array.isArray(customers) ? customers : [];
       renderPartialData();
       if (state.dashboard) safeRun(buildCharts);
@@ -1402,14 +1621,14 @@
     }
   });
 
-  const loadExecutionWindows = () => requestOnce('execution-windows', async () => {
+  const loadExecutionWindows = ({ stale = false } = {}) => requestOnce(stale ? 'execution-windows-stale' : 'execution-windows', async () => {
     state.executionWindowsError = '';
     try {
-      state.executionWindows = await fetchJson('execution-windows.php') || { items: [] };
+      state.executionWindows = await fetchJson(stale ? 'execution-windows.php?stale=1' : 'execution-windows.php', { timeout: stale ? 2500 : 18000 }) || { items: [] };
       safeRun(buildExecutionWindowRows);
     } catch (error) {
-      state.executionWindowsError = error.message || 'Falha ao carregar janelas.';
-      notify(state.executionWindowsError);
+      state.executionWindowsError = stale ? '' : (error.message || 'Falha ao carregar janelas.');
+      if (state.executionWindowsError) notify(state.executionWindowsError);
       safeRun(buildExecutionWindowRows);
       throw error;
     }
@@ -1459,17 +1678,61 @@
     }
   });
 
+  const loadIntegrations = () => requestOnce('integrations', async () => {
+    if (!state.me) {
+      await loadMe().catch(() => {});
+    }
+    state.integrationsError = '';
+    try {
+      const payload = await fetchJson('acronis-credentials.php');
+      state.integrations = Array.isArray(payload?.items) ? payload.items : [];
+      safeRun(renderIntegrations);
+    } catch (error) {
+      state.integrations = [];
+      state.integrationsError = error.message || 'Falha ao carregar integracoes.';
+      safeRun(renderIntegrations);
+      throw error;
+    }
+  });
+
+  const loadAudit = () => requestOnce('audit', async () => {
+    state.auditError = '';
+    try {
+      const payload = await fetchJson('auditoria.php');
+      state.audit = Array.isArray(payload?.items) ? payload.items : [];
+      safeRun(renderAudit);
+    } catch (error) {
+      state.audit = [];
+      state.auditError = error.message || 'Falha ao carregar auditoria.';
+      safeRun(renderAudit);
+      throw error;
+    }
+  });
+
   const sectionLoaders = {
-    overview: [loadMe, loadDashboard, loadAlerts, loadCustomers],
-    executions: [loadDevices],
-    storage: [loadDashboard],
-    summary: [loadDashboard, loadAlerts],
-    windows: [loadExecutionWindows],
-    clients: [loadDashboard, loadCustomers],
+    overview: [loadMe, loadDashboard],
+    executions: [loadMe, loadDevices],
+    storage: [() => loadDashboard({ full: true })],
+    summary: [loadMe, loadDashboard],
+    windows: [loadMe, () => loadExecutionWindows({ stale: true })],
+    clients: [loadMe, loadDashboard, loadCustomers],
     accounts: [loadMe, loadAccounts],
-    infrastructure: [loadDailyExecutions],
-    analytics: [loadDashboard, loadCustomers],
-    alerts: []
+    integrations: [loadMe, loadIntegrations],
+    infrastructure: [loadMe, loadDailyExecutions],
+    analytics: [loadMe, () => loadDashboard({ full: true }), loadCustomers],
+    alerts: [loadMe],
+    audit: [loadMe, loadAudit]
+  };
+
+  const sectionBackgroundLoaders = {
+    overview: [
+      () => loadAlerts({ foreground: false }),
+      () => loadCustomers({ foreground: false }),
+      () => loadDashboard({ full: true })
+    ],
+    summary: [() => loadAlerts({ foreground: false })],
+    clients: [() => loadCustomers({ foreground: false })],
+    windows: [loadExecutionWindows]
   };
 
   const sectionLabels = {
@@ -1480,9 +1743,11 @@
     windows: 'Janelas',
     clients: 'Clientes',
     accounts: 'Contas',
+    integrations: 'Integrações',
     infrastructure: 'Infraestrutura',
     analytics: 'Analises',
-    alerts: 'Alertas'
+    alerts: 'Alertas',
+    audit: 'Auditoria'
   };
 
   const sectionDescriptions = {
@@ -1492,9 +1757,11 @@
     windows: 'Comparativo entre horarios esperados e execucoes realizadas por empresa e plano.',
     clients: 'Distribuicao dos dispositivos protegidos e concentracao da carga por cliente.',
     accounts: 'Gerencie usuarios internos do painel e crie acessos com menos privilegios.',
+    integrations: 'Gerencie credenciais da Acronis BR, US ou outro ambiente.',
     infrastructure: 'Execucoes de hoje e ontem organizadas por dispositivo para verificacao operacional.',
     analytics: 'Tendencias, taxa de sucesso, falhas e volume diario dos backups.',
-    alerts: 'Central de alertas operacionais.'
+    alerts: 'Central de alertas operacionais.',
+    audit: 'Eventos administrativos de criacao, edicao e seguranca de contas.'
   };
 
   const setSyncStatus = (message, stateName = 'ready') => {
@@ -1534,6 +1801,41 @@
     (sectionLoaders[section] || sectionLoaders.overview).map(loader => loader())
   );
 
+  const loadBackgroundData = (section, activationId) => {
+    const loaders = sectionBackgroundLoaders[section] || [];
+    if (loaders.length === 0) {
+      return;
+    }
+
+    Promise.allSettled(loaders.map(loader => loader())).then(results => {
+      if (activationId !== sectionActivationId || root.dataset.activeSection !== section) {
+        return;
+      }
+
+      const hasFailure = results.some(result => result.status === 'rejected');
+      setSyncStatus(hasFailure ? 'Essencial carregado' : syncTimeLabel(), hasFailure ? 'warning' : 'ready');
+      if (state.dashboard) safeRun(buildCharts);
+    });
+  };
+
+  const releaseSectionLoading = (section, activationId, results, timedOut = false) => {
+    if (activationId !== sectionActivationId || root.dataset.activeSection !== section) {
+      return false;
+    }
+
+    const hasFailure = results.some(result => result.status === 'rejected');
+    setSyncStatus(
+      timedOut ? 'Carregando em segundo plano' : (hasFailure ? 'Dados parciais' : syncTimeLabel()),
+      timedOut || hasFailure ? 'warning' : 'ready'
+    );
+    root.classList.remove('is-section-loading');
+    requestAnimationFrame(() => {
+      if (state.dashboard) safeRun(buildCharts);
+      window.dispatchEvent(new Event('resize'));
+    });
+    return true;
+  };
+
   const panelMatchesSection = (panel, section) => {
     const sections = [
       panel.dataset.panelSection || '',
@@ -1544,6 +1846,7 @@
 
   const activateSection = (section, updateHistory = true) => {
     const selected = sectionLabels[section] ? section : 'overview';
+    const activationId = ++sectionActivationId;
     root.dataset.activeSection = selected;
     root.classList.toggle('alerts-immersive', selected === 'alerts');
     root.classList.add('is-section-loading');
@@ -1569,14 +1872,21 @@
       window.history.pushState({ section: selected }, '', `#${selected}`);
     }
 
-    loadSectionData(selected).then(results => {
-      const hasFailure = results.some(result => result.status === 'rejected');
-      setSyncStatus(hasFailure ? 'Dados parciais' : syncTimeLabel(), hasFailure ? 'warning' : 'ready');
-      root.classList.remove('is-section-loading');
-      requestAnimationFrame(() => {
-        if (state.dashboard) safeRun(buildCharts);
-        window.dispatchEvent(new Event('resize'));
-      });
+    const loading = loadSectionData(selected);
+    let released = false;
+    let backgroundStarted = false;
+    window.setTimeout(() => {
+      if (!released) {
+        released = releaseSectionLoading(selected, activationId, [], true);
+      }
+    }, 2800);
+
+    loading.then(results => {
+      released = releaseSectionLoading(selected, activationId, results);
+      if (!backgroundStarted) {
+        backgroundStarted = true;
+        loadBackgroundData(selected, activationId);
+      }
     });
   };
 
@@ -1607,6 +1917,33 @@
     setRailOpen(false);
   };
 
+  const refreshAccountsAndAudit = async () => {
+    dataRequests.delete('accounts');
+    dataRequests.delete('audit');
+    await Promise.allSettled([loadAccounts(), loadAudit()]);
+  };
+
+  const updateAccount = async (id, payload, message = 'Conta atualizada.') => {
+    const account = state.accounts.find(item => Number(item.id) === Number(id));
+    if (!account) {
+      notify('Conta nao encontrada.');
+      return;
+    }
+
+    await fetchJson('contas.php', {
+      method: 'PATCH',
+      body: {
+        id: Number(id),
+        nome: account.nome,
+        perfil: account.perfil,
+        ativo: Boolean(account.ativo),
+        ...payload
+      }
+    });
+    await refreshAccountsAndAudit();
+    notify(message);
+  };
+
   theme.apply(theme.get());
   window.lucide?.createIcons();
 
@@ -1626,17 +1963,20 @@
   document.querySelectorAll('[data-toast]').forEach(button => button.addEventListener('click', () => notify(button.dataset.toast)));
   document.getElementById('refreshDashboard')?.addEventListener('click', async event => {
     const button = event.currentTarget;
+    const selected = root.dataset.activeSection || 'overview';
+    const activationId = ++sectionActivationId;
     button.disabled = true;
     button.classList.add('is-refreshing');
     dataRequests.clear();
     root.classList.add('is-section-loading');
     setSyncStatus('Atualizando dados', 'loading');
-    const results = await loadSectionData(root.dataset.activeSection || 'overview');
+    const results = await loadSectionData(selected);
     const hasFailure = results.some(result => result.status === 'rejected');
     setSyncStatus(hasFailure ? 'Dados parciais' : syncTimeLabel(), hasFailure ? 'warning' : 'ready');
     root.classList.remove('is-section-loading');
     button.disabled = false;
     button.classList.remove('is-refreshing');
+    loadBackgroundData(selected, activationId);
     notify(hasFailure ? 'Atualizacao concluida com dados parciais.' : 'Dados atualizados.');
   });
   document.getElementById('profileButton')?.addEventListener('click', () => notify(state.me?.email || 'Perfil indisponivel neste painel.'));
@@ -1644,6 +1984,22 @@
   document.getElementById('windowsSearch')?.addEventListener('input', event => {
     state.windowsSearch = String(event.currentTarget.value || '').trim();
     safeRun(buildExecutionWindowRows);
+  });
+  document.getElementById('manageWindowRules')?.addEventListener('click', async () => {
+    const dialog = document.getElementById('windowRulesDialog');
+    if (!canManageAccounts()) {
+      notify('Somente administradores podem editar janelas.');
+      return;
+    }
+    dialog?.showModal();
+    window.lucide?.createIcons();
+    await loadWindowRules().catch(() => {});
+  });
+  document.getElementById('reloadWindowRules')?.addEventListener('click', () => {
+    loadWindowRules().catch(error => notify(error.message || 'Falha ao recarregar regras.'));
+  });
+  document.getElementById('saveWindowRules')?.addEventListener('click', () => {
+    saveWindowRules().catch(error => notify(error.message || 'Falha ao salvar regras.'));
   });
   document.getElementById('globalSearch')?.addEventListener('input', event => {
     state.globalSearch = String(event.currentTarget.value || '').trim();
@@ -1658,6 +2014,32 @@
   });
   document.getElementById('accountRoleSelect')?.addEventListener('change', event => {
     setText('accountPermissionHint', accountRoleHint(event.currentTarget.value));
+  });
+  document.getElementById('accountsRows')?.addEventListener('click', async event => {
+    const button = event.target.closest('button');
+    if (!button) return;
+
+    const id = button.dataset.accountSave || button.dataset.accountToggle || button.dataset.accountPassword;
+    if (!id) return;
+
+    button.disabled = true;
+    try {
+      if (button.dataset.accountSave) {
+        const role = document.querySelector(`[data-account-role="${id}"]`)?.value || 'leitura';
+        await updateAccount(id, { perfil: role }, 'Perfil atualizado.');
+      } else if (button.dataset.accountToggle) {
+        const account = state.accounts.find(item => Number(item.id) === Number(id));
+        await updateAccount(id, { ativo: !Boolean(account?.ativo) }, account?.ativo ? 'Conta inativada.' : 'Conta ativada.');
+      } else if (button.dataset.accountPassword) {
+        const password = window.prompt('Nova senha temporaria (minimo 8 caracteres):');
+        if (password === null) return;
+        await updateAccount(id, { senha: password }, 'Senha redefinida.');
+      }
+    } catch (error) {
+      notify(error.message || 'Falha ao atualizar conta.');
+    } finally {
+      button.disabled = false;
+    }
   });
   document.getElementById('accountForm')?.addEventListener('submit', async event => {
     event.preventDefault();
@@ -1683,6 +2065,8 @@
       const created = await fetchJson('contas.php', { method: 'POST', body: payload });
       state.accounts = [created, ...state.accounts].sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'));
       renderAccounts();
+      dataRequests.delete('audit');
+      loadAudit().catch(() => {});
       form.reset();
       const roleSelect = document.getElementById('accountRoleSelect');
       if (roleSelect) roleSelect.value = 'leitura';
@@ -1696,10 +2080,139 @@
       submitButton.disabled = false;
     }
   });
+  document.getElementById('integrationRows')?.addEventListener('click', async event => {
+    const button = event.target.closest('button');
+    if (!button) return;
+
+    const editId = button.dataset.integrationEdit;
+    const activateId = button.dataset.integrationActivate;
+    const deleteId = button.dataset.integrationDelete;
+    const id = editId || activateId || deleteId;
+    const item = state.integrations.find(integration => integration.id === id);
+    if (!id || !item) return;
+
+    if (editId) {
+      const form = document.getElementById('integrationForm');
+      if (!form) return;
+      form.elements.namedItem('id').value = item.id || '';
+      form.elements.namedItem('name').value = item.name || '';
+      form.elements.namedItem('region').value = item.region || 'BR';
+      form.elements.namedItem('base_url').value = item.base_url || '';
+      form.elements.namedItem('client_id').value = item.client_id || '';
+      form.elements.namedItem('client_secret').value = '';
+      form.elements.namedItem('active').checked = Boolean(item.active);
+      setText('integrationFormMessage', 'Editando integracao. Secret vazio mantém valor atual.');
+      form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    button.disabled = true;
+    try {
+      const endpoint = 'acronis-credentials.php';
+      const method = activateId ? 'PATCH' : 'DELETE';
+      const payload = await fetchJson(endpoint, {
+        method,
+        body: activateId ? { id, active: !Boolean(item.active) } : { id }
+      });
+      state.integrations = Array.isArray(payload?.items) ? payload.items : [];
+      dataRequests.delete('integrations');
+      renderIntegrations();
+      notify(activateId ? (item.active ? 'Integracao desativada.' : 'Integracao ativada.') : 'Integracao removida.');
+    } catch (error) {
+      notify(error.message || 'Falha ao atualizar integracao.');
+    } finally {
+      button.disabled = false;
+    }
+  });
+  document.getElementById('integrationForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!canManageAccounts()) {
+      notify('Somente administradores podem gerenciar integracoes.');
+      return;
+    }
+
+    const form = event.currentTarget;
+    const submitButton = document.getElementById('integrationSubmitButton');
+    const message = document.getElementById('integrationFormMessage');
+    const data = new FormData(form);
+    const payload = {
+      id: String(data.get('id') || '').trim(),
+      name: String(data.get('name') || '').trim(),
+      region: String(data.get('region') || 'BR').trim(),
+      base_url: String(data.get('base_url') || '').trim(),
+      client_id: String(data.get('client_id') || '').trim(),
+      client_secret: String(data.get('client_secret') || ''),
+      active: data.get('active') !== null
+    };
+
+    submitButton.disabled = true;
+    if (message) message.textContent = 'Salvando integracao...';
+    try {
+      const saved = await fetchJson('acronis-credentials.php', { method: 'POST', body: payload });
+      state.integrations = Array.isArray(saved?.items) ? saved.items : [];
+      dataRequests.delete('integrations');
+      dataRequests.delete('dashboard');
+      dataRequests.delete('alerts');
+      dataRequests.delete('devices');
+      renderIntegrations();
+      form.reset();
+      form.elements.namedItem('id').value = '';
+      if (message) message.textContent = 'Integracao salva.';
+      notify('Integracao Acronis salva. Cache limpo.');
+    } catch (error) {
+      if (message) message.textContent = error.message || 'Falha ao salvar integracao.';
+      notify(error.message || 'Falha ao salvar integracao.');
+    } finally {
+      submitButton.disabled = false;
+    }
+  });
+
+  const setupVisualInteractions = () => {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const glowTargets = document.querySelectorAll('.surface, .kpi-tile, .signal-band');
+    glowTargets.forEach(target => {
+      target.addEventListener('pointermove', event => {
+        const rect = target.getBoundingClientRect();
+        target.style.setProperty('--mx', `${event.clientX - rect.left}px`);
+        target.style.setProperty('--my', `${event.clientY - rect.top}px`);
+      });
+      target.addEventListener('pointerleave', () => {
+        target.style.removeProperty('--mx');
+        target.style.removeProperty('--my');
+      });
+    });
+
+    const revealTargets = document.querySelectorAll('.hero-row, .signal-band, .kpi-tile, .surface');
+    revealTargets.forEach((target, index) => {
+      target.classList.add('visual-reveal');
+      target.style.transitionDelay = reducedMotion ? '0ms' : `${Math.min(index * 35, 260)}ms`;
+    });
+
+    if (!('IntersectionObserver' in window) || reducedMotion) {
+      revealTargets.forEach(target => target.classList.add('is-visible'));
+      return;
+    }
+
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-visible');
+        observer.unobserve(entry.target);
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: .08 });
+
+    revealTargets.forEach(target => observer.observe(target));
+  };
 
   const restoreSection = () => activateSection(sectionFromLocation(), false);
   window.addEventListener('popstate', restoreSection);
   window.addEventListener('hashchange', restoreSection);
+  let chartResizeTimer;
+  window.addEventListener('resize', () => {
+    if (!state.dashboard) return;
+    window.clearTimeout(chartResizeTimer);
+    chartResizeTimer = window.setTimeout(() => safeRun(buildCharts), 180);
+  });
   window.addEventListener('keydown', event => {
     if (event.key === 'Escape' && (!desktopRail.matches || !root.classList.contains('rail-collapsed'))) {
       closeRail();
@@ -1714,6 +2227,7 @@
     window.history.replaceState({ section: initialSection }, '', `#${initialSection}`);
   }
   setText('accountPermissionHint', accountRoleHint('leitura'));
+  setupVisualInteractions();
   setRailOpen(desktopRail.matches ? localStorage.getItem('nyxcloud-rail-collapsed') !== '1' : false);
   activateSection(initialSection, false);
 })();

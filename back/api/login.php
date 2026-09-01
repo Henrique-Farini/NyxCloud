@@ -36,6 +36,8 @@ if ($login === '' || $senha === '') {
     exit;
 }
 
+verificarLimiteLogin($login);
+
 $perfilSelect = tabelaUsuarioTemPerfil($pdo) ? 'perfil' : "'admin' AS perfil";
 $stmt = $pdo->prepare(
     "SELECT id, nome, email, {$perfilSelect}, senha_hash
@@ -52,10 +54,13 @@ $stmt->execute(['login' => $login]);
 $usuario = $stmt->fetch();
 
 if (!$usuario || !password_verify($senha, $usuario['senha_hash'])) {
+    registrarFalhaLogin($login);
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'Usuario/e-mail ou senha invalidos.']);
     exit;
 }
+
+limparFalhasLogin($login);
 
 $pdo->prepare('UPDATE usuario SET ultimo_login_em = NOW(), atualizado_em = NOW() WHERE id = :id')
     ->execute(['id' => $usuario['id']]);
@@ -69,6 +74,7 @@ try {
         'email' => $usuario['email'],
     ], $ttl);
     definirCookieJwt($token, $ttl, $lembrar);
+    $csrfToken = definirCookieCsrf(null, $ttl);
 } catch (Throwable $e) {
     error_log($e->getMessage());
     http_response_code(500);
@@ -78,10 +84,9 @@ try {
 
 echo json_encode([
     'success' => true,
-    'token_type' => 'Bearer',
     'expires_in' => $ttl,
     'remembered' => $lembrar,
-    'access_token' => $token,
+    'csrf_token' => $csrfToken,
     'user' => [
         'id' => (int) $usuario['id'],
         'nome' => $usuario['nome'],
@@ -90,3 +95,49 @@ echo json_encode([
         'perfil_nome' => nomePerfil((string) ($usuario['perfil'] ?? '')),
     ],
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+function chaveLimiteLogin(string $login): string
+{
+    $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? 'cli');
+    return sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'nyxcloud-login-' . hash('sha256', strtolower($ip . '|' . $login)) . '.json';
+}
+
+function lerFalhasLogin(string $login): array
+{
+    $file = chaveLimiteLogin($login);
+    if (!is_readable($file)) {
+        return [];
+    }
+
+    $payload = json_decode((string) file_get_contents($file), true);
+    return is_array($payload) ? array_values(array_filter(array_map('intval', $payload))) : [];
+}
+
+function verificarLimiteLogin(string $login): void
+{
+    $windowStart = time() - 900;
+    $falhas = array_values(array_filter(lerFalhasLogin($login), static fn (int $time): bool => $time >= $windowStart));
+    if (count($falhas) < 5) {
+        return;
+    }
+
+    http_response_code(429);
+    echo json_encode(['success' => false, 'message' => 'Muitas tentativas. Aguarde 15 minutos e tente novamente.']);
+    exit;
+}
+
+function registrarFalhaLogin(string $login): void
+{
+    $windowStart = time() - 900;
+    $falhas = array_values(array_filter(lerFalhasLogin($login), static fn (int $time): bool => $time >= $windowStart));
+    $falhas[] = time();
+    @file_put_contents(chaveLimiteLogin($login), json_encode($falhas, JSON_THROW_ON_ERROR), LOCK_EX);
+}
+
+function limparFalhasLogin(string $login): void
+{
+    $file = chaveLimiteLogin($login);
+    if (is_file($file)) {
+        @unlink($file);
+    }
+}

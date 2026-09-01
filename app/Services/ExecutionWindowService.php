@@ -17,9 +17,29 @@ final class ExecutionWindowService extends AbstractAcronisService
     public function listWindows(array $filters = []): array
     {
         $requestedDate = $this->normalizeDate((string) ($filters['date'] ?? date('Y-m-d')));
+        $preferStale = filter_var($filters['stale'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        unset($filters['stale']);
+        $cacheKey = 'acronis.execution_windows.' . self::CACHE_VERSION . '.' . $this->windowsConfigVersion() . '.' . md5(json_encode([$filters, $requestedDate]));
+
+        if ($preferStale) {
+            $cached = $this->cache->getStale($cacheKey);
+            if (is_array($cached)) {
+                $cached['cache_stale'] = true;
+                return $cached;
+            }
+
+            return [
+                'date' => $requestedDate,
+                'mode' => 'loading',
+                'rules_count' => count($this->rules()),
+                'items' => [],
+                'cache_stale' => true,
+                'cache_miss' => true,
+            ];
+        }
 
         return $this->remember(
-            'acronis.execution_windows.' . self::CACHE_VERSION . '.' . md5(json_encode([$filters, $requestedDate])),
+            $cacheKey,
             (int) ($this->config['cache_ttl']['dashboard'] ?? 300),
             function () use ($filters, $requestedDate): array {
             $tasks = $this->taskItems(90);
@@ -504,11 +524,35 @@ final class ExecutionWindowService extends AbstractAcronisService
             return $this->windowsConfigCache;
         }
 
+        $jsonPath = dirname(__DIR__, 2) . '/storage/config/backup_windows.json';
+        if (is_readable($jsonPath)) {
+            try {
+                $json = json_decode((string) file_get_contents($jsonPath), true, 512, JSON_THROW_ON_ERROR);
+                if (is_array($json)) {
+                    $this->windowsConfigCache = $json;
+                    return $this->windowsConfigCache;
+                }
+            } catch (\Throwable $e) {
+                error_log('Configuracao JSON de janelas invalida: ' . $e->getMessage());
+            }
+        }
+
         $path = dirname(__DIR__) . '/Config/backup_windows.php';
         $config = is_file($path) ? (require $path) : [];
         $this->windowsConfigCache = is_array($config) ? $config : [];
 
         return $this->windowsConfigCache;
+    }
+
+    private function windowsConfigVersion(): string
+    {
+        $jsonPath = dirname(__DIR__, 2) . '/storage/config/backup_windows.json';
+        if (is_file($jsonPath)) {
+            return 'json-' . ((string) filemtime($jsonPath));
+        }
+
+        $path = dirname(__DIR__) . '/Config/backup_windows.php';
+        return is_file($path) ? 'php-' . ((string) filemtime($path)) : 'none';
     }
 
     private function timezone(): DateTimeZone

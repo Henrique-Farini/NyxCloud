@@ -25,10 +25,8 @@
         throw new Error(data.message || "Nao foi possivel fazer login.");
       }
 
-      if (data.access_token) {
-        localStorage.setItem("access_token", data.access_token);
-        sessionStorage.setItem("access_token", data.access_token);
-      }
+      localStorage.removeItem("access_token");
+      sessionStorage.removeItem("access_token");
 
       window.location.href = "painel.php";
     } catch (error) {

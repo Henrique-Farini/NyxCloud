@@ -1,0 +1,94 @@
+{
+    "state": {
+        "active_id": "us-us",
+        "active_ids": [
+            "us-us",
+            "br-br"
+        ],
+        "items": [
+            {
+                "id": "us-us",
+                "name": "US",
+                "region": "US",
+                "base_url": "https://us.example.com",
+                "client_id": "u1",
+                "secret_set": true,
+                "active": true,
+                "updated_at": "2026-09-01T19:57:18+00:00"
+            },
+            {
+                "id": "br-br",
+                "name": "BR",
+                "region": "BR",
+                "base_url": "https://br.example.com",
+                "client_id": "b1",
+                "secret_set": true,
+                "active": true,
+                "updated_at": "2026-09-01T19:57:18+00:00"
+            },
+            {
+                "id": "nativo",
+                "name": "Nativo",
+                "region": "NATIVO",
+                "base_url": "https://br01-cloud.acronis.com",
+                "client_id": "82daca90-32c0-41be-ae45-526787ad88ef",
+                "secret_set": true,
+                "active": false,
+                "updated_at": ""
+            }
+        ]
+    },
+    "configs": [
+        {
+            "active_id": "br-acronis-us",
+            "active_ids": [
+                "br-acronis-us",
+                "nativo"
+            ],
+            "accounts": [
+                {
+                    "id": "br-acronis-us",
+                    "name": "Acronis US",
+                    "region": "BR",
+                    "base_url": "https://us-cloud.acronis.com",
+                    "client_id": "e8a4446f-0610-471d-a497-8093fc1a12c3",
+                    "client_secret": "245ho2zwju2kljlareecyxtpz4i6khr3tmancfqcqp3yvuur2eva",
+                    "updated_at": "2026-09-01T19:42:05+00:00"
+                },
+                {
+                    "id": "nativo",
+                    "name": "Acronis BR",
+                    "region": "BR",
+                    "base_url": "https://br01-cloud.acronis.com",
+                    "client_id": "82daca90-32c0-41be-ae45-526787ad88ef",
+                    "client_secret": "vo3rhhf4ptswq4rx7klazyfosybkjqwjaqkvtlwaxju7mws7alam",
+                    "updated_at": "2026-09-01T19:52:40+00:00"
+                }
+            ],
+            "base_url": "https://us-cloud.acronis.com",
+            "client_id": "e8a4446f-0610-471d-a497-8093fc1a12c3",
+            "client_secret": "245ho2zwju2kljlareecyxtpz4i6khr3tmancfqcqp3yvuur2eva",
+            "timeout": 30,
+            "ssl_verify": true,
+            "token_cache_ttl": 6600,
+            "cache_path": "C:\\xampp\\htdocs\\NyxCloud\\storage\\cache\\acronis",
+            "endpoints": {
+                "oauth_token": "/api/2/idp/token",
+                "client": "/api/2/clients/{client_id}",
+                "tenants": "/api/2/tenants",
+                "tenant_usages": "/api/2/tenants/{tenant_id}/usages",
+                "workloads": "/api/workload_management/v5/workloads",
+                "alerts": "/api/alert_manager/v1/alerts",
+                "tasks": "/api/task_manager/v2/tasks",
+                "resource_statuses": "/api/resource_management/v4/resource_statuses"
+            },
+            "cache_ttl": {
+                "dashboard": 300,
+                "storage": 1800,
+                "customers": 600,
+                "devices": 300,
+                "alerts": 60
+            }
+        }
+    ]
+}

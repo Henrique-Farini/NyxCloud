@@ -10,8 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260820-2128">
-  <link rel="stylesheet" href="alertas.css?v=20260820-2128">
+  <link rel="stylesheet" href="styles.css?v=20260901-integrations-1">
+  <link rel="stylesheet" href="alertas.css?v=20260901-alerts-nav-1">
 </head>
 <body data-mode="dark">
   <a class="skip-link" href="#alert-events">Pular para os alertas</a>
@@ -33,6 +33,8 @@
           <a class="rail-item" href="index.php#windows"><i data-lucide="waypoints"></i><span>Janelas</span></a>
           <span class="rail-caption">Ambiente</span>
           <a class="rail-item" href="index.php#clients"><i data-lucide="building-2"></i><span>Clientes</span></a>
+          <a class="rail-item" href="index.php#accounts"><i data-lucide="users-round"></i><span>Contas</span></a>
+          <a class="rail-item" href="index.php#integrations"><i data-lucide="key-round"></i><span>Integrações</span></a>
           <a class="rail-item" href="index.php#daily-devices"><i data-lucide="server-cog"></i><span>Infraestrutura</span></a>
           <a class="rail-item" href="index.php#reports"><i data-lucide="chart-no-axes-combined"></i><span>Análises</span></a>
           <a class="rail-item" href="#alert-events"><i data-lucide="scroll-text"></i><span>Auditoria</span></a>
@@ -71,6 +73,13 @@
           <article class="alert-kpi amber-kpi" data-status-filter="running" role="button" tabindex="0" aria-pressed="false"><div class="alert-kpi-top"><span class="alert-icon"><i data-lucide="clock-3"></i></span><span class="kpi-trend warn">Acompanhando</span></div><span>Em andamento</span><strong data-alert-count="0">0</strong><small>Filtrar eventos em processamento</small></article>
         </section>
 
+        <section class="alert-focus-strip" aria-live="polite" aria-label="Prioridade de ação">
+          <span>Prioridade</span>
+          <strong id="actionQueueTitle">Carregando</strong>
+          <small id="actionQueueText">Mostrando item mais importante do período.</small>
+          <div id="actionQueueBadges" hidden></div>
+        </section>
+
         <section class="filter-panel" aria-label="Filtros de alertas">
           <div class="filter-field"><label for="statusFilter">Status</label><select id="statusFilter"><option value="all">Todos</option><option value="failed">Falha</option><option value="success">Sucesso</option><option value="running">Em andamento</option></select></div>
           <div class="filter-field"><label for="priorityFilter">Prioridade</label><select id="priorityFilter"><option value="all">Todas</option><option value="critical">Crítica</option><option value="high">Alta</option><option value="medium">Média</option><option value="low">Baixa</option></select></div>
@@ -79,6 +88,13 @@
           <label class="search-filter"><span>Buscar</span><i data-lucide="search"></i><input id="searchFilter" type="search" placeholder="Erro, cliente, dispositivo ou IP"></label>
           <button class="clear-filter" id="clearFilters"><i data-lucide="rotate-ccw"></i> Limpar</button>
           <button class="apply-filter" id="applyFilters"><i data-lucide="list-filter"></i> Filtrar</button>
+        </section>
+
+        <section class="quick-alert-filters" aria-label="Filtros rápidos por causa">
+          <button type="button" class="is-active" data-quick-filter="all">Todos <b data-quick-count="all">0</b></button>
+          <button type="button" data-quick-filter="offline">Offline <b data-quick-count="offline">0</b></button>
+          <button type="button" data-quick-filter="backup">Backup pendente <b data-quick-count="backup">0</b></button>
+          <button type="button" data-quick-filter="hidden">Ocultos <b data-quick-count="hidden">0</b></button>
         </section>
 
         <section class="alert-table-surface" id="alert-events">
@@ -94,12 +110,13 @@
     <div class="alert-details-head"><div><span>DETALHES DO EVENTO</span><h2 id="alertDetailsTitle">Alerta</h2></div><button type="button" id="closeAlertDetails" aria-label="Fechar detalhes"><i data-lucide="x"></i></button></div>
     <dl id="alertDetailsContent"></dl>
     <div class="alert-details-actions">
+      <button type="button" id="resolveAlert"><i data-lucide="circle-check"></i><span>Confirmar resolvido</span></button>
       <button type="button" id="markKnownAlert"><i data-lucide="shield-check"></i><span>Marcar conhecido</span></button>
       <button type="button" id="hideAlertFromPanel" data-tone="danger"><i data-lucide="eye-off"></i><span>Ocultar do painel</span></button>
     </div>
   </dialog>
   <div class="alerts-toast" id="alertsToast" role="status" aria-live="polite"></div>
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script src="alertas.js?v=20260820-2128"></script>
+  <script src="alertas.js?v=20260901-alerts-usability-2"></script>
 </body>
 </html>

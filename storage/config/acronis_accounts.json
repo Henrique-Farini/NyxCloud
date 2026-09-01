@@ -1,0 +1,27 @@
+{
+    "active_id": "us-acronis-us",
+    "active_ids": [
+        "us-acronis-us",
+        "nativo"
+    ],
+    "accounts": [
+        {
+            "id": "nativo",
+            "name": "Acronis BR",
+            "region": "BR",
+            "base_url": "https://br01-cloud.acronis.com",
+            "client_id": "82daca90-32c0-41be-ae45-526787ad88ef",
+            "client_secret": "v1:aO2zOp8en24w3jpSnjkCjoNbU0O71fF8jGTvOjIANpCWDb+FgFto0mMDtnpdWQ6hsIaCkHcma3IpN7NjMMnuSnAGTe6z4TpZNUmk+YSxAnU=",
+            "updated_at": "2026-09-01T19:52:40+00:00"
+        },
+        {
+            "id": "us-acronis-us",
+            "name": "Acronis US",
+            "region": "US",
+            "base_url": "https://us-cloud.acronis.com",
+            "client_id": "e8a4446f-0610-471d-a497-8093fc1a12c3",
+            "client_secret": "v1:FGtbFEiKowHV2aLdmYk+XyRyDq+LLY+M+gjLHcG+VQK1pBQtHv+VgWrh3ktJVUL2gFp89fw/asrRwnyjTkNxgdP76+HYhgEPr3H/LBBx0PI=",
+            "updated_at": "2026-09-01T20:07:21+00:00"
+        }
+    ]
+}

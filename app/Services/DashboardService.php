@@ -6,31 +6,36 @@ namespace NyxCloud\Services;
 
 final class DashboardService extends AbstractAcronisService
 {
-    private const CACHE_VERSION = 'v11';
+    private const CACHE_VERSION = 'v12';
 
     public function summary(array $filters = []): array
     {
-        return $this->remember('acronis.dashboard.' . self::CACHE_VERSION . '.' . md5(json_encode($filters)), (int) $this->config['cache_ttl']['dashboard'], function () use ($filters): array {
-            $tenants = $this->items($this->api->get($this->endpoint('tenants'), $this->tenantScopeFilters($filters)));
+        $fast = filter_var($filters['fast'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $cacheKey = 'acronis.dashboard.' . self::CACHE_VERSION . '.' . md5(json_encode($filters));
+
+        if ($fast) {
+            $cached = $this->cache->getStale($cacheKey);
+            if (is_array($cached)) {
+                $cached['cache_stale'] = true;
+                return $cached;
+            }
+        }
+
+        return $this->remember($cacheKey, (int) $this->config['cache_ttl']['dashboard'], function () use ($filters, $fast): array {
+            $tenantFilters = $filters;
+            unset($tenantFilters['fast']);
+            $tenants = $this->items($this->api->get($this->endpoint('tenants'), $this->tenantScopeFilters($tenantFilters)));
             $customers = $this->customerTenants($tenants);
-            $devices = array_values(array_filter($this->items($this->api->get($this->endpoint('workloads'), [
-                'include_status' => 'true',
-                'include_all_attributes' => 'true',
-                'limit' => 500,
-            ])), fn (array $device): bool => $this->isRealDevice($device)));
+            $devices = array_values(array_filter($this->workloadItems(), fn (array $device): bool => $this->isRealDevice($device)));
             $tasks = $this->taskItems(30);
 
             $backupTasks = array_values(array_filter($tasks, fn (array $task): bool => $this->isBackupTask($task)));
             $successful = array_values(array_filter($backupTasks, fn (array $task): bool => $this->taskResult($task) === 'ok'));
             $failed = array_values(array_filter($backupTasks, fn (array $task): bool => $this->taskResult($task) === 'failed'));
             $daily = $this->dailyHistory($backupTasks);
-            $storage = $this->remember(
-                'acronis.dashboard.storage.v2',
-                (int) ($this->config['cache_ttl']['storage'] ?? 1800),
-                fn (): array => $this->storageSummary($customers)
-            );
+            $storage = $this->storageForDashboard($customers, $fast);
 
-            return [
+            $summary = [
                 'total_clientes' => count($customers),
                 'total_dispositivos' => count($devices),
                 'total_backups' => count($backupTasks),
@@ -44,7 +49,43 @@ final class DashboardService extends AbstractAcronisService
                 'series_diarias' => $daily['series'],
                 'armazenamento_por_dia' => $daily['storage'],
             ];
+
+            if (!$fast) {
+                $fastFilters = $filters;
+                $fastFilters['fast'] = '1';
+                $this->cache->set(
+                    'acronis.dashboard.' . self::CACHE_VERSION . '.' . md5(json_encode($fastFilters)),
+                    $summary,
+                    (int) $this->config['cache_ttl']['dashboard']
+                );
+            }
+
+            return $summary;
         });
+    }
+
+    private function storageForDashboard(array $customers, bool $fast): array
+    {
+        $cacheKey = 'acronis.dashboard.storage.v2';
+
+        if ($fast) {
+            $cached = $this->cache->get($cacheKey);
+            if (is_array($cached)) {
+                return $cached;
+            }
+
+            return [
+                'total' => 0,
+                'clients' => [],
+                'available' => false,
+            ];
+        }
+
+        return $this->remember(
+            $cacheKey,
+            (int) ($this->config['cache_ttl']['storage'] ?? 1800),
+            fn (): array => $this->storageSummary($customers)
+        );
     }
 
     private function isBackupTask(array $task): bool
