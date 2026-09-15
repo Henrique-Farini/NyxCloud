@@ -13,7 +13,8 @@ try {
     outputJson([
         'success' => true,
         'token_type' => 'Bearer',
-        'access_token' => $token,
+        // Never print a live Acronis token to a terminal, CI log or browser.
+        'token_received' => $token !== '',
     ]);
 } catch (Throwable $e) {
     outputError($e);
@@ -39,4 +40,3 @@ function outputError(Throwable $e): void
         'error' => $e->getMessage(),
     ]);
 }
-

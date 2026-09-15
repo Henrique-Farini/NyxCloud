@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_errors.php';
+
 header('Content-Type: application/json; charset=utf-8');
 
 try {
@@ -44,13 +46,13 @@ $stmt = $pdo->prepare(
      FROM usuario
      WHERE ativo = TRUE
        AND (
-            LOWER(email) = LOWER(:login)
-            OR LOWER(nome) = LOWER(:login)
+            LOWER(email) = LOWER(:email_login)
+            OR LOWER(nome) = LOWER(:nome_login)
        )
      ORDER BY id ASC
      LIMIT 1"
 );
-$stmt->execute(['login' => $login]);
+$stmt->execute(['email_login' => $login, 'nome_login' => $login]);
 $usuario = $stmt->fetch();
 
 if (!$usuario || !password_verify($senha, $usuario['senha_hash'])) {

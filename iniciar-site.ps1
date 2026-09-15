@@ -4,6 +4,10 @@ $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $php = Join-Path $projectRoot 'tools\php\php.exe'
 
 if (-not (Test-Path -LiteralPath $php)) {
+    $php = 'C:\xampp\php\php.exe'
+}
+
+if (-not (Test-Path -LiteralPath $php)) {
     throw "PHP não encontrado em: $php"
 }
 

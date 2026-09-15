@@ -8,6 +8,10 @@ $usuario = exigirPerfilAdministrador($pdo);
 
 try {
     $hasPerfil = tabelaUsuarioTemPerfil($pdo);
+    $mysql = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql';
+    $contaColumns = 'id, nome, email, ' . ($hasPerfil ? 'perfil' : "'admin' AS perfil")
+        . ', ativo, ultimo_login_em, criado_em, atualizado_em';
+    $returning = $mysql ? '' : ' RETURNING ' . $contaColumns;
 
     if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
         $perfilSelect = $hasPerfil ? 'perfil' : "'admin' AS perfil";
@@ -89,7 +93,7 @@ try {
         }
         if ($ativo !== null) {
             $sets[] = 'ativo = :ativo';
-            $params['ativo'] = $ativo;
+            $params['ativo'] = $ativo ? '1' : '0';
         }
         if ($senha !== '') {
             $hash = password_hash($senha, PASSWORD_DEFAULT);
@@ -102,11 +106,10 @@ try {
 
         $update = $pdo->prepare(
             'UPDATE usuario SET ' . implode(', ', $sets) . '
-             WHERE id = :id
-             RETURNING id, nome, email, perfil, ativo, ultimo_login_em, criado_em, atualizado_em'
+             WHERE id = :id' . $returning
         );
         $update->execute($params);
-        $conta = $update->fetch() ?: [];
+        $conta = $mysql ? buscarContaSalva($pdo, $id, $contaColumns) : ($update->fetch() ?: []);
         registrarAuditoriaConta($pdo, (int) $usuario['id'], $id, 'conta_atualizada', [
             'perfil_anterior' => $contaAtual['perfil'] ?? null,
             'perfil_novo' => $perfil,
@@ -153,31 +156,31 @@ try {
     if ($hasPerfil) {
         $insert = $pdo->prepare(
             'INSERT INTO usuario (nome, email, senha_hash, perfil, ativo, criado_em, atualizado_em)
-             VALUES (:nome, :email, :senha_hash, :perfil, :ativo, NOW(), NOW())
-             RETURNING id, nome, email, perfil, ativo, ultimo_login_em, criado_em, atualizado_em'
+             VALUES (:nome, :email, :senha_hash, :perfil, :ativo, NOW(), NOW())' . $returning
         );
         $insert->execute([
             'nome' => $nome,
             'email' => $email,
             'senha_hash' => $hash,
             'perfil' => $perfil,
-            'ativo' => $ativo !== false,
+            'ativo' => $ativo !== false ? '1' : '0',
         ]);
     } else {
         $insert = $pdo->prepare(
             "INSERT INTO usuario (nome, email, senha_hash, ativo, criado_em, atualizado_em)
-             VALUES (:nome, :email, :senha_hash, :ativo, NOW(), NOW())
-             RETURNING id, nome, email, 'admin' AS perfil, ativo, ultimo_login_em, criado_em, atualizado_em"
+             VALUES (:nome, :email, :senha_hash, :ativo, NOW(), NOW())" . $returning
         );
         $insert->execute([
             'nome' => $nome,
             'email' => $email,
             'senha_hash' => $hash,
-            'ativo' => $ativo !== false,
+            'ativo' => $ativo !== false ? '1' : '0',
         ]);
     }
 
-    $conta = $insert->fetch() ?: [];
+    $conta = $mysql
+        ? buscarContaSalva($pdo, (int) $pdo->lastInsertId(), $contaColumns)
+        : ($insert->fetch() ?: []);
     registrarAuditoriaConta($pdo, (int) $usuario['id'], (int) ($conta['id'] ?? 0), 'conta_criada', [
         'perfil' => $perfil,
         'ativo' => $ativo !== false,
@@ -186,6 +189,17 @@ try {
     apiResponse(true, formatarConta($conta), [], 'Conta criada com sucesso.', 201);
 } catch (Throwable $e) {
     apiHandle($e);
+}
+
+function buscarContaSalva(PDO $pdo, int $id, string $columns): array
+{
+    $stmt = $pdo->prepare('SELECT ' . $columns . ' FROM usuario WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $conta = $stmt->fetch();
+    if (!$conta) {
+        throw new RuntimeException('Nao foi possivel consultar a conta salva.');
+    }
+    return $conta;
 }
 
 function formatarConta(array $conta): array
@@ -201,9 +215,11 @@ function formatarConta(array $conta): array
 function registrarAuditoriaConta(PDO $pdo, int $atorId, int $alvoId, string $acao, array $detalhes = []): void
 {
     try {
+        $jsonValue = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql'
+            ? ':detalhes' : 'CAST(:detalhes AS jsonb)';
         $stmt = $pdo->prepare(
             "INSERT INTO usuario_auditoria (ator_id, alvo_usuario_id, acao, detalhes, ip, user_agent, criado_em)
-             VALUES (:ator_id, :alvo_usuario_id, :acao, CAST(:detalhes AS jsonb), :ip, :user_agent, NOW())"
+             VALUES (:ator_id, :alvo_usuario_id, :acao, {$jsonValue}, :ip, :user_agent, NOW())"
         );
         $stmt->execute([
             'ator_id' => $atorId,

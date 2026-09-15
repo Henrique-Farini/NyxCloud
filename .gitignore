@@ -2,3 +2,9 @@
 back/error_log
 tools/php/
 storage/cache/
+
+# Runtime state, debug snapshots and generated test artifacts must not enter Git.
+/debug_state.json
+storage/config/*.json
+storage/config/versions/
+tests/tmp_*.json

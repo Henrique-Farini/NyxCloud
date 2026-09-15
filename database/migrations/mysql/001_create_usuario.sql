@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS usuario (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(150) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    senha_hash VARCHAR(255) NOT NULL,
+    perfil ENUM('admin', 'operador', 'leitura') NOT NULL DEFAULT 'admin',
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    ultimo_login_em TIMESTAMP NULL DEFAULT NULL,
+    criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY ux_usuario_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

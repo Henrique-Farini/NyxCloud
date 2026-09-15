@@ -25,6 +25,33 @@ No PowerShell com o PHP do XAMPP:
 As variáveis `DB_DATABASE`/`DB_USERNAME` também são aceitas como aliases de
 `DB_NAME`/`DB_USER`, facilitando uma futura migração para o scaffold Laravel.
 
+## Migrations MySQL adicionais
+
+`DB_CONNECTION` seleciona a conexao da aplicacao (`pgsql` por padrao ou `mysql`).
+O PostgreSQL continua sendo o destino padrao das migrations sem argumento.
+Para criar o schema tambem em um banco MySQL existente, preencha `MYSQL_HOST`,
+`MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER` e `MYSQL_PASSWORD` no `.env`.
+Essas variaveis sao independentes de `DB_*`. O MySQL local usa a porta 3307.
+Habilite a extensao PHP `pdo_mysql` e execute:
+
+```powershell
+& C:\xampp\php\php.exe database\migrate.php mysql
+```
+
+As migrations MySQL ficam em `database/migrations/mysql`, criam `usuario` e
+`usuario_auditoria` e registram as versoes em `schema_migrations` no banco MySQL.
+O executor usa um lock por banco para impedir execucoes simultaneas. Como DDL
+MySQL faz commit implicito, cada arquivo deve conter uma unica instrucao
+idempotente; em caso de falha, corrija a causa e execute novamente.
+Este schema destina-se a um banco novo; tabelas existentes nao sao reconciliadas.
+As migrations nao copiam dados nem alteram `DB_CONNECTION`.
+O login e a sessao suportam MySQL; consultas administrativas com SQL especifico
+de PostgreSQL ainda precisam de adaptacao antes de usar essas funcoes no MySQL.
+
+```powershell
+& C:\xampp\php\php.exe database\migrate.php pgsql
+```
+
 ## Rotas
 
 - `POST /back/api/login.php`: recebe `email` e `senha`, retorna JWT e cria cookie HttpOnly.

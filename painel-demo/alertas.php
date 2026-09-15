@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260901-integrations-1">
+  <link rel="stylesheet" href="styles.css?v=20260903-overview-1">
   <link rel="stylesheet" href="alertas.css?v=20260901-alerts-nav-1">
 </head>
 <body data-mode="dark">
@@ -26,18 +26,18 @@
         <nav class="rail-nav" aria-label="Navegação do painel">
           <span class="rail-caption">Monitoramento</span>
           <a class="rail-item" href="index.php#overview"><i data-lucide="layout-dashboard"></i><span>Visão geral</span></a>
-          <a class="rail-item" href="index.php#recent"><i data-lucide="database-zap"></i><span>Execuções</span><em>0</em></a>
+          <a class="rail-item" href="index.php#executions"><i data-lucide="database-zap"></i><span>Atividade recente</span><em>0</em></a>
           <a class="rail-item is-current" href="alertas.php"><i data-lucide="siren"></i><span>Alertas</span><em class="danger-count">0</em></a>
           <a class="rail-item" href="index.php#storage"><i data-lucide="hard-drive"></i><span>Armazenamento</span></a>
           <a class="rail-item" href="index.php#schedules"><i data-lucide="calendar-clock"></i><span>Resumo</span></a>
-          <a class="rail-item" href="index.php#windows"><i data-lucide="waypoints"></i><span>Janelas</span></a>
+          <a class="rail-item" href="index.php#windows"><i data-lucide="waypoints"></i><span>Janelas de execução</span></a>
           <span class="rail-caption">Ambiente</span>
           <a class="rail-item" href="index.php#clients"><i data-lucide="building-2"></i><span>Clientes</span></a>
           <a class="rail-item" href="index.php#accounts"><i data-lucide="users-round"></i><span>Contas</span></a>
           <a class="rail-item" href="index.php#integrations"><i data-lucide="key-round"></i><span>Integrações</span></a>
-          <a class="rail-item" href="index.php#daily-devices"><i data-lucide="server-cog"></i><span>Infraestrutura</span></a>
-          <a class="rail-item" href="index.php#reports"><i data-lucide="chart-no-axes-combined"></i><span>Análises</span></a>
-          <a class="rail-item" href="#alert-events"><i data-lucide="scroll-text"></i><span>Auditoria</span></a>
+          <a class="rail-item" href="index.php#infrastructure"><i data-lucide="server-cog"></i><span>Execuções por dispositivo</span></a>
+          <a class="rail-item" href="index.php#analytics"><i data-lucide="chart-no-axes-combined"></i><span>Análises</span></a>
+          <a class="rail-item" href="index.php#audit"><i data-lucide="scroll-text"></i><span>Auditoria administrativa</span></a>
         </nav>
       </div>
       <div class="rail-bottom">
@@ -50,7 +50,7 @@
 
     <main class="workspace" id="mainContent" tabindex="-1">
       <header class="command-bar">
-        <div class="command-left"><button class="mobile-trigger" id="railOpen" aria-label="Abrir menu" aria-expanded="true"><i data-lucide="menu"></i></button><div class="crumb"><span>Painel</span><i data-lucide="chevron-right"></i><b>Alertas de backup</b></div></div>
+        <div class="command-left"><button class="mobile-trigger" id="railOpen" aria-label="Abrir menu" aria-expanded="true"><i data-lucide="menu"></i></button><div class="crumb"><span>Painel</span><i data-lucide="chevron-right"></i><b>Alertas</b></div></div>
         <div class="command-right">
           <span class="sync-status" id="alertsSyncStatus" role="status" aria-live="polite"><i data-lucide="refresh-cw"></i><span>Sincronizando</span></span>
           <label class="global-search"><i data-lucide="search"></i><input id="globalAlertSearch" type="search" placeholder="Buscar cliente, dispositivo ou erro" aria-label="Pesquisar alertas"></label>
@@ -62,7 +62,7 @@
 
       <div class="alerts-body">
         <section class="alerts-heading">
-          <div><div class="section-kicker"><span class="pulse"></span> CENTRAL DE ALERTAS - AO VIVO</div><h1>Alertas de backups</h1><p>Cliente, dispositivo, IP, tamanho e motivo reunidos para diagnóstico rápido.</p></div>
+          <div><div class="section-kicker"><span class="pulse"></span> CENTRAL DE ALERTAS · AO VIVO</div><h1>Alertas</h1><p>Identifique, priorize e trate ocorrências de backup em um único lugar.</p></div>
           <label class="range-picker"><i data-lucide="calendar-days"></i><select id="periodFilter" aria-label="Período"><option value="today">Hoje</option><option value="yesterday">Ontem</option><option value="7">Últimos 7 dias</option><option value="30" selected>Últimos 30 dias</option></select><i data-lucide="chevron-down"></i></label>
         </section>
 
@@ -107,16 +107,13 @@
   </div>
 
   <dialog class="alert-details" id="alertDetailsDialog" aria-labelledby="alertDetailsTitle">
-    <div class="alert-details-head"><div><span>DETALHES DO EVENTO</span><h2 id="alertDetailsTitle">Alerta</h2></div><button type="button" id="closeAlertDetails" aria-label="Fechar detalhes"><i data-lucide="x"></i></button></div>
-    <dl id="alertDetailsContent"></dl>
-    <div class="alert-details-actions">
-      <button type="button" id="resolveAlert"><i data-lucide="circle-check"></i><span>Confirmar resolvido</span></button>
-      <button type="button" id="markKnownAlert"><i data-lucide="shield-check"></i><span>Marcar conhecido</span></button>
-      <button type="button" id="hideAlertFromPanel" data-tone="danger"><i data-lucide="eye-off"></i><span>Ocultar do painel</span></button>
-    </div>
+    <div id="alertDetailsReactRoot"></div>
   </dialog>
   <div class="alerts-toast" id="alertsToast" role="status" aria-live="polite"></div>
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script src="alertas.js?v=20260901-alerts-usability-2"></script>
+  <script src="alertas.js?v=20260903-alerts-resolved-1"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="alertas-react.js?v=20260903-alerts-react-1"></script>
 </body>
 </html>

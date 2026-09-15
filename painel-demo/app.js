@@ -30,7 +30,12 @@
     windowRules: null,
     windowRulesError: '',
     windowsSearch: '',
-    globalSearch: ''
+    globalSearch: '',
+    executionSearch: '',
+    executionStatus: 'all',
+    executionSort: 'recent',
+    clientsSearch: '',
+    clientsSort: 'name'
   };
 
   const topCustomersLimit = 5;
@@ -823,7 +828,7 @@
     }
 
     tbody.replaceChildren();
-    const query = String(state.globalSearch || '').trim().toLocaleLowerCase('pt-BR');
+    const query = String(state.executionSearch || state.globalSearch || '').trim().toLocaleLowerCase('pt-BR');
     const items = Array.isArray(state.devices)
       ? state.devices
         .filter(device => normalizeText(device.hostname) !== '--')
@@ -835,7 +840,14 @@
           device.endereco_ip,
           ...extractPlans(device)
         ].map(normalizeText).join(' ').toLocaleLowerCase('pt-BR').includes(query))
-        .sort((a, b) => new Date(b.ultimo_backup || 0).getTime() - new Date(a.ultimo_backup || 0).getTime())
+        .filter(device => state.executionStatus === 'all' || statusMeta(device.status || device.situacao || '').className === state.executionStatus)
+        .sort((a, b) => {
+          if (state.executionSort === 'client') {
+            return displayCompanyName(a.cliente || resolveCustomer(a)?.nome || '').localeCompare(displayCompanyName(b.cliente || resolveCustomer(b)?.nome || ''), 'pt-BR');
+          }
+          const difference = new Date(b.ultimo_backup || 0).getTime() - new Date(a.ultimo_backup || 0).getTime();
+          return state.executionSort === 'oldest' ? -difference : difference;
+        })
         .slice(0, 12)
       : [];
 
@@ -917,6 +929,90 @@
         button.setAttribute('aria-expanded', String(!expanded));
         button.classList.toggle('is-open', !expanded);
       });
+    });
+  };
+
+  const buildClientDirectory = () => {
+    const node = document.getElementById('clientsDirectory');
+    if (!node) return;
+    const query = String(state.clientsSearch || '').toLocaleLowerCase('pt-BR');
+    const customers = Array.isArray(state.customers) ? state.customers : [];
+    const devices = Array.isArray(state.devices) ? state.devices : [];
+    const rows = customers.map(customer => {
+      const customerName = displayCompanyName(customer.nome || 'Cliente');
+      const customerDevices = devices.filter(device => {
+        const resolved = resolveCustomer(device);
+        if (resolved === customer) return true;
+        return normalizeText(device.cliente).toLocaleLowerCase('pt-BR') === normalizeText(customer.nome).toLocaleLowerCase('pt-BR');
+      });
+      const backupEntries = customerDevices.flatMap(device => planEntries(device).map(entry => ({
+        ...entry,
+        hostname: normalizeText(device.hostname),
+        deviceStatus: device.status || device.situacao || 'unknown'
+      })));
+      backupEntries.sort((left, right) => new Date(right.ultimo_backup || 0).getTime() - new Date(left.ultimo_backup || 0).getTime());
+      const latest = backupEntries.find(entry => entry.ultimo_backup) || null;
+      const detailedTimestamp = Date.parse(latest?.ultimo_backup || '') || 0;
+      const aggregateTimestamp = Date.parse(customer.ultimo_backup || '') || 0;
+      const hasDetailedSource = Boolean(latest && detailedTimestamp >= aggregateTimestamp);
+      const lastBackup = detailedTimestamp >= aggregateTimestamp ? (latest?.ultimo_backup || '') : (customer.ultimo_backup || '');
+      const deviceCount = Math.max(Number(customer.quantidade_dispositivos || 0), customerDevices.length);
+      const status = hasDetailedSource
+        ? statusMeta(latest.status || latest.deviceStatus)
+        : { className: lastBackup ? 'queued' : 'failed', label: lastBackup ? 'Registrado' : 'Sem histórico' };
+      return {
+        customer,
+        customerName,
+        deviceCount,
+        lastBackup,
+        hostname: hasDetailedSource ? (latest?.hostname || '--') : '--',
+        plan: hasDetailedSource ? (latest?.plano || '--') : (customer.plano || '--'),
+        size: hasDetailedSource ? (latest?.tamanho_realizado || '--') : '--',
+        status,
+        searchText: [
+          customerName,
+          customer.tenant,
+          ...customerDevices.flatMap(device => [device.hostname, ...extractPlans(device)])
+        ].map(normalizeText).join(' ').toLocaleLowerCase('pt-BR')
+      };
+    });
+    const totalDevices = rows.reduce((sum, row) => sum + row.deviceCount, 0);
+    const coveredClients = rows.filter(row => row.lastBackup).length;
+    setText('clientsTotalCount', fmtInt(rows.length));
+    setText('clientsDeviceCount', fmtInt(totalDevices));
+    setText('clientsBackupCoverage', rows.length ? `${Math.round((coveredClients / rows.length) * 100)}%` : '0%');
+    setText('clientsBackupCoverageHint', `${fmtInt(coveredClients)} de ${fmtInt(rows.length)} clientes`);
+
+    const items = rows
+      .filter(item => !query || item.searchText.includes(query))
+      .sort((left, right) => {
+        if (state.clientsSort === 'recent') return new Date(right.lastBackup || 0).getTime() - new Date(left.lastBackup || 0).getTime();
+        if (state.clientsSort === 'devices') return right.deviceCount - left.deviceCount || left.customerName.localeCompare(right.customerName, 'pt-BR');
+        return left.customerName.localeCompare(right.customerName, 'pt-BR');
+      });
+    setText('clientsTotalLabel', query ? `${fmtInt(items.length)} encontrados` : `${fmtInt(rows.length)} clientes`);
+    node.replaceChildren();
+    if (!items.length) {
+      node.innerHTML = `<div class="clients-empty"><b>${query ? 'Nenhum cliente encontrado' : 'Nenhum cliente disponível'}</b><small>${query ? 'Ajuste o termo de busca para ver outros clientes.' : 'A API ainda não retornou empresas para este ambiente.'}</small></div>`;
+      return;
+    }
+    const heading = document.createElement('div');
+    heading.className = 'client-directory-head';
+    heading.innerHTML = '<span>Cliente</span><span>Dispositivos</span><span>Último backup</span><span>Origem</span><span>Status</span><span>Volume</span>';
+    node.append(heading);
+    items.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'client-directory-row';
+      const relativeBackup = item.lastBackup ? (backupDaysFromEntry({ ultimo_backup: item.lastBackup }) === '0 dias' ? 'hoje' : `há ${backupDaysFromEntry({ ultimo_backup: item.lastBackup })}`) : 'sem histórico';
+      row.innerHTML = [
+        `<div class="client-identity" data-label="Cliente"><span class="client-avatar">${escapeHtml(profileInitial(item.customerName))}</span><span><b>${escapeHtml(item.customerName)}</b><small>${escapeHtml(item.customer.tenant || 'Ambiente protegido')}</small></span></div>`,
+        `<div class="client-device-total" data-label="Dispositivos"><strong>${fmtInt(item.deviceCount)}</strong><small>protegidos</small></div>`,
+        `<div class="client-last-backup" data-label="Último backup"><time>${escapeHtml(toShortTime(item.lastBackup))}</time><small>${escapeHtml(relativeBackup)}</small></div>`,
+        `<div class="client-backup-source" data-label="Origem"><b>${escapeHtml(item.hostname)}</b><small>${escapeHtml(displayPlanName(item.plan))}</small></div>`,
+        `<div data-label="Status"><em class="job-state ${item.status.className}">${escapeHtml(item.lastBackup ? item.status.label : 'Sem backup')}</em></div>`,
+        `<div class="client-backup-size" data-label="Volume"><b>${escapeHtml(item.size)}</b></div>`
+      ].join('');
+      node.append(row);
     });
   };
 
@@ -1201,18 +1297,18 @@
     const operationDate = document.getElementById('operationDate');
     if (operationDate) {
       const label = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-      operationDate.innerHTML = `<span class="pulse"></span> OPERACAO AO VIVO - ${label.toUpperCase()}`;
+      operationDate.innerHTML = `<span class="pulse"></span> OPERAÇÃO AO VIVO · ${label.toUpperCase()}`;
     }
 
     const failures = Number(dashboard.backups_com_falha || 0);
     const recentAlerts = alertsInLastDays();
     const principalAlerta = recentAlerts[0] || null;
-    setText('signalTitle', failures > 0 ? 'Operacao com pontos de atencao' : 'Operacao estavel');
+    setText('signalTitle', failures > 0 ? 'Operação com pontos de atenção' : 'Operação estável');
     setText(
       'signalText',
       failures > 0
-        ? `${fmtInt(failures)} falhas exigem revisao. Principal ponto: ${principalAlerta ? `${alertLocation(principalAlerta)} - ${alertCause(principalAlerta)}` : 'verificar alertas abertos'}.`
-        : 'Os backups recentes indicam um ambiente protegido e sem falhas criticas agora.'
+        ? `${fmtInt(failures)} falhas exigem revisão. Principal ponto: ${principalAlerta ? `${alertLocation(principalAlerta)} · ${alertCause(principalAlerta)}` : 'verificar alertas abertos'}.`
+        : 'Os backups recentes indicam um ambiente protegido e sem falhas críticas agora.'
     );
 
     const executionCount = document.querySelector('.rail-item[data-section="executions"] em');
@@ -1260,6 +1356,74 @@
     );
   };
 
+  const renderOverviewInsights = () => {
+    const dashboard = state.dashboard || {};
+    const customers = Array.isArray(state.customers) ? state.customers : [];
+    const failures = Number(dashboard.backups_com_falha || 0);
+    setText('overviewFailures', fmtInt(failures));
+    setText('overviewFailuresHint', failures > 0 ? 'Abra os alertas e priorize as falhas recorrentes.' : 'Nenhuma falha identificada no período atual.');
+
+    const dayMs = 86400000;
+    const freshness = customers.reduce((summary, customer) => {
+      const timestamp = Date.parse(customer.ultimo_backup || '');
+      if (!timestamp) {
+        summary.stale += 1;
+        summary.withoutHistory += 1;
+        return summary;
+      }
+      summary.covered += 1;
+      const age = Math.max(0, (Date.now() - timestamp) / dayMs);
+      if (age <= 1) summary.fresh += 1;
+      else if (age <= 7) summary.watch += 1;
+      else {
+        summary.stale += 1;
+        summary.olderThanWeek += 1;
+      }
+      return summary;
+    }, { fresh: 0, watch: 0, stale: 0, covered: 0, withoutHistory: 0, olderThanWeek: 0 });
+
+    setText('overviewStaleClients', customers.length ? fmtInt(freshness.withoutHistory) : '--');
+    setText(
+      'overviewStaleClientsHint',
+      customers.length
+        ? `${fmtInt(freshness.olderThanWeek)} com último backup há mais de 7 dias.`
+        : 'Aguardando a lista de clientes da Acronis.'
+    );
+    setText('overviewCoveredClients', customers.length ? fmtInt(freshness.covered) : '--');
+    setText('overviewCoverageSummary', customers.length ? `de ${fmtInt(customers.length)} clientes monitorados` : 'Aguardando clientes');
+    setText('overviewFreshCount', customers.length ? fmtInt(freshness.fresh) : '--');
+    setText('overviewWatchCount', customers.length ? fmtInt(freshness.watch) : '--');
+    setText('overviewStaleCount', customers.length ? fmtInt(freshness.stale) : '--');
+
+    const setCoverageWidth = (id, value) => {
+      const node = document.getElementById(id);
+      if (node) node.style.width = `${customers.length ? Math.round((value / customers.length) * 100) : 0}%`;
+    };
+    setCoverageWidth('overviewFreshBar', freshness.fresh);
+    setCoverageWidth('overviewWatchBar', freshness.watch);
+    setCoverageWidth('overviewStaleBar', freshness.stale);
+
+    const dailySeries = [...(Array.isArray(dashboard.series_diarias) ? dashboard.series_diarias : [])]
+      .sort((left, right) => String(right.date || '').localeCompare(String(left.date || '')));
+    const latestActivity = dailySeries.find(item => Number(item.backups || 0) > 0) || null;
+    if (!latestActivity?.date) {
+      setText('overviewLastActivity', '--');
+      setText('overviewLastActivityHint', 'Nenhuma execução diária disponível para consulta.');
+      return;
+    }
+    const activityDate = new Date(`${latestActivity.date}T12:00:00`);
+    const today = new Date();
+    const yesterday = new Date(Date.now() - dayMs);
+    const sameDay = (left, right) => left.toDateString() === right.toDateString();
+    const activityLabel = sameDay(activityDate, today)
+      ? 'Hoje'
+      : sameDay(activityDate, yesterday)
+        ? 'Ontem'
+        : activityDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '');
+    setText('overviewLastActivity', activityLabel);
+    setText('overviewLastActivityHint', `${fmtInt(latestActivity.backups || 0)} execuções registradas nesse dia.`);
+  };
+
   const updateLegendsAndSummary = ({ completed, failed, other }) => {
     const dashboard = state.dashboard || {};
     const storageAvailable = dashboard.armazenamento_disponivel !== false;
@@ -1301,6 +1465,78 @@
     setText('fleetStorage', dashboard.armazenamento_disponivel === false ? 'Indisponivel' : formatBytes(Number(dashboard.espaco_utilizado || 0)));
   };
 
+  const renderAnalyticsInsights = () => {
+    const series = [...(Array.isArray(state.dashboard?.series_diarias) ? state.dashboard.series_diarias : [])]
+      .sort((left, right) => String(left.date || '').localeCompare(String(right.date || '')));
+    const current = series.slice(-7);
+    const previous = series.slice(-14, -7);
+    const summarize = items => items.reduce((summary, item) => ({
+      executions: summary.executions + Number(item.backups || 0),
+      success: summary.success + Number(item.success || 0),
+      failures: summary.failures + Number(item.failed || 0)
+    }), { executions: 0, success: 0, failures: 0 });
+    const currentSummary = summarize(current);
+    const previousSummary = summarize(previous);
+    const rate = summary => summary.executions ? (summary.success / summary.executions) * 100 : 0;
+    const delta = (currentValue, previousValue, suffix = '%') => {
+      if (!previousValue) return currentValue ? 'Novo período' : 'Sem variação';
+      const change = ((currentValue - previousValue) / previousValue) * 100;
+      return `${change >= 0 ? '+' : ''}${change.toFixed(1).replace('.', ',')}${suffix} vs. período anterior`;
+    };
+    const setAnalyticsDelta = (id, value, tone = 'neutral') => {
+      const node = document.getElementById(id);
+      if (!node) return;
+      node.textContent = value;
+      node.dataset.tone = tone;
+    };
+    setText('analyticsExecutions', fmtInt(currentSummary.executions));
+    setAnalyticsDelta('analyticsExecutionsDelta', delta(currentSummary.executions, previousSummary.executions), currentSummary.executions >= previousSummary.executions ? 'positive' : 'negative');
+    setText('analyticsSuccessRate', `${rate(currentSummary).toFixed(1)}%`);
+    const successDelta = rate(currentSummary) - rate(previousSummary);
+    setAnalyticsDelta('analyticsSuccessDelta', `${successDelta >= 0 ? '+' : ''}${successDelta.toFixed(1).replace('.', ',')} p.p. vs. período anterior`, successDelta >= 0 ? 'positive' : 'negative');
+    setText('analyticsFailures', fmtInt(currentSummary.failures));
+    setAnalyticsDelta('analyticsFailuresDelta', delta(currentSummary.failures, previousSummary.failures), currentSummary.failures <= previousSummary.failures ? 'positive' : 'negative');
+
+    const causeList = document.getElementById('analyticsCauseList');
+    if (causeList) {
+      const causes = new Map();
+      state.alerts.forEach(alert => {
+        const cause = normalizeText(alert.codigo || alert.tipo || alert.mensagem || 'Sem classificação');
+        causes.set(cause, (causes.get(cause) || 0) + 1);
+      });
+      causeList.replaceChildren();
+      [...causes.entries()].sort((left, right) => right[1] - left[1]).slice(0, 5).forEach(([cause, count]) => {
+        const item = document.createElement('div');
+        const label = document.createElement('span');
+        const value = document.createElement('b');
+        label.textContent = cause;
+        value.textContent = `${fmtInt(count)} evento${count === 1 ? '' : 's'}`;
+        item.append(label, value);
+        causeList.append(item);
+      });
+      if (!causeList.children.length) causeList.innerHTML = '<span>Nenhum alerta classificado no período.</span>';
+    }
+
+    const recommendationList = document.getElementById('analyticsRecommendationList');
+    if (recommendationList) {
+      const alertText = state.alerts.map(alert => normalizeText(`${alert.codigo || ''} ${alert.tipo || ''} ${alert.mensagem || ''}`).toLowerCase()).join(' ');
+      const recommendations = [];
+      if (alertText.includes('offline')) recommendations.push('Priorize os dispositivos offline e valide a última comunicação do agente.');
+      if (alertText.includes('expected') || alertText.includes('nao execut') || alertText.includes('didnotstart')) recommendations.push('Revise as janelas dos planos que não executaram no período esperado.');
+      if (alertText.includes('zero') || alertText.includes('no_files') || alertText.includes('sem arquivos')) recommendations.push('Verifique origem, permissões e caminhos dos planos sem arquivos processados.');
+      if (currentSummary.failures > 0) recommendations.push('Compare as falhas recentes com o histórico antes de encerrar a tratativa.');
+      if (!recommendations.length) recommendations.push('Nenhum padrão crítico detectado. Mantenha o acompanhamento da próxima janela de execução.');
+      recommendationList.replaceChildren();
+      recommendations.slice(0, 4).forEach(text => {
+        const item = document.createElement('div');
+        item.innerHTML = '<i data-lucide="arrow-up-right"></i>';
+        item.append(document.createTextNode(text));
+        recommendationList.append(item);
+      });
+      window.lucide?.createIcons();
+    }
+  };
+
   const buildCharts = () => {
     if (!state.dashboard) {
       return;
@@ -1329,6 +1565,7 @@
     const clientHeight = chartHeight(292, 270, 250);
     const historyHeight = chartHeight(318, 295, 260);
     renderDailyHistory(dailySeries);
+    renderAnalyticsInsights();
 
     updateLegendsAndSummary({ completed, failed, other });
 
@@ -1349,42 +1586,43 @@
 
     mount('statusDonut', {
       ...chartBase(statusHeight),
-      chart: { ...chartBase(statusHeight).chart, type: 'donut' },
+      chart: { ...chartBase(statusHeight).chart, type: 'donut', toolbar: { show: false } },
       series: [completed, failed, other],
       labels: ['Sucesso', 'Falha', 'Outros'],
-      colors: [c.green, c.red, '#708096'],
-      stroke: { width: 4, colors: [root.dataset.mode === 'light' ? '#fff' : '#0b1726'] },
-      states: { hover: { filter: { type: 'lighten', value: .08 } } },
+      colors: ['#19c37d', '#f05d6b', '#7d8ea8'],
+      stroke: { width: 3, colors: [root.dataset.mode === 'light' ? '#ffffff' : '#0b1726'] },
+      states: { hover: { filter: { type: 'darken', value: .08 } } },
       legend: { ...chartBase(statusHeight).legend, show: false },
       plotOptions: {
         pie: {
           expandOnClick: false,
           donut: {
-            size: '70%',
+            size: '72%',
+            background: 'transparent',
             labels: {
               show: true,
-              name: { show: true, color: c.text, fontSize: '12px', fontWeight: 700, offsetY: 20 },
-              value: { show: true, color: root.dataset.mode === 'light' ? '#101827' : '#fff', fontSize: '31px', fontWeight: 800, offsetY: -4, formatter: value => fmtInt(value) },
-              total: { show: true, label: 'Total monitorado', color: c.text, fontSize: '11px', fontWeight: 700, formatter: () => fmtInt(dashboard.total_backups || 0) }
+              name: { show: true, color: c.text, fontSize: '11px', fontWeight: 700, offsetY: 18 },
+              value: { show: true, color: root.dataset.mode === 'light' ? '#101827' : '#f5f7fb', fontSize: '30px', fontWeight: 800, offsetY: -2, formatter: value => fmtInt(value) },
+              total: { show: true, label: 'Total', color: c.text, fontSize: '10px', fontWeight: 700, formatter: () => fmtInt(dashboard.total_backups || 0) }
             }
           }
         }
       },
-      tooltip: { ...chartBase(statusHeight).tooltip, y: { formatter: value => `${fmtInt(value)} execucoes` } }
+      tooltip: { ...chartBase(statusHeight).tooltip, enabled: true, y: { formatter: value => `${fmtInt(value)} execucoes` } }
     });
 
     mount('executionLine', {
       ...chartBase(trendHeight),
-      chart: { ...chartBase(trendHeight).chart, type: 'area' },
+      chart: { ...chartBase(trendHeight).chart, type: 'area', toolbar: { show: false } },
       series: [{ name: 'Execucoes', data: jobsHistory }],
       colors: [c.violet2],
-      stroke: { curve: 'smooth', width: 4, lineCap: 'round' },
+      stroke: { curve: 'smooth', width: 3.5, lineCap: 'round' },
       fill: {
         type: 'gradient',
-        gradient: { shadeIntensity: .35, opacityFrom: .48, opacityTo: .04, stops: [0, 82, 100] }
+        gradient: { shadeIntensity: .2, opacityFrom: .52, opacityTo: 0, stops: [0, 70, 100] }
       },
-      markers: { size: 0, strokeWidth: 3, strokeColors: root.dataset.mode === 'light' ? '#fff' : '#0b1726', hover: { size: 6, sizeOffset: 2 } },
-      grid: { ...chartBase(trendHeight).grid, xaxis: { lines: { show: false } } },
+      markers: { size: 0, strokeWidth: 2, strokeColors: root.dataset.mode === 'light' ? '#ffffff' : '#0b1726', hover: { size: 6, sizeOffset: 2 } },
+      grid: { ...chartBase(trendHeight).grid, xaxis: { lines: { show: false } }, yaxis: { lines: { show: true } } },
       xaxis: { ...chartBase(trendHeight).xaxis, categories: historyLabels, tickAmount: Math.min(7, Math.max(historyLabels.length - 1, 1)) },
       yaxis: { ...chartBase(trendHeight).yaxis, min: 0, forceNiceScale: true, tickAmount: 4, labels: { ...chartBase(trendHeight).yaxis.labels, formatter: value => fmtInt(value) } },
       tooltip: { ...chartBase(trendHeight).tooltip, y: { formatter: value => `${fmtInt(value)} execucoes` } }
@@ -1398,46 +1636,54 @@
       colors: [c.violet2],
       plotOptions: {
         radialBar: {
-          startAngle: -125,
-          endAngle: 125,
-          hollow: { size: '66%', background: 'transparent' },
-          track: { background: root.dataset.mode === 'light' ? '#e8e8e8' : '#253247', strokeWidth: '98%', margin: 4 },
+          startAngle: -110,
+          endAngle: 110,
+          hollow: { size: '62%', background: 'rgba(255,255,255,0.02)' },
+          track: { background: root.dataset.mode === 'light' ? '#edf1f5' : '#253247', strokeWidth: '88%', margin: 4 },
           dataLabels: {
-            name: { color: c.text, fontSize: '11px', fontWeight: 700, offsetY: 38 },
-            value: { color: root.dataset.mode === 'light' ? '#0f0f0f' : '#fff', fontSize: '27px', fontWeight: 800, offsetY: -8, formatter: () => formatBytes(Number(dashboard.espaco_utilizado || 0)) }
+            name: { color: c.text, fontSize: '10px', fontWeight: 700, offsetY: 30 },
+            value: { color: root.dataset.mode === 'light' ? '#0f0f0f' : '#ffffff', fontSize: '24px', fontWeight: 800, offsetY: -6, formatter: () => formatBytes(Number(dashboard.espaco_utilizado || 0)) }
           }
         }
       },
       stroke: { lineCap: 'round' },
       legend: { show: false },
-      subtitle: { text: 'Fonte Acronis', align: 'center', offsetY: 14, style: { color: c.text, fontSize: '10px', fontWeight: 700 } }
+      tooltip: { ...chartBase(storageHeight).tooltip, y: { formatter: value => `${fmtInt(value)}%` } }
     });
 
     mount('clientBar', {
       ...chartBase(clientHeight),
-      chart: { ...chartBase(clientHeight).chart, type: 'bar' },
+      chart: { ...chartBase(clientHeight).chart, type: 'bar', toolbar: { show: false } },
       series: [{ name: 'Dispositivos protegidos', data: clientSeries.length ? clientSeries : [0] }],
       colors: [c.violet, c.cyan, c.green, c.amber, c.violet2],
-      plotOptions: { bar: { borderRadius: 8, borderRadiusApplication: 'end', barHeight: '62%', distributed: true, horizontal: true } },
-      dataLabels: { enabled: true, offsetX: 8, style: { colors: [root.dataset.mode === 'light' ? '#1f2937' : '#dbe8f8'], fontSize: '10px', fontWeight: 800 }, formatter: value => fmtInt(value) },
-      grid: { ...chartBase(clientHeight).grid, yaxis: { lines: { show: false } }, padding: { top: 6, right: 28, bottom: 0, left: 10 } },
+      plotOptions: {
+        bar: {
+          borderRadius: 10,
+          borderRadiusApplication: 'end',
+          barHeight: '70%',
+          distributed: true,
+          horizontal: true
+        }
+      },
+      dataLabels: { enabled: true, offsetX: 10, style: { colors: [root.dataset.mode === 'light' ? '#1f2937' : '#dbe8f8'], fontSize: '10px', fontWeight: 800 }, formatter: value => fmtInt(value) },
+      grid: { ...chartBase(clientHeight).grid, xaxis: { lines: { show: false } }, yaxis: { lines: { show: false } }, padding: { top: 8, right: 18, bottom: 0, left: 6 } },
       xaxis: { ...chartBase(clientHeight).xaxis, categories: clientLabels.length ? clientLabels : ['Sem dados'], min: 0, tickAmount: 4, labels: { ...chartBase(clientHeight).xaxis.labels, formatter: value => fmtInt(value) } },
-      yaxis: { ...chartBase(clientHeight).yaxis, labels: { ...chartBase(clientHeight).yaxis.labels, maxWidth: window.innerWidth <= 700 ? 110 : 170, trim: true } },
+      yaxis: { ...chartBase(clientHeight).yaxis, labels: { ...chartBase(clientHeight).yaxis.labels, maxWidth: window.innerWidth <= 700 ? 100 : 160, trim: true } },
       legend: { show: false },
       tooltip: { ...chartBase(clientHeight).tooltip, y: { formatter: value => `${fmtInt(value)} dispositivos` } }
     });
 
     mount('historyArea', {
       ...chartBase(historyHeight),
-      chart: { ...chartBase(historyHeight).chart, type: 'bar', stacked: true },
+      chart: { ...chartBase(historyHeight).chart, type: 'bar', stacked: true, toolbar: { show: false } },
       series: [
         { name: 'Sucesso', data: chartDailySeries.map(item => Number(item.success || 0)) },
         { name: 'Falha', data: chartDailySeries.map(item => Number(item.failed || 0)) }
       ],
-      colors: [c.green, c.red],
-      plotOptions: { bar: { borderRadius: 5, borderRadiusApplication: 'end', borderRadiusWhenStacked: 'last', columnWidth: window.innerWidth <= 700 ? '72%' : '54%' } },
+      colors: ['#19c37d', '#f05d6b'],
+      plotOptions: { bar: { borderRadius: 6, borderRadiusApplication: 'end', borderRadiusWhenStacked: 'last', columnWidth: window.innerWidth <= 700 ? '72%' : '54%' } },
       stroke: { width: 0 },
-      grid: { ...chartBase(historyHeight).grid, xaxis: { lines: { show: false } } },
+      grid: { ...chartBase(historyHeight).grid, xaxis: { lines: { show: false } }, yaxis: { lines: { show: true } } },
       xaxis: { ...chartBase(historyHeight).xaxis, categories: historyLabels.length ? historyLabels : ['Sem dados'], tickAmount: Math.min(7, Math.max(historyLabels.length - 1, 1)) },
       yaxis: { ...chartBase(historyHeight).yaxis, min: 0, forceNiceScale: true, tickAmount: 4, labels: { ...chartBase(historyHeight).yaxis.labels, formatter: value => fmtInt(value) } },
       legend: { ...chartBase(historyHeight).legend, position: 'top', horizontalAlign: 'right', offsetY: -4 },
@@ -1525,9 +1771,11 @@
   const renderData = () => {
     safeRun(updateHero);
     safeRun(updateKpis);
+    safeRun(renderOverviewInsights);
     safeRun(buildCharts);
     safeRun(buildMicroCharts);
     safeRun(buildRecentRows);
+    safeRun(buildClientDirectory);
     safeRun(buildExecutionWindowRows);
     safeRun(buildDailyExecutionRows);
     safeRun(animateKpis);
@@ -1539,7 +1787,9 @@
     safeRun(renderAudit);
     safeRun(updateHero);
     safeRun(updateKpis);
+    safeRun(renderOverviewInsights);
     safeRun(buildRecentRows);
+    safeRun(buildClientDirectory);
     safeRun(buildExecutionWindowRows);
     safeRun(buildDailyExecutionRows);
   };
@@ -1614,6 +1864,7 @@
       const customers = await fetchJson('clientes.php', { timeout: foreground ? 12000 : 9000 });
       state.customers = Array.isArray(customers) ? customers : [];
       renderPartialData();
+      safeRun(buildClientDirectory);
       if (state.dashboard) safeRun(buildCharts);
     } catch (error) {
       notify(error.message || 'Falha ao carregar clientes.');
@@ -1715,11 +1966,11 @@
     storage: [() => loadDashboard({ full: true })],
     summary: [loadMe, loadDashboard],
     windows: [loadMe, () => loadExecutionWindows({ stale: true })],
-    clients: [loadMe, loadDashboard, loadCustomers],
+    clients: [loadMe, loadDashboard, loadCustomers, loadDevices],
     accounts: [loadMe, loadAccounts],
     integrations: [loadMe, loadIntegrations],
     infrastructure: [loadMe, loadDailyExecutions],
-    analytics: [loadMe, () => loadDashboard({ full: true }), loadCustomers],
+    analytics: [loadMe, () => loadDashboard({ full: true }), loadCustomers, loadAlerts],
     alerts: [loadMe],
     audit: [loadMe, loadAudit]
   };
@@ -1736,18 +1987,18 @@
   };
 
   const sectionLabels = {
-    overview: 'Visao geral',
-    executions: 'Execucoes',
+    overview: 'Visão geral',
+    executions: 'Atividade recente',
     storage: 'Armazenamento',
     summary: 'Resumo',
-    windows: 'Janelas',
+    windows: 'Janelas de execução',
     clients: 'Clientes',
     accounts: 'Contas',
     integrations: 'Integrações',
-    infrastructure: 'Infraestrutura',
-    analytics: 'Analises',
+    infrastructure: 'Execuções por dispositivo',
+    analytics: 'Análises',
     alerts: 'Alertas',
-    audit: 'Auditoria'
+    audit: 'Auditoria administrativa'
   };
 
   const sectionDescriptions = {
@@ -1759,7 +2010,7 @@
     accounts: 'Gerencie usuarios internos do painel e crie acessos com menos privilegios.',
     integrations: 'Gerencie credenciais da Acronis BR, US ou outro ambiente.',
     infrastructure: 'Execucoes de hoje e ontem organizadas por dispositivo para verificacao operacional.',
-    analytics: 'Tendencias, taxa de sucesso, falhas e volume diario dos backups.',
+    analytics: 'Investigue tendências, compare períodos, identifique causas recorrentes e priorize ações.',
     alerts: 'Central de alertas operacionais.',
     audit: 'Eventos administrativos de criacao, edicao e seguranca de contas.'
   };
@@ -1837,10 +2088,10 @@
   };
 
   const panelMatchesSection = (panel, section) => {
-    const sections = [
-      panel.dataset.panelSection || '',
-      panel.dataset.panelExtraSections || ''
-    ].join(' ');
+    if (section === 'overview') {
+      return (panel.dataset.panelSection || '').split(/\s+/).filter(Boolean).includes(section);
+    }
+    const sections = [panel.dataset.panelSection || '', panel.dataset.panelExtraSections || ''].join(' ');
     return sections.split(/\s+/).filter(Boolean).includes(section);
   };
 
@@ -1960,6 +2211,10 @@
   document.querySelectorAll('.rail-item:not([data-section])').forEach(item => item.addEventListener('click', () => {
     if (!desktopRail.matches) closeRail();
   }));
+  document.querySelectorAll('[data-overview-nav]').forEach(item => item.addEventListener('click', () => {
+    activateSection(item.dataset.overviewNav || 'overview');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }));
   document.querySelectorAll('[data-toast]').forEach(button => button.addEventListener('click', () => notify(button.dataset.toast)));
   document.getElementById('refreshDashboard')?.addEventListener('click', async event => {
     const button = event.currentTarget;
@@ -1984,6 +2239,26 @@
   document.getElementById('windowsSearch')?.addEventListener('input', event => {
     state.windowsSearch = String(event.currentTarget.value || '').trim();
     safeRun(buildExecutionWindowRows);
+  });
+  document.getElementById('executionSearch')?.addEventListener('input', event => {
+    state.executionSearch = String(event.currentTarget.value || '').trim();
+    safeRun(buildRecentRows);
+  });
+  document.getElementById('executionStatus')?.addEventListener('change', event => {
+    state.executionStatus = event.currentTarget.value || 'all';
+    safeRun(buildRecentRows);
+  });
+  document.getElementById('executionSort')?.addEventListener('change', event => {
+    state.executionSort = event.currentTarget.value || 'recent';
+    safeRun(buildRecentRows);
+  });
+  document.getElementById('clientsSearch')?.addEventListener('input', event => {
+    state.clientsSearch = String(event.currentTarget.value || '').trim();
+    safeRun(buildClientDirectory);
+  });
+  document.getElementById('clientsSort')?.addEventListener('change', event => {
+    state.clientsSort = event.currentTarget.value || 'name';
+    safeRun(buildClientDirectory);
   });
   document.getElementById('manageWindowRules')?.addEventListener('click', async () => {
     const dialog = document.getElementById('windowRulesDialog');
@@ -2231,5 +2506,3 @@
   setRailOpen(desktopRail.matches ? localStorage.getItem('nyxcloud-rail-collapsed') !== '1' : false);
   activateSection(initialSection, false);
 })();
-
-

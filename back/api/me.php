@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_errors.php';
+
 require_once __DIR__ . '/../auth/middleware.php';
 
 header('Content-Type: application/json; charset=utf-8');

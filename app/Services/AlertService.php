@@ -9,7 +9,7 @@ use DateTimeZone;
 
 final class AlertService extends AbstractAcronisService
 {
-    private const CACHE_VERSION = 'v23';
+    private const CACHE_VERSION = 'v24';
     private ?array $windowRulesCache = null;
     private ?DateTimeZone $timezoneCache = null;
 
@@ -59,6 +59,7 @@ final class AlertService extends AbstractAcronisService
             $alerts = array_values(array_filter(
                 array_merge($missingBackups, $operational, $native),
                 fn (array $alert): bool => !$this->shouldHideAlertByPlan($alert)
+                    && !$this->isIgnoredAlertMachine((string) ($alert['maquina'] ?? ''))
             ));
             usort($alerts, static fn (array $a, array $b): int => strcmp(
                 (string) ($b['data'] ?? '') . (string) ($b['hora'] ?? ''),
@@ -218,6 +219,9 @@ final class AlertService extends AbstractAcronisService
             $cliente = $this->firstString($task, ['tenant.name'], 'Cliente nao identificado');
             $maquina = $this->firstString($task, ['resource.name', 'context.Persistent.Name', 'context.MachineName']);
             $plano = $this->firstString($task, ['policy.name', 'context.BackupPlanName'], 'Sem plano');
+            if ($this->isIgnoredAlertMachine($maquina)) {
+                continue;
+            }
             $completedAt = $this->firstString($task, ['completedAt', 'updatedAt', 'startedAt']);
             if ($maquina === '' || $completedAt === '' || strtotime($completedAt) === false) {
                 continue;
@@ -327,6 +331,9 @@ final class AlertService extends AbstractAcronisService
 
             $hostname = $this->firstString($workload, ['name', 'attributes.hostname', 'attributes.host_name']);
             if ($hostname === '') {
+                continue;
+            }
+            if ($this->isIgnoredAlertMachine($hostname)) {
                 continue;
             }
             if ($this->ignoreMissingBackupDevice($hostname)) {
@@ -593,6 +600,11 @@ final class AlertService extends AbstractAcronisService
         ];
 
         return in_array($this->lookupKey($hostname), $ignoredDevices, true);
+    }
+
+    private function isIgnoredAlertMachine(string $hostname): bool
+    {
+        return str_contains($this->lookupKey($hostname), 'fileserver');
     }
 
     private function backupScheduleStatus(string $cliente, string $hostname, string $plan, int $now, int $defaultMinimumTimestamp): array

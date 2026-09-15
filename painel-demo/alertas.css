@@ -899,6 +899,76 @@ body[data-mode="light"] .alert-details-actions button[data-tone="danger"] {
   color: #b94a5f;
 }
 
+.alerts-heading {
+  position: relative;
+  padding: 22px 24px;
+  border: 1px solid rgba(168, 128, 218, .18);
+  border-left: 3px solid var(--violet2);
+  border-radius: 14px;
+  background: linear-gradient(110deg, rgba(113, 63, 169, .13), rgba(12, 21, 33, .2) 52%, rgba(22, 163, 74, .06));
+}
+
+.alert-kpi {
+  min-height: 158px;
+  background: linear-gradient(145deg, rgba(22, 34, 52, .98), rgba(10, 18, 29, .98));
+}
+
+.alert-kpi strong {
+  font-size: 34px;
+}
+
+.alert-kpi:hover {
+  transform: translateY(-4px);
+}
+
+.filter-panel {
+  border-color: rgba(168, 128, 218, .2);
+  background: linear-gradient(145deg, rgba(20, 31, 49, .98), rgba(10, 18, 29, .98));
+}
+
+.responsive-table tbody tr {
+  transition: background-color .2s, box-shadow .2s;
+}
+
+.responsive-table tbody tr:hover {
+  background: rgba(168, 128, 218, .055);
+}
+
+.responsive-table tbody tr.alert-row-status-failed {
+  box-shadow: inset 3px 0 #ed536a;
+}
+
+.responsive-table tbody tr.alert-row-status-resolved,
+.responsive-table tbody tr.alert-row-status-success {
+  box-shadow: inset 3px 0 #36c96d;
+  opacity: .78;
+}
+
+.alert-detail-status {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 10px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(201, 54, 78, .13);
+  color: #f17a8b;
+  font: 700 10px Inter, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.alert-detail-status.status-resolved,
+.alert-detail-status.status-success {
+  background: rgba(22, 163, 74, .13);
+  color: #64d98a;
+}
+
+.alert-detail-status.status-known {
+  background: rgba(113, 63, 169, .16);
+  color: #c2a4ec;
+}
+
 @media (max-width: 1320px) {
   .filter-panel {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1284,5 +1354,58 @@ body[data-mode="light"] .alert-focus-strip {
 @media (prefers-reduced-motion: reduce) {
   .is-filtered {
     animation: none;
+  }
+}
+
+/* Final readability pass: keep alert content separated instead of relying on tight defaults. */
+.alerts-heading > div:first-child,
+.table-heading > div:first-child {
+  min-width: 0;
+}
+.alerts-heading p,
+.alert-focus-strip small,
+.alert-kpi small,
+.filter-field label,
+.search-filter span {
+  line-height: 1.45;
+}
+.filter-panel > * {
+  min-width: 0;
+}
+.responsive-table table {
+  min-width: 1080px;
+}
+.responsive-table th,
+.responsive-table td {
+  line-height: 1.35;
+  vertical-align: top;
+}
+.responsive-table td {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.table-heading h2 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.table-heading h2 b {
+  margin-left: 0;
+}
+@media (max-width: 760px) {
+  .responsive-table table {
+    min-width: 0;
+  }
+  .alerts-heading,
+  .alert-table-surface,
+  .filter-panel {
+    border-radius: 15px;
+  }
+  .alerts-heading {
+    padding: 18px;
+  }
+  .table-heading h2 {
+    gap: 6px;
   }
 }

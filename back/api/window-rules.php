@@ -201,9 +201,14 @@ function salvarConfigJanelas(array $config, int $usuarioId): array
 function registrarAuditoriaJanelas(PDO $pdo, int $atorId, string $acao, array $detalhes = []): void
 {
     try {
+        // PostgreSQL needs an explicit jsonb cast; MySQL accepts the JSON
+        // string directly and does not understand the jsonb type.
+        $detalhesValue = env('DB_CONNECTION', 'pgsql') === 'mysql'
+            ? ':detalhes'
+            : 'CAST(:detalhes AS jsonb)';
         $stmt = $pdo->prepare(
             "INSERT INTO usuario_auditoria (ator_id, acao, detalhes, ip, user_agent, criado_em)
-             VALUES (:ator_id, :acao, CAST(:detalhes AS jsonb), :ip, :user_agent, NOW())"
+             VALUES (:ator_id, :acao, {$detalhesValue}, :ip, :user_agent, NOW())"
         );
         $stmt->execute([
             'ator_id' => $atorId,

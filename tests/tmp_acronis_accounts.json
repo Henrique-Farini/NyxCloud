@@ -8,8 +8,8 @@
             "region": "US",
             "base_url": "https://us.example.com",
             "client_id": "client-1",
-            "client_secret": "v1:3uTE3sJh26tpBJkm9UlPLN3Wl70RQDxCJDR25do7OnsnoIc6",
-            "updated_at": "2026-09-01T20:23:26+00:00"
+            "client_secret": "v1:KckJK1zODifqtery2VkRpnT9GbqJioJeyI9XqB9utqkVLy/E",
+            "updated_at": "2026-09-10T19:07:35+00:00"
         },
         {
             "id": "us-acronis-us-stage",
@@ -17,8 +17,8 @@
             "region": "US",
             "base_url": "https://us-stage.example.com",
             "client_id": "client-2",
-            "client_secret": "v1:vo67SH6R1Qg9Skdz7XjRlAYwbGtH8iIL5yJ0g5rJWglYbBXN",
-            "updated_at": "2026-09-01T20:23:26+00:00"
+            "client_secret": "v1:XCYfM7aJPjgS2DD1S1kUx9PeOBA46dAzc66lqqt/lIdS5nHq",
+            "updated_at": "2026-09-10T19:07:35+00:00"
         }
     ]
 }

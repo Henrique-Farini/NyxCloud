@@ -4,6 +4,15 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
 
+$databaseDriver = $databaseDriver ?? env('DB_CONNECTION', 'pgsql');
+if ($databaseDriver === 'mysql') {
+    require __DIR__ . '/conexao_mysql.php';
+    return;
+}
+if ($databaseDriver !== 'pgsql') {
+    throw new RuntimeException('DB_CONNECTION deve ser pgsql ou mysql.');
+}
+
 /**
  * Conexão PostgreSQL da aplicação.
  *
@@ -43,10 +52,5 @@ try {
     $pdo->exec("SET TIME ZONE 'UTC'");
 } catch (PDOException $e) {
     error_log('Erro na conexão com o PostgreSQL: ' . $e->getMessage());
-    if (PHP_SAPI === 'cli') {
-        throw new RuntimeException('Não foi possível conectar ao PostgreSQL. Verifique a configuração.', 0, $e);
-    }
-
-    http_response_code(500);
-    die('Não foi possível conectar ao banco de dados. Verifique a configuração.');
+    throw new RuntimeException('Não foi possível conectar ao PostgreSQL. Verifique a configuração.', 0, $e);
 }

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_errors.php';
+
 require_once dirname(__DIR__) . '/auth/middleware.php';
 require_once dirname(__DIR__, 2) . '/app/bootstrap.php';
 

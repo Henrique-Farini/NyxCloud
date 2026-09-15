@@ -521,6 +521,7 @@
     return periodRows()
       .filter(row => state.quickFilter === 'hidden' ? isHiddenAlert(row) : !isHiddenAlert(row))
       .filter(matchesQuickFilter)
+      .filter(row => filters.status === 'success' || !isResolvedAlert(row))
       .filter(row =>
         (filters.status === 'all' || effectiveStatus(row) === filters.status || (filters.status === 'success' && effectiveStatus(row) === 'resolved')) &&
         (filters.priority === 'all' || row.priority === filters.priority) &&
@@ -548,55 +549,9 @@
   const showDetails = row => {
     if (!detailsDialog) return;
     currentDetailRow = row;
-    document.getElementById('alertDetailsTitle').textContent = `${row.client} - ${row.server}`;
-    const content = document.getElementById('alertDetailsContent');
-    content.replaceChildren();
-    const status = effectiveStatus(row);
-    const known = status === 'known';
-    const resolved = status === 'resolved';
-    [
-      ['Status', statusMeta[status]?.[0] || row.status],
-      ['Prioridade', priorityLabel[row.priority] || row.priority],
-      ['Cliente', row.client],
-      ['Dispositivo', row.server],
-      ['IP / origem', row.location],
-      ['Tipo', row.type],
-      ['Plano', displayPlan(row)],
-      ['Tamanho', row.size],
-      ['Horário', row.time],
-      ['Código', row.code],
-      ['Motivo', row.error],
-      ...(row.offlineNotice && row.offlineNotice !== '--' ? [['Aviso offline', row.offlineNotice]] : []),
-      ['Tratativa', resolved ? 'Confirmado como resolvido neste painel.' : (known ? 'Marcado como conhecido neste painel.' : 'Sem tratativa manual.')]
-    ].forEach(([label, value]) => {
-      const group = document.createElement('div');
-      group.append(cell('dt', label), cell('dd', value));
-      content.append(group);
-    });
-    const guidance = alertGuidance(row);
-    if (guidance) {
-      [
-        ['Motivo real', guidance.reason],
-        ['Acao sugerida', guidance.action]
-      ].forEach(([label, value]) => {
-        const group = document.createElement('div');
-        group.append(cell('dt', label), cell('dd', value));
-        content.append(group);
-      });
-    }
-    const markKnownButton = document.getElementById('markKnownAlert');
-    const markKnownLabel = markKnownButton?.querySelector('span');
-    if (markKnownLabel) markKnownLabel.textContent = known ? 'Remover conhecido' : 'Marcar conhecido';
-    const resolveButton = document.getElementById('resolveAlert');
-    const resolveLabel = resolveButton?.querySelector('span');
-    if (resolveLabel) resolveLabel.textContent = resolved ? 'Remover resolvido' : 'Confirmar resolvido';
-    const hideButton = document.getElementById('hideAlertFromPanel');
-    const hideLabel = hideButton?.querySelector('span');
-    hideButton?.removeAttribute('disabled');
-    hideButton?.setAttribute('title', 'Ocultar este alerta apenas neste painel.');
-    if (hideLabel) hideLabel.textContent = 'Ocultar do painel';
-    detailsDialog.showModal();
-    window.lucide?.createIcons();
+    window.dispatchEvent(new CustomEvent('nyxcloud-alert-details', {
+      detail: { ...row, status: effectiveStatus(row) }
+    }));
   };
 
   const renderPagination = totalPages => {
@@ -713,7 +668,7 @@
       ['Status', 'Cliente', 'Dispositivo', 'IP', 'Motivo', 'Horario', 'Plano', 'Tamanho', 'Acoes']
         .forEach((label, index) => { rowCells[index].dataset.label = label; });
       rowCells.forEach(item => tr.append(item));
-      tr.className = 'is-filtered';
+      tr.className = `is-filtered alert-row-status-${visualStatus}`;
       tbody.append(tr);
     });
 
@@ -980,27 +935,30 @@
       sortByHeader(header);
     });
   });
-  document.getElementById('markKnownAlert')?.addEventListener('click', () => {
-    if (!currentDetailRow) return;
-    const nextKnown = toggleKnownAlert(currentDetailRow);
+  window.addEventListener('nyxcloud-alert-known', event => {
+    const row = event.detail || currentDetailRow;
+    if (!row) return;
+    const nextKnown = toggleKnownAlert(row);
     updateKpis();
     renderRows();
-    showDetails(currentDetailRow);
+    showDetails(row);
     notify(nextKnown ? 'Alerta marcado como conhecido.' : 'Marcacao removida.');
   });
-  document.getElementById('resolveAlert')?.addEventListener('click', () => {
-    if (!currentDetailRow) return;
-    const nextResolved = toggleResolvedAlert(currentDetailRow);
+  window.addEventListener('nyxcloud-alert-resolve', event => {
+    const row = event.detail || currentDetailRow;
+    if (!row) return;
+    const nextResolved = toggleResolvedAlert(row);
+    currentDetailRow = null;
     updateKpis();
     renderRows();
-    showDetails(currentDetailRow);
     notify(nextResolved ? 'Alerta confirmado como resolvido.' : 'Resolucao removida.');
   });
-  document.getElementById('hideAlertFromPanel')?.addEventListener('click', () => {
-    if (!currentDetailRow) return;
+  window.addEventListener('nyxcloud-alert-hide', event => {
+    const row = event.detail || currentDetailRow;
+    if (!row) return;
     const scrollX = window.scrollX;
     const scrollY = window.scrollY;
-    hideAlert(currentDetailRow);
+    hideAlert(row);
     detailsDialog?.close();
     currentDetailRow = null;
     updateKpis();

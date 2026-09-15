@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/_bootstrap.php';
 
+// This endpoint exposes upstream tenant/workload samples and is for local
+// diagnostics only. Never make it available in a production deployment.
+if (env('APP_ENV', 'production') !== 'development') {
+    http_response_code(404);
+    exit;
+}
+
 use NyxCloud\Lib\Acronis\AcronisFactory;
 
 apiMethod('GET');

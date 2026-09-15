@@ -6,12 +6,13 @@ namespace NyxCloud\Services;
 
 final class CustomerService extends AbstractAcronisService
 {
-    private const CACHE_VERSION = 'v7';
+    private const CACHE_VERSION = 'v9';
 
     public function listCustomers(array $filters = []): array
     {
         return $this->remember('acronis.customers.' . self::CACHE_VERSION . '.' . md5(json_encode($filters)), (int) $this->config['cache_ttl']['customers'], function () use ($filters): array {
-            $tenants = $this->items($this->api->get($this->endpoint('tenants'), $this->tenantScopeFilters($filters)));
+            $tenantFilters = array_merge(['limit' => 1000], $filters);
+            $tenants = $this->tenantItems($tenantFilters);
             $devices = array_values(array_filter($this->items($this->api->get($this->endpoint('workloads'), [
                 'include_status' => 'true',
                 'include_all_attributes' => 'true',
@@ -35,6 +36,37 @@ final class CustomerService extends AbstractAcronisService
                 $customers
             );
         });
+    }
+
+    private function tenantItems(array $filters): array
+    {
+        $items = [];
+        $after = '';
+        $baseQuery = $this->tenantScopeFilters($filters);
+
+        for ($page = 0; $page < 100; $page++) {
+            $query = $baseQuery;
+            if ($after !== '') {
+                $query['after'] = $after;
+            }
+
+            $payload = $this->api->get($this->endpoint('tenants'), $query);
+            $pageItems = $this->items($payload);
+            foreach ($pageItems as $item) {
+                if (is_array($item)) {
+                    $items[] = $item;
+                }
+            }
+
+            $next = is_array($payload) ? (string) ($payload['paging']['cursors']['after'] ?? '') : '';
+            if ($pageItems === [] || $next === '' || $next === $after) {
+                break;
+            }
+
+            $after = $next;
+        }
+
+        return $items;
     }
 
     private function mapCustomer(array $tenant, array $devicesByTenant, array $tasksByTenant, array $tenantFamilyMap, array $tenantNumericMap): array
