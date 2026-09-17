@@ -9,7 +9,7 @@ use DateTimeZone;
 
 final class AlertService extends AbstractAcronisService
 {
-    private const CACHE_VERSION = 'v24';
+    private const CACHE_VERSION = 'v25';
     private ?array $windowRulesCache = null;
     private ?DateTimeZone $timezoneCache = null;
 
@@ -249,15 +249,10 @@ final class AlertService extends AbstractAcronisService
                 continue;
             }
 
-            $previousSizes = [];
-            foreach (array_slice($items, 1, 20) as $previous) {
-                if ($previous['status'] === 'success' && is_int($previous['bytes']) && $previous['bytes'] > 0) {
-                    $previousSizes[] = $previous['bytes'];
-                }
-            }
-
-            $historicalBaseline = $previousSizes !== [] ? $this->median($previousSizes) : null;
-            $baseline = count($previousSizes) >= 3 ? $historicalBaseline : null;
+            $baselineData = $this->baselineForExecutionTime($latest, array_slice($items, 1, 20));
+            $historicalBaseline = $baselineData['value'];
+            $baseline = $baselineData['sample_count'] >= 3 ? $historicalBaseline : null;
+            $baselineLabel = $baselineData['label'] !== '' ? ' do horario ' . $baselineData['label'] : '';
             $reason = '';
             $severity = 'warning';
             $code = '';
@@ -270,7 +265,7 @@ final class AlertService extends AbstractAcronisService
                 $severity = 'high';
                 $code = 'BACKUP_ZERO_SIZE';
             } elseif ($latest['status'] === 'success' && $latest['bytes'] === null && $historicalBaseline !== null) {
-                $reason = 'A execucao foi concluida, mas a Acronis nao informou arquivos ou tamanho processado. Padrao historico: ' . $this->formatBytes($historicalBaseline) . '.';
+                $reason = 'A execucao foi concluida, mas a Acronis nao informou arquivos ou tamanho processado. Padrao historico' . $baselineLabel . ': ' . $this->formatBytes($historicalBaseline) . '.';
                 $severity = 'high';
                 $code = 'BACKUP_NO_FILES_PROCESSED';
             } elseif (
@@ -279,7 +274,7 @@ final class AlertService extends AbstractAcronisService
                 && $baseline !== null
                 && $latest['bytes'] < ($baseline * 0.60)
             ) {
-                $reason = 'Tamanho abaixo de 60% do padrao historico (' . $this->formatBytes($baseline) . ').';
+                $reason = 'Tamanho abaixo de 60% do padrao historico' . $baselineLabel . ' (' . $this->formatBytes($baseline) . ').';
                 $severity = 'warning';
                 $code = 'BACKUP_BELOW_BASELINE';
             }
@@ -1342,6 +1337,115 @@ final class AlertService extends AbstractAcronisService
         }
 
         return null;
+    }
+
+    /**
+     * Finds a historical reference for the same recurring execution time.
+     * Different schedules are kept apart, but equivalent schedules may share
+     * a baseline after their historical medians prove consistent.
+     *
+     * @return array{value:?int, sample_count:int, label:string}
+     */
+    private function baselineForExecutionTime(array $latest, array $previous): array
+    {
+        $valid = array_values(array_filter($previous, static function (array $item): bool {
+            return ($item['status'] ?? '') === 'success'
+                && is_int($item['bytes'] ?? null)
+                && $item['bytes'] > 0
+                && is_int($item['time_minutes'] ?? null);
+        }));
+
+        $latestMinutes = $latest['time_minutes'] ?? null;
+        if (!is_int($latestMinutes) || $valid === []) {
+            return ['value' => null, 'sample_count' => 0, 'label' => ''];
+        }
+
+        // Backups can finish a little before/after their configured time.
+        $sameTime = array_values(array_filter(
+            $valid,
+            fn (array $item): bool => $this->circularMinuteDistance($latestMinutes, $item['time_minutes']) <= 90
+        ));
+
+        if (count($sameTime) >= 3) {
+            return [
+                'value' => $this->median(array_column($sameTime, 'bytes')),
+                'sample_count' => count($sameTime),
+                'label' => $this->formatExecutionTime($latestMinutes),
+            ];
+        }
+
+        // With too few samples in the slot, only pool different slots when
+        // their medians are demonstrably equivalent. This avoids hiding a
+        // real 12:00-vs-18:00 difference while supporting uniform schedules.
+        $clusters = $this->timeClusters($valid);
+        $clusterMedians = [];
+        foreach ($clusters as $cluster) {
+            if (count($cluster) < 2) {
+                return ['value' => null, 'sample_count' => 0, 'label' => $this->formatExecutionTime($latestMinutes)];
+            }
+            $clusterMedians[] = $this->median(array_column($cluster, 'bytes'));
+        }
+
+        if (count($clusterMedians) > 1) {
+            $minimum = min($clusterMedians);
+            $maximum = max($clusterMedians);
+            if ($minimum <= 0 || $maximum > ($minimum * 1.20)) {
+                return ['value' => null, 'sample_count' => 0, 'label' => $this->formatExecutionTime($latestMinutes)];
+            }
+        }
+
+        return [
+            'value' => count($valid) >= 3 ? $this->median(array_column($valid, 'bytes')) : null,
+            'sample_count' => count($valid),
+            'label' => $this->formatExecutionTime($latestMinutes),
+        ];
+    }
+
+    /** @return list<list<array>> */
+    private function timeClusters(array $items): array
+    {
+        usort($items, static fn (array $a, array $b): int => $a['time_minutes'] <=> $b['time_minutes']);
+        $clusters = [];
+        foreach ($items as $item) {
+            $last = count($clusters) - 1;
+            if ($last < 0 || $item['time_minutes'] - $clusters[$last][count($clusters[$last]) - 1]['time_minutes'] > 90) {
+                $clusters[] = [$item];
+                continue;
+            }
+            $clusters[$last][] = $item;
+        }
+
+        // Treat 23:xx and 00:xx as one recurring slot across midnight.
+        if (count($clusters) > 1
+            && $clusters[0][0]['time_minutes'] <= 90
+            && $clusters[count($clusters) - 1][count($clusters[count($clusters) - 1]) - 1]['time_minutes'] >= 1350) {
+            $first = array_shift($clusters);
+            $clusters[count($clusters) - 1] = array_merge($clusters[count($clusters) - 1], $first);
+        }
+
+        return $clusters;
+    }
+
+    private function circularMinuteDistance(int $left, int $right): int
+    {
+        $difference = abs($left - $right);
+        return min($difference, 1440 - $difference);
+    }
+
+    private function executionTimeMinutes(string $completedAt): ?int
+    {
+        try {
+            $date = new DateTimeImmutable($completedAt);
+            $local = $date->setTimezone($this->scheduleTimezone());
+            return ((int) $local->format('G') * 60) + (int) $local->format('i');
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function formatExecutionTime(int $minutes): string
+    {
+        return sprintf('%02d:%02d', intdiv($minutes, 60), $minutes % 60);
     }
 
     private function median(array $values): int

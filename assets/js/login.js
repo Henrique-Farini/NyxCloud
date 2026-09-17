@@ -10,6 +10,7 @@
   const message = document.getElementById('loginMessage');
   const emailGroup = document.getElementById('email').closest('.field-group');
   const passwordGroup = password.closest('.field-group');
+  const forgot = document.getElementById('forgotPassword');
 
   function safeNextUrl() {
     const value = new URLSearchParams(window.location.search).get('next');
@@ -50,6 +51,18 @@
   }
 
   resumeSession();
+
+  forgot?.addEventListener('click', async function (event) {
+    event.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    if (!email) { message.textContent = 'Informe seu e-mail para receber o link.'; return; }
+    try {
+      const response = await fetch('api/forgot-password.php', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ email }) });
+      const data = await response.json();
+      message.textContent = data.message || 'Verifique seu e-mail.';
+      message.classList.add('is-info');
+    } catch (error) { message.textContent = 'Nao foi possivel solicitar redefinicao agora.'; }
+  });
 
   toggle.addEventListener('click', function () {
     const visible = password.type === 'text';

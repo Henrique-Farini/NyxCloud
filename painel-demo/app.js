@@ -38,7 +38,6 @@
     clientsSort: 'name'
   };
 
-  const topCustomersLimit = 5;
   const dataRequests = new Map();
   let sectionActivationId = 0;
 
@@ -529,8 +528,8 @@
 
   const renderProfile = () => {
     if (!state.me) {
-      ['railProfileName', 'commandProfileName'].forEach(id => setText(id, 'Carregando perfil'));
-      ['railProfileRole', 'commandProfileRole'].forEach(id => setText(id, 'Validando sessao'));
+      ['commandProfileName'].forEach(id => setText(id, 'Carregando perfil'));
+      ['commandProfileRole'].forEach(id => setText(id, 'Validando sessao'));
       ['railProfileAvatar', 'commandProfileAvatar'].forEach(id => setText(id, '?'));
       return;
     }
@@ -538,16 +537,37 @@
     const user = state.me;
     const name = cleanLabel(user.nome || user.email || 'Sessao sem nome');
     const role = cleanLabel(user.perfil_nome || user.perfil || 'Perfil nao informado');
-    ['railProfileName', 'commandProfileName'].forEach(id => setText(id, name));
-    ['railProfileRole', 'commandProfileRole'].forEach(id => setText(id, role));
+    ['commandProfileName'].forEach(id => setText(id, name));
+    ['commandProfileRole'].forEach(id => setText(id, role));
     ['railProfileAvatar', 'commandProfileAvatar'].forEach(id => setText(id, profileInitial(name)));
+    renderProfilePage();
     const manageRules = document.getElementById('manageWindowRules');
     if (manageRules) manageRules.hidden = !canManageAccounts();
   };
 
+  const renderProfilePage = () => {
+    if (!state.me) return;
+    const role = state.me.perfil_nome || state.me.perfil || 'Perfil nao informado';
+    const securityPanel = document.querySelector('[data-page-profile-panel="security"]');
+    if (securityPanel && !securityPanel.querySelector('.profile-access-cards')) {
+      const cards = document.createElement('div'); cards.className = 'profile-access-cards';
+      cards.innerHTML = '<div><span>Meu cargo</span><strong id="pageProfileRoleCard">--</strong></div><div><span>Minhas permissões</span><strong id="pageProfilePermissionsCard">--</strong></div>';
+      securityPanel.prepend(cards);
+    }
+    if (securityPanel && !securityPanel.querySelector('.profile-security-info')) {
+      const info = document.createElement('div'); info.className = 'profile-security-info';
+      info.innerHTML = '<div><span>Último acesso</span><strong id="pageProfileLastLogin">--</strong></div><div><span>Conta criada em</span><strong id="pageProfileCreatedAt">--</strong></div><div><span>Proteção</span><strong>Senha protegida</strong></div><div><span>Sessão</span><strong>Ativa neste navegador</strong></div>';
+      securityPanel.append(info);
+    }
+    setText('pageProfileSummaryName', state.me.nome || '--'); setText('pageProfileSummaryRole', role); setText('pageProfileSummaryEmail', state.me.email || '--');
+    setText('pageProfileSummaryId', state.me.id ? `#${state.me.id}` : '--'); setText('pageProfileSummaryAvatar', profileInitial(state.me.nome)); setText('pageProfileAvatar', profileInitial(state.me.nome));
+    setText('pageProfilePermissionsText', permissionsByRole[role] || 'Permissões definidas pelo administrador.'); setText('pageProfileRoleCard', role); setText('pageProfilePermissionsCard', permissionsByRole[role] || 'Permissões definidas pelo administrador.');
+    setText('pageProfileLastLogin', formatDateTime(state.me.ultimo_login_em)); setText('pageProfileCreatedAt', formatDateTime(state.me.criado_em));
+  };
+
   const markProfileUnavailable = () => {
-    ['railProfileName', 'commandProfileName'].forEach(id => setText(id, 'Sessao indisponivel'));
-    ['railProfileRole', 'commandProfileRole'].forEach(id => setText(id, 'Recarregue ou faca login'));
+    ['commandProfileName'].forEach(id => setText(id, 'Sessao indisponivel'));
+    ['commandProfileRole'].forEach(id => setText(id, 'Recarregue ou faca login'));
     ['railProfileAvatar', 'commandProfileAvatar'].forEach(id => setText(id, '!'));
   };
 
@@ -1548,12 +1568,6 @@
     const failed = Number(dashboard.backups_com_falha || 0);
     const other = Math.max(Number(dashboard.total_backups || 0) - completed - failed, 0);
 
-    const topCustomers = [...state.customers]
-      .sort((a, b) => Number(b.quantidade_dispositivos || 0) - Number(a.quantidade_dispositivos || 0))
-      .slice(0, topCustomersLimit);
-
-    const clientLabels = topCustomers.map(item => item.nome || 'Cliente');
-    const clientSeries = topCustomers.map(item => Number(item.quantidade_dispositivos || 0));
     const dailySeries = Array.isArray(dashboard.series_diarias) ? dashboard.series_diarias : [];
     const chartDailySeries = dailySeries.slice(-21);
     const historyLabels = chartDailySeries.map(item => item.label || '--');
@@ -1562,7 +1576,6 @@
     const statusHeight = chartHeight(260, 245, 230);
     const trendHeight = chartHeight(292, 270, 245);
     const storageHeight = chartHeight(260, 240, 225);
-    const clientHeight = chartHeight(292, 270, 250);
     const historyHeight = chartHeight(318, 295, 260);
     renderDailyHistory(dailySeries);
     renderAnalyticsInsights();
@@ -1579,7 +1592,6 @@
         dashboard.armazenamento_disponivel === false ? 'Indisponivel' : formatBytes(Number(dashboard.espaco_utilizado || 0)),
         'Volume protegido'
       );
-      mountFallbackBars('clientBar', clientSeries, clientLabels, c.violet);
       mountFallbackBars('historyArea', dailySeries.slice(-14).map(item => Number(item.backups || 0)), historyLabels.slice(-14), c.green);
       return;
     }
@@ -1649,28 +1661,6 @@
       stroke: { lineCap: 'round' },
       legend: { show: false },
       tooltip: { ...chartBase(storageHeight).tooltip, y: { formatter: value => `${fmtInt(value)}%` } }
-    });
-
-    mount('clientBar', {
-      ...chartBase(clientHeight),
-      chart: { ...chartBase(clientHeight).chart, type: 'bar', toolbar: { show: false } },
-      series: [{ name: 'Dispositivos protegidos', data: clientSeries.length ? clientSeries : [0] }],
-      colors: [c.violet, c.cyan, c.green, c.amber, c.violet2],
-      plotOptions: {
-        bar: {
-          borderRadius: 10,
-          borderRadiusApplication: 'end',
-          barHeight: '70%',
-          distributed: true,
-          horizontal: true
-        }
-      },
-      dataLabels: { enabled: true, offsetX: 10, style: { colors: [root.dataset.mode === 'light' ? '#1f2937' : '#dbe8f8'], fontSize: '10px', fontWeight: 800 }, formatter: value => fmtInt(value) },
-      grid: { ...chartBase(clientHeight).grid, xaxis: { lines: { show: false } }, yaxis: { lines: { show: false } }, padding: { top: 8, right: 18, bottom: 0, left: 6 } },
-      xaxis: { ...chartBase(clientHeight).xaxis, categories: clientLabels.length ? clientLabels : ['Sem dados'], min: 0, tickAmount: 4, labels: { ...chartBase(clientHeight).xaxis.labels, formatter: value => fmtInt(value) } },
-      yaxis: { ...chartBase(clientHeight).yaxis, labels: { ...chartBase(clientHeight).yaxis.labels, maxWidth: window.innerWidth <= 700 ? 100 : 160, trim: true } },
-      legend: { show: false },
-      tooltip: { ...chartBase(clientHeight).tooltip, y: { formatter: value => `${fmtInt(value)} dispositivos` } }
     });
 
     mount('historyArea', {
@@ -1972,7 +1962,8 @@
     infrastructure: [loadMe, loadDailyExecutions],
     analytics: [loadMe, () => loadDashboard({ full: true }), loadCustomers, loadAlerts],
     alerts: [loadMe],
-    audit: [loadMe, loadAudit]
+    audit: [loadMe, loadAudit],
+    profile: [loadMe]
   };
 
   const sectionBackgroundLoaders = {
@@ -1998,7 +1989,8 @@
     infrastructure: 'Execuções por dispositivo',
     analytics: 'Análises',
     alerts: 'Alertas',
-    audit: 'Auditoria administrativa'
+    audit: 'Auditoria administrativa',
+    profile: 'Meu perfil'
   };
 
   const sectionDescriptions = {
@@ -2012,7 +2004,8 @@
     infrastructure: 'Execucoes de hoje e ontem organizadas por dispositivo para verificacao operacional.',
     analytics: 'Investigue tendências, compare períodos, identifique causas recorrentes e priorize ações.',
     alerts: 'Central de alertas operacionais.',
-    audit: 'Eventos administrativos de criacao, edicao e seguranca de contas.'
+    audit: 'Eventos administrativos de criacao, edicao e seguranca de contas.',
+    profile: 'Informacoes gerais, permissoes e seguranca da sua conta.'
   };
 
   const setSyncStatus = (message, stateName = 'ready') => {
@@ -2234,8 +2227,57 @@
     loadBackgroundData(selected, activationId);
     notify(hasFailure ? 'Atualizacao concluida com dados parciais.' : 'Dados atualizados.');
   });
-  document.getElementById('profileButton')?.addEventListener('click', () => notify(state.me?.email || 'Perfil indisponivel neste painel.'));
-  document.getElementById('commandUserButton')?.addEventListener('click', () => notify(state.me?.email || 'Perfil indisponivel neste painel.'));
+  const permissionsByRole = { Administrador: 'Acesso total ao painel, contas, integrações, auditoria e configurações.', Operador: 'Consulta dados operacionais e executa rotinas permitidas.', 'Somente leitura': 'Consulta indicadores, clientes, alertas e relatórios.' };
+  const openProfile = () => {
+    activateSection('profile');
+    document.getElementById('pageProfileNameInput').value = state.me?.nome || '';
+    document.getElementById('pageProfileEmailInput').value = state.me?.email || '';
+    document.getElementById('pageProfileCurrentPassword').value = '';
+    document.getElementById('pageProfileNewPassword').value = '';
+    document.getElementById('pageProfileNewPasswordConfirm').value = '';
+    const role = state.me?.perfil_nome || state.me?.perfil || 'Perfil nao informado';
+    const securityPanel = document.querySelector('[data-page-profile-panel="security"]');
+    if (securityPanel && !securityPanel.querySelector('.profile-access-cards')) {
+      const cards = document.createElement('div');
+      cards.className = 'profile-access-cards';
+      cards.innerHTML = '<div><span>Meu cargo</span><strong id="pageProfileRoleCard">--</strong></div><div><span>Minhas permissões</span><strong id="pageProfilePermissionsCard">--</strong></div>';
+      securityPanel.prepend(cards);
+    }
+    if (securityPanel && !securityPanel.querySelector('.profile-security-info')) {
+      const info = document.createElement('div');
+      info.className = 'profile-security-info';
+      info.innerHTML = '<div><span>Último acesso</span><strong id="pageProfileLastLogin">--</strong></div><div><span>Conta criada em</span><strong id="pageProfileCreatedAt">--</strong></div><div><span>Proteção</span><strong>Senha protegida</strong></div><div><span>Sessão</span><strong>Ativa neste navegador</strong></div>';
+      securityPanel.append(info);
+    }
+    document.getElementById('pageProfileRoleCard').textContent = role;
+    document.getElementById('pageProfilePermissionsCard').textContent = permissionsByRole[role] || 'Permissões definidas pelo administrador.';
+    document.getElementById('pageProfileLastLogin').textContent = formatDateTime(state.me?.ultimo_login_em);
+    document.getElementById('pageProfileCreatedAt').textContent = formatDateTime(state.me?.criado_em);
+    document.getElementById('pageProfileSummaryName').textContent = state.me?.nome || '--';
+    document.getElementById('pageProfileSummaryRole').textContent = role;
+    document.getElementById('pageProfileSummaryEmail').textContent = state.me?.email || '--';
+    document.getElementById('pageProfileSummaryId').textContent = state.me?.id ? `#${state.me.id}` : '--';
+    document.getElementById('pageProfileSummaryAvatar').textContent = profileInitial(state.me?.nome);
+    document.getElementById('pageProfileAvatar').textContent = profileInitial(state.me?.nome);
+    document.getElementById('pageProfilePermissionsText').textContent = permissionsByRole[role] || 'Permissões definidas pelo administrador.';
+    document.getElementById('pageProfileLanguage').value = localStorage.getItem('nyxcloud_language') || 'pt-BR';
+    document.getElementById('pageProfileMessage').textContent = '';
+  };
+  document.getElementById('commandUserButton')?.addEventListener('click', openProfile);
+  document.querySelector('.rail-item[data-section="profile"]')?.addEventListener('click', event => { event.preventDefault(); openProfile(); });
+  document.querySelectorAll('[data-page-profile-tab]').forEach(tab => tab.addEventListener('click', () => {
+    const target = tab.dataset.pageProfileTab;
+    document.querySelectorAll('[data-page-profile-tab]').forEach(item => item.classList.toggle('is-active', item === tab));
+    document.querySelectorAll('[data-page-profile-panel]').forEach(panel => panel.classList.toggle('is-active', panel.dataset.pageProfilePanel === target));
+  }));
+  document.getElementById('pageProfileLanguage')?.addEventListener('change', event => localStorage.setItem('nyxcloud_language', event.target.value));
+  document.getElementById('pageSaveProfileButton')?.addEventListener('click', async () => {
+    const nova = document.getElementById('pageProfileNewPassword').value;
+    if (nova !== document.getElementById('pageProfileNewPasswordConfirm').value) { document.getElementById('pageProfileMessage').textContent = 'Novas senhas nao conferem.'; return; }
+    const payload = { nome: document.getElementById('pageProfileNameInput').value.trim(), email: document.getElementById('pageProfileEmailInput').value.trim(), senha_atual: document.getElementById('pageProfileCurrentPassword').value, nova_senha: nova };
+    try { await fetchJson('update-profile.php', { method: 'POST', body: payload }); state.me = { ...state.me, nome: payload.nome, email: payload.email }; renderPartialData(); notify('Perfil atualizado com sucesso.'); }
+    catch (error) { document.getElementById('pageProfileMessage').textContent = error.message; }
+  });
   document.getElementById('windowsSearch')?.addEventListener('input', event => {
     state.windowsSearch = String(event.currentTarget.value || '').trim();
     safeRun(buildExecutionWindowRows);
@@ -2390,7 +2432,6 @@
         body: activateId ? { id, active: !Boolean(item.active) } : { id }
       });
       state.integrations = Array.isArray(payload?.items) ? payload.items : [];
-      dataRequests.delete('integrations');
       renderIntegrations();
       notify(activateId ? (item.active ? 'Integracao desativada.' : 'Integracao ativada.') : 'Integracao removida.');
     } catch (error) {
@@ -2425,10 +2466,6 @@
     try {
       const saved = await fetchJson('acronis-credentials.php', { method: 'POST', body: payload });
       state.integrations = Array.isArray(saved?.items) ? saved.items : [];
-      dataRequests.delete('integrations');
-      dataRequests.delete('dashboard');
-      dataRequests.delete('alerts');
-      dataRequests.delete('devices');
       renderIntegrations();
       form.reset();
       form.elements.namedItem('id').value = '';

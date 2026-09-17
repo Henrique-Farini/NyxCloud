@@ -3,7 +3,7 @@
 
   const body = document.body;
   const basePageSize = 10;
-  const state = { rows: [], quickFilter: 'all' };
+  const state = { rows: [], inventoryRows: [], quickFilter: 'all' };
   let page = 1;
   let sortKey = 'time';
   let sortDir = 'desc';
@@ -83,6 +83,10 @@
   const knownStorageKey = 'nyxcloud-known-alerts';
   const hiddenStorageKey = 'nyxcloud-hidden-alerts';
   const resolvedStorageKey = 'nyxcloud-resolved-alerts';
+  const hiddenClientVisibilityKey = 'nyxcloud-hidden-alert-clients-v2';
+  const hiddenDeviceVisibilityKey = 'nyxcloud-hidden-alert-devices-v2';
+  const hiddenPlanVisibilityKey = 'nyxcloud-hidden-alert-plans-v2';
+  const deviceAlertCategoriesKey = 'nyxcloud-device-alert-categories-v1';
 
   const statusMeta = {
     failed: ['Falha', 'circle-x'],
@@ -130,6 +134,15 @@
     }
   };
   const writeStoredSet = (key, values) => localStorage.setItem(key, JSON.stringify([...values]));
+  const readStoredMap = key => {
+    try {
+      const value = JSON.parse(localStorage.getItem(key) || '{}');
+      return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    } catch {
+      return {};
+    }
+  };
+  const writeStoredMap = (key, value) => localStorage.setItem(key, JSON.stringify(value));
   const knownAlertKeys = () => readStoredSet(knownStorageKey);
   const hiddenAlertKeys = () => readStoredSet(hiddenStorageKey);
   const resolvedAlertKeys = () => readStoredSet(resolvedStorageKey);
@@ -139,6 +152,11 @@
   const isKnownAlert = row => hasStoredAlert(knownAlertKeys(), row);
   const isHiddenAlert = row => hasStoredAlert(hiddenAlertKeys(), row);
   const isResolvedAlert = row => hasStoredAlert(resolvedAlertKeys(), row);
+  const scopeKey = (...values) => values.map(value => cleanText(value).toLocaleLowerCase('pt-BR')).join('||');
+  const isFilteredByVisibility = row => readStoredSet(hiddenClientVisibilityKey).has(scopeKey(row.client))
+    || readStoredSet(hiddenDeviceVisibilityKey).has(scopeKey(row.client, row.server))
+    || readStoredSet(hiddenPlanVisibilityKey).has(scopeKey(row.client, row.server, row.plan))
+    || (readStoredMap(deviceAlertCategoriesKey)[scopeKey(row.client, row.server)] || []).includes(alertCategoryGroup(row));
   const effectiveStatus = row => isResolvedAlert(row) ? 'resolved' : (isKnownAlert(row) ? 'known' : row.status);
   const rowCodeKey = row => cleanText(row.rawCode || row.code);
   const rowTypeKey = row => cleanText(row.rawType || row.type);
@@ -151,6 +169,41 @@
     if (hasAlertKey(row, ['BACKUP_EXPECTED_NOT_RUN', 'DEVICE_OFFLINE_BACKUP_MISSING', 'BackupDidNotStart'])) return 'missing';
     if (hasAlertKey(row, ['BACKUP_FAILED', 'BACKUP_BELOW_BASELINE', 'PlanDeploymentFailed'])) return 'failedbackup';
     if ((row.source || '').toLocaleLowerCase('pt-BR') === 'acronis') return 'acronis';
+    return 'other';
+  };
+  const isSizeAlert = row => hasAlertKey(row, ['BACKUP_NO_FILES_PROCESSED', 'BACKUP_ZERO_SIZE', 'BACKUP_BELOW_BASELINE'])
+    || ['nofiles'].includes(alertCategory(row));
+  const alertCategoryOptions = [
+    ['backup', 'Backup'],
+    ['offline', 'Máquina offline'],
+    ['size', 'Tamanho do backup'],
+    ['antimalware', 'Antimalware'],
+    ['edr', 'EDR e incidentes'],
+    ['url_filtering', 'Filtro de URL'],
+    ['device_control', 'Device Control'],
+    ['licensing', 'Licenciamento e cota'],
+    ['cloud', 'Microsoft 365 e nuvens'],
+    ['software', 'Implantação e software'],
+    ['recovery', 'Disaster Recovery'],
+    ['system', 'Sistema e infraestrutura'],
+    ['management', 'Gestão e monitoramento'],
+    ['other', 'Outros']
+  ];
+  const alertCategoryGroup = row => {
+    const text = [row.rawCode, row.rawType, row.code, row.type, row.error].join(' ').toLocaleLowerCase('pt-BR');
+    if (alertCategory(row) === 'offline' || /offline|sem comunica|não responde|nao responde/.test(text)) return 'offline';
+    if (/malware|antimalware|ransomware|vírus|virus|comportamento suspeito/.test(text)) return 'antimalware';
+    if (/\bedr\b|incidente de seguran|indicador de comprometimento|brecha/.test(text)) return 'edr';
+    if (/url filtering|filtro de url|site bloqueado|navega/.test(text)) return 'url_filtering';
+    if (/device control|dispositivo removível|dispositivo removivel|porta bloqueada|usb/.test(text)) return 'device_control';
+    if (/licen|cota|quota|subscription/.test(text)) return 'licensing';
+    if (/microsoft 365|office 365|onedrive|sharepoint|google workspace|nuvem|cloud|consentimento/.test(text)) return 'cloud';
+    if (/software|implant|instala|atualiza|deployment|agente/.test(text)) return 'software';
+    if (/recovery|recupera|failover|failback|disaster/.test(text)) return 'recovery';
+    if (isSizeAlert(row)) return 'size';
+    if (['missing', 'failedbackup'].includes(alertCategory(row)) || /backup|prote[çc][aã]o|plano/.test(text)) return 'backup';
+    if (/sistema|serviço|servico|rede|infraestrutura|disco/.test(text)) return 'system';
+    if (/monitor|gest[aã]o|management/.test(text)) return 'management';
     return 'other';
   };
   const toggleKnownAlert = row => {
@@ -426,7 +479,7 @@
 
   const updateQuickFilters = () => {
     const rows = periodRows();
-    const visibleRows = rows.filter(row => !isHiddenAlert(row));
+    const visibleRows = rows.filter(row => !isHiddenAlert(row) && !isFilteredByVisibility(row));
     const counts = {
       all: visibleRows.length,
       offline: visibleRows.filter(row => alertCategory(row) === 'offline').length,
@@ -452,7 +505,7 @@
   };
 
   const updateActionQueue = () => {
-    const rows = periodRows().filter(row => !isHiddenAlert(row) && !isKnownAlert(row) && !isResolvedAlert(row));
+    const rows = periodRows().filter(row => !isHiddenAlert(row) && !isFilteredByVisibility(row) && !isKnownAlert(row) && !isResolvedAlert(row));
     const openRows = rows.filter(row => effectiveStatus(row) === 'failed');
     const counts = {
       offline: openRows.filter(row => alertCategory(row) === 'offline').length,
@@ -520,6 +573,7 @@
 
     return periodRows()
       .filter(row => state.quickFilter === 'hidden' ? isHiddenAlert(row) : !isHiddenAlert(row))
+      .filter(row => state.quickFilter === 'hidden' || !isFilteredByVisibility(row))
       .filter(matchesQuickFilter)
       .filter(row => filters.status === 'success' || !isResolvedAlert(row))
       .filter(row =>
@@ -710,9 +764,170 @@
     fill('serverFilter', state.rows.map(row => row.server));
   };
 
+  const visibilityValues = values => [...new Set(values.filter(value => value && value !== '--'))]
+    .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+  const inventoryFromDevices = devices => {
+    const rows = [];
+    (Array.isArray(devices) ? devices : []).forEach(device => {
+      const client = cleanText(device?.cliente || device?.customer_name || 'Cliente não identificado');
+      const server = cleanText(device?.hostname || device?.name || 'Máquina não identificada');
+      const details = Array.isArray(device?.planos_detalhes) ? device.planos_detalhes : [];
+      const plans = details.length
+        ? details.map(detail => cleanText(detail?.plano || 'Sem plano'))
+        : String(device?.plano || '').split(';').map(plan => cleanText(plan)).filter(plan => plan !== '--');
+      [...new Set(plans.length ? plans : ['Sem plano'])].forEach(plan => rows.push({ client, server, plan }));
+    });
+    return rows;
+  };
+
+  const renderVisibilityOptions = () => {
+    const container = document.getElementById('alertScopeOptions');
+    if (!container) return;
+      const hiddenClients = readStoredSet(hiddenClientVisibilityKey);
+      const hiddenDevices = readStoredSet(hiddenDeviceVisibilityKey);
+      const hiddenPlans = readStoredSet(hiddenPlanVisibilityKey);
+      const disabledCategories = readStoredMap(deviceAlertCategoriesKey);
+    const inventory = state.inventoryRows.length ? state.inventoryRows : state.rows.map(row => ({ client: row.client, server: row.server, plan: row.plan }));
+    const clients = visibilityValues(inventory.map(row => row.client));
+    container.replaceChildren();
+    if (!clients.length) {
+      container.append(cell('small', 'Nenhum cliente encontrado.', 'visibility-empty'));
+      return;
+    }
+
+    clients.forEach(client => {
+      const clientKey = scopeKey(client);
+      const clientRows = inventory.filter(row => row.client === client);
+      const clientSection = document.createElement('section');
+      clientSection.className = 'visibility-client-group';
+      const clientHead = document.createElement('div');
+      clientHead.className = 'visibility-client-head';
+      const clientLabel = document.createElement('label');
+      clientLabel.className = 'visibility-check visibility-client-check';
+      const clientInput = document.createElement('input');
+      clientInput.type = 'checkbox';
+      clientInput.dataset.visibilityKind = 'client';
+      clientInput.dataset.visibilityKey = clientKey;
+      clientInput.checked = !hiddenClients.has(clientKey);
+      clientInput.addEventListener('change', () => {
+        clientSection.querySelectorAll('input[data-visibility-kind="device"], input[data-visibility-kind="plan"], input[data-visibility-kind="category"]').forEach(input => { input.checked = clientInput.checked; });
+      });
+      clientLabel.append(clientInput, cell('span', client));
+      clientHead.append(clientLabel, cell('small', `${new Set(clientRows.map(row => row.server)).size} máquina(s)`, 'visibility-count'));
+      clientSection.append(clientHead);
+
+      const machines = visibilityValues(clientRows.map(row => row.server));
+      const machineList = document.createElement('div');
+      machineList.className = 'visibility-machine-list';
+      machines.forEach(server => {
+        const deviceKey = scopeKey(client, server);
+        const machineRows = clientRows.filter(row => row.server === server);
+        const machine = document.createElement('div');
+        machine.className = 'visibility-machine-group';
+        const machineLabel = document.createElement('label');
+        machineLabel.className = 'visibility-check visibility-machine-check';
+        const machineInput = document.createElement('input');
+        machineInput.type = 'checkbox';
+        machineInput.dataset.visibilityKind = 'device';
+        machineInput.dataset.visibilityKey = deviceKey;
+        machineInput.checked = !hiddenDevices.has(deviceKey);
+        machineInput.addEventListener('change', () => {
+          plans.querySelectorAll('input').forEach(input => { input.checked = machineInput.checked; });
+          categoryList.querySelectorAll('input').forEach(input => { input.checked = machineInput.checked; });
+        });
+        machineLabel.append(machineInput, cell('span', server));
+        machine.append(machineLabel);
+        machine.append(cell('div', 'Tipos de alerta', 'visibility-section-label'));
+        const categoryList = document.createElement('div');
+        categoryList.className = 'visibility-category-list';
+        const disabledForDevice = new Set(disabledCategories[deviceKey] || []);
+        alertCategoryOptions.forEach(([category, label]) => {
+          const categoryLabel = document.createElement('label');
+          categoryLabel.className = 'visibility-check visibility-category-check';
+          const categoryInput = document.createElement('input');
+          categoryInput.type = 'checkbox';
+          categoryInput.dataset.visibilityKind = 'category';
+          categoryInput.dataset.visibilityDeviceKey = deviceKey;
+          categoryInput.dataset.visibilityCategory = category;
+          categoryInput.checked = !disabledForDevice.has(category);
+          categoryLabel.append(categoryInput, cell('span', label));
+          categoryList.append(categoryLabel);
+        });
+        machine.append(categoryList);
+        machine.append(cell('div', 'Planos monitorados', 'visibility-section-label visibility-plan-title'));
+        const plans = document.createElement('div');
+        plans.className = 'visibility-plan-list';
+        visibilityValues(machineRows.map(row => row.plan)).forEach(plan => {
+          const planKey = scopeKey(client, server, plan);
+          const planLabel = document.createElement('label');
+          planLabel.className = 'visibility-check visibility-plan-check';
+          const planInput = document.createElement('input');
+          planInput.type = 'checkbox';
+          planInput.dataset.visibilityKind = 'plan';
+          planInput.dataset.visibilityKey = planKey;
+          planInput.checked = !hiddenPlans.has(planKey);
+          planLabel.append(planInput, cell('span', plan));
+          plans.append(planLabel);
+        });
+        machine.append(plans);
+        machineList.append(machine);
+      });
+      clientSection.append(machineList);
+      container.append(clientSection);
+    });
+  };
+
+  const applyVisibilitySelection = () => {
+    const hidden = { client: new Set(), device: new Set(), plan: new Set() };
+    document.querySelectorAll('#alertScopeOptions input[data-visibility-kind="client"], #alertScopeOptions input[data-visibility-kind="device"], #alertScopeOptions input[data-visibility-kind="plan"]').forEach(input => {
+      if (!input.checked) hidden[input.dataset.visibilityKind].add(input.dataset.visibilityKey);
+    });
+    writeStoredSet(hiddenClientVisibilityKey, hidden.client);
+    writeStoredSet(hiddenDeviceVisibilityKey, hidden.device);
+    writeStoredSet(hiddenPlanVisibilityKey, hidden.plan);
+    const categories = {};
+    document.querySelectorAll('#alertScopeOptions input[data-visibility-kind="category"]').forEach(input => {
+      if (!input.checked) {
+        const deviceKey = input.dataset.visibilityDeviceKey;
+        if (!categories[deviceKey]) categories[deviceKey] = [];
+        categories[deviceKey].push(input.dataset.visibilityCategory);
+      }
+    });
+    writeStoredMap(deviceAlertCategoriesKey, categories);
+    page = 1;
+    renderRows();
+    setAlertTab('events');
+    notify('Seleção por cliente, máquina e plano aplicada.');
+  };
+
+  const resetVisibilitySelection = () => {
+    writeStoredSet(hiddenClientVisibilityKey, new Set());
+    writeStoredSet(hiddenDeviceVisibilityKey, new Set());
+    writeStoredSet(hiddenPlanVisibilityKey, new Set());
+    writeStoredMap(deviceAlertCategoriesKey, {});
+    renderVisibilityOptions();
+    page = 1;
+    renderRows();
+    notify('Todos os dispositivos e planos foram reativados.');
+  };
+
+  const setAlertTab = tab => {
+    const visibility = tab === 'visibility';
+    body.classList.toggle('alerts-visibility-mode', visibility);
+    const panel = document.getElementById('alertVisibilityPanel');
+    if (panel) panel.hidden = !visibility;
+    document.querySelectorAll('[data-alert-tab]').forEach(button => {
+      const active = button.dataset.alertTab === tab;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-selected', String(active));
+    });
+    if (visibility) renderVisibilityOptions();
+  };
+
   const updateKpis = () => {
     const rows = periodRows();
-    const visibleRows = rows.filter(row => !isHiddenAlert(row));
+    const visibleRows = rows.filter(row => !isHiddenAlert(row) && !isFilteredByVisibility(row));
     const values = [
       visibleRows.length,
       visibleRows.filter(row => ['success', 'resolved'].includes(effectiveStatus(row))).length,
@@ -776,7 +991,11 @@
     setSyncStatus('Atualizando alertas', 'loading');
 
     try {
-      const alerts = await fetchJson('alertas.php');
+      const [alerts, devices] = await Promise.all([
+        fetchJson('alertas.php'),
+        fetchJson('devices.php').catch(() => [])
+      ]);
+      state.inventoryRows = inventoryFromDevices(devices);
       state.rows = deduplicateRows((Array.isArray(alerts) ? alerts : []).map(mapAlertRow))
         .map(row => ({
           ...row,
@@ -786,8 +1005,9 @@
             row.error
           ].filter(Boolean).join(' - '),
           location: looksLikeIp(row.location) ? row.location : '--'
-        }));
+      }));
       populateSelects();
+      renderVisibilityOptions();
       updateKpis();
       renderRows();
       setSyncStatus(syncTimeLabel(), 'ready');
@@ -878,6 +1098,11 @@
     renderRows();
   });
   document.getElementById('clearFilters')?.addEventListener('click', resetFilters);
+  document.querySelectorAll('[data-alert-tab]').forEach(button => {
+    button.addEventListener('click', () => setAlertTab(button.dataset.alertTab || 'events'));
+  });
+  document.getElementById('applyAlertVisibility')?.addEventListener('click', applyVisibilitySelection);
+  document.getElementById('resetAlertVisibility')?.addEventListener('click', resetVisibilitySelection);
   document.querySelectorAll('.quick-alert-filters [data-quick-filter]').forEach(button => {
     button.addEventListener('click', () => {
       state.quickFilter = button.dataset.quickFilter || 'all';

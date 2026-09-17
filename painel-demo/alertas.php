@@ -10,8 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260903-overview-1">
-  <link rel="stylesheet" href="alertas.css?v=20260901-alerts-nav-1">
+  <link rel="stylesheet" href="styles.css?v=20260915-light-theme-2">
+  <link rel="stylesheet" href="alertas.css?v=20260915-light-theme-2">
 </head>
 <body data-mode="dark">
   <a class="skip-link" href="#alert-events">Pular para os alertas</a>
@@ -66,6 +66,17 @@
           <label class="range-picker"><i data-lucide="calendar-days"></i><select id="periodFilter" aria-label="Período"><option value="today">Hoje</option><option value="yesterday">Ontem</option><option value="7">Últimos 7 dias</option><option value="30" selected>Últimos 30 dias</option></select><i data-lucide="chevron-down"></i></label>
         </section>
 
+        <nav class="alert-view-tabs" aria-label="Visualização da central de alertas">
+          <button type="button" class="is-active" data-alert-tab="events" aria-selected="true"><i data-lucide="bell"></i> Alertas</button>
+          <button type="button" data-alert-tab="visibility" aria-selected="false"><i data-lucide="network"></i> Dispositivos e planos</button>
+        </nav>
+
+        <section class="alert-visibility-panel" id="alertVisibilityPanel" hidden>
+          <div class="visibility-panel-head"><div><span class="surface-eyebrow">CONFIGURAÇÃO DE EXIBIÇÃO</span><h2>Escolha o que deve gerar alertas</h2><p>Selecione clientes, máquinas, planos e os tipos de alerta de cada máquina.</p></div><button class="apply-filter" id="applyAlertVisibility" type="button"><i data-lucide="check"></i> Salvar seleção</button></div>
+          <div class="alert-scope-tree" id="alertScopeOptions"></div>
+          <div class="visibility-panel-foot"><span>Itens desmarcados ficam fora da lista de alertas, mas não são removidos da Acronis.</span><button class="clear-filter" id="resetAlertVisibility" type="button">Mostrar todos</button></div>
+        </section>
+
         <section class="alert-kpis" aria-label="Resumo dos alertas">
           <article class="alert-kpi violet-kpi" data-status-filter="all" role="button" tabindex="0" aria-pressed="true"><div class="alert-kpi-top"><span class="alert-icon"><i data-lucide="database"></i></span><span class="kpi-trend">Monitorado</span></div><span>Total no período</span><strong data-alert-count="0">0</strong><small>Mostrar todos os eventos</small></article>
           <article class="alert-kpi green-kpi" data-status-filter="success" role="button" tabindex="0" aria-pressed="false"><div class="alert-kpi-top"><span class="alert-icon"><i data-lucide="circle-check"></i></span><span class="kpi-trend">Saudável</span></div><span>Resolvidos</span><strong data-alert-count="0">0</strong><small>Filtrar alertas fechados ou limpos</small></article>
@@ -111,7 +122,7 @@
   </dialog>
   <div class="alerts-toast" id="alertsToast" role="status" aria-live="polite"></div>
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script src="alertas.js?v=20260903-alerts-resolved-1"></script>
+  <script src="alertas.js?v=20260915-alert-visibility-5"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="alertas-react.js?v=20260903-alerts-react-1"></script>
