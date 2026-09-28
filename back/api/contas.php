@@ -95,6 +95,7 @@ try {
         $senha = (string) ($payload['senha'] ?? '');
         $temEmpresas = array_key_exists('empresa_ids', $payload);
         $empresaIds = $temEmpresas ? normalizarEmpresaIds($payload['empresa_ids']) : [];
+        $self = (int) $usuario['id'] === $id;
 
         if ($id <= 0) {
             apiResponse(false, new stdClass(), [], 'Conta invalida.', 422);
@@ -122,7 +123,6 @@ try {
             apiResponse(false, new stdClass(), [], 'Conta nao encontrada.', 404);
         }
 
-        $self = (int) $usuario['id'] === $id;
         if ($self && ($perfil !== 'admin' || $ativo === false)) {
             apiResponse(false, new stdClass(), [], 'Voce nao pode remover seu proprio acesso administrativo.', 422);
         }
