@@ -208,7 +208,8 @@
     return csrf ? { 'X-CSRF-Token': csrf } : {};
   };
   const redirectToLogin = () => {
-    const login = new URL('../back/index.php', window.location.href);
+    const cleanPanel = /\/painel(?:\/|$)/i.test(window.location.pathname);
+    const login = new URL(cleanPanel ? '../login/' : '../back/index.php', window.location.href);
     login.searchParams.set('next', window.location.pathname + window.location.search + window.location.hash);
     window.location.replace(login.href);
   };
@@ -271,13 +272,14 @@
     toastTimer = setTimeout(() => toast.classList.remove('is-visible'), 2600);
   };
 
-  const fmtInt = value => Number(value || 0).toLocaleString('pt-BR');
+  const uiLocale = () => localStorage.getItem('nyxcloud_language') === 'en-US' ? 'en-US' : 'pt-BR';
+  const fmtInt = value => Number(value || 0).toLocaleString(uiLocale());
   const fmtPercent = value => `${Number(value || 0).toFixed(2)}%`;
   const profileInitial = value => (String(value || '').trim().charAt(0) || 'U').toUpperCase();
   const formatDateTime = value => {
     if (!value) return '--';
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? '--' : date.toLocaleString('pt-BR', {
+    return Number.isNaN(date.getTime()) ? '--' : date.toLocaleString(uiLocale(), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -299,7 +301,7 @@
     const start = performance.now();
     const tick = now => {
       const progress = Math.min((now - start) / 1100, 1);
-      element.textContent = `${Math.round(target * (1 - Math.pow(1 - progress, 3))).toLocaleString('pt-BR')}${suffix}`;
+      element.textContent = `${Math.round(target * (1 - Math.pow(1 - progress, 3))).toLocaleString(uiLocale())}${suffix}`;
       if (progress < 1) {
         requestAnimationFrame(tick);
       }
@@ -344,7 +346,7 @@
       const size = document.createElement('td');
       const parsedDate = item.date ? new Date(`${item.date}T12:00:00`) : null;
       date.textContent = parsedDate && !Number.isNaN(parsedDate.getTime())
-        ? parsedDate.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
+        ? parsedDate.toLocaleDateString(uiLocale(), { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
         : item.label || '--';
       executions.textContent = `${fmtInt(item.backups || 0)} execuções`;
       success.textContent = fmtInt(item.success || 0);
@@ -384,7 +386,7 @@
       const parsedDate = item.date ? new Date(`${item.date}T12:00:00`) : null;
       const values = [
         parsedDate && !Number.isNaN(parsedDate.getTime())
-          ? parsedDate.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
+          ? parsedDate.toLocaleDateString(uiLocale(), { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
           : item.label || '--',
         fmtInt(item.backups || 0),
         fmtInt(item.success || 0),
@@ -409,7 +411,7 @@
     }
 
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? '--' : date.toLocaleString('pt-BR', {
+    return Number.isNaN(date.getTime()) ? '--' : date.toLocaleString(uiLocale(), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -525,6 +527,132 @@
     .replaceAll("'", '&#039;');
 
   const canManageAccounts = () => Boolean(state.me?.pode_gerenciar_contas);
+  const sectionPermissions = {
+    admin: new Set(['overview', 'executions', 'alerts', 'storage', 'summary', 'windows', 'clients', 'accounts', 'integrations', 'infrastructure', 'analytics', 'audit', 'profile']),
+    operador: new Set(['overview', 'executions', 'alerts', 'storage', 'summary', 'windows', 'clients', 'infrastructure', 'analytics', 'profile']),
+    leitura: new Set(['overview', 'executions', 'alerts', 'storage', 'summary', 'windows', 'clients', 'infrastructure', 'analytics', 'profile'])
+  };
+  const uiTranslations = {
+    'Visão geral': 'Overview', 'Atividade recente': 'Recent activity', 'Alertas': 'Alerts', 'Armazenamento': 'Storage',
+    'Resumo': 'Summary', 'Janelas de execução': 'Execution windows', 'Clientes': 'Clients', 'Contas': 'Accounts',
+    'Integrações': 'Integrations', 'Execuções por dispositivo': 'Executions by device', 'Análises': 'Analytics',
+    'Auditoria administrativa': 'Administrative audit', 'Meu perfil': 'My profile', 'Monitoramento': 'Monitoring',
+    'Ambiente': 'Environment', 'Usuário': 'User', 'Atualizar dados': 'Refresh data', 'Dados reais': 'Real data',
+    'Buscar cliente ou maquina': 'Search client or machine', 'Pesquisar cliente na aba Janelas': 'Search client in Windows',
+    'Pesquisar nas execuções': 'Search executions', 'Status': 'Status', 'Todos': 'All', 'Concluído': 'Completed',
+    'Falha': 'Failed', 'Atenção': 'Attention', 'Mais recente': 'Most recent', 'Mais antigo': 'Oldest',
+    'Cliente A–Z': 'Client A–Z', 'Hoje': 'Today', 'Ontem': 'Yesterday', 'Últimos 7 dias': 'Last 7 days',
+    'Últimos 30 dias': 'Last 30 days', 'Salvar alterações': 'Save changes', 'Dados e segurança': 'Data and security',
+    'Visão geral': 'Overview', 'Somente leitura': 'Read-only', 'Operador': 'Operator', 'Administrador': 'Administrator',
+    'Ações': 'Actions', 'Salvar': 'Save', 'Recarregar': 'Reload', 'Fechar': 'Close', 'Carregando': 'Loading',
+    'Sincronizando': 'Synchronizing', 'Atualizado agora': 'Updated now', 'Painel conectado': 'Panel connected',
+    'Dados sincronizados com a Acronis': 'Data synchronized with Acronis',
+    'Visão operacional de proteção': 'Protection operations overview',
+    'O essencial para entender a saúde dos backups e decidir o que precisa de atenção agora.': 'Everything you need to understand backup health and decide what needs attention now.',
+    'Proteção monitorada': 'Monitored protection', 'Resumo consolidado da operação de backup e do ambiente protegido.': 'Consolidated summary of backup operations and the protected environment.',
+    'Taxa de sucesso': 'Success rate', 'Melhor indicador': 'Best indicator', 'Monitorados': 'Monitored', 'Protegidos': 'Protected',
+    'Backups concluídos': 'Completed backups', 'Backups processados': 'Processed backups', 'Backups com falha': 'Failed backups',
+    'Espaço protegido': 'Protected space', 'Resultado das execuções': 'Execution results', 'Tarefas concluídas nos últimos 30 dias': 'Tasks completed in the last 30 days',
+    'Sucesso': 'Success', 'Outros': 'Other', 'Execuções por dia': 'Executions per day', 'Últimos 21 dias disponíveis na Acronis': 'Last 21 days available in Acronis',
+    'Prioridades da operação': 'Operational priorities', 'Os sinais que merecem uma próxima ação.': 'Signals that require the next action.',
+    'Falhas no período': 'Failures in period', 'Clientes sem histórico': 'Clients without history', 'Última atividade': 'Last activity',
+    'Recência por cliente': 'Recency by client', 'Quando ocorreu o último backup registrado.': 'When the last recorded backup occurred.',
+    'clientes com histórico': 'clients with history', 'Até 24 horas': 'Within 24 hours', 'De 2 a 7 dias': '2 to 7 days', 'Mais de 7 dias ou sem histórico': 'More than 7 days or no history',
+    'Uso do armazenamento': 'Storage usage', 'Em uso': 'In use', 'Fonte': 'Source', 'Desempenho diário dos backups': 'Daily backup performance',
+    'Gráfico dos últimos 21 dias e histórico completo disponível.': 'Chart of the last 21 days with full history available.', 'execuções': 'executions', 'Média diária': 'Daily average',
+    'no período': 'in period', 'Volume processado': 'Processed volume', 'Dia realizado': 'Execution day', 'Falhas': 'Failures', 'Tamanho processado': 'Processed size',
+    'Clientes e últimos backups': 'Clients and latest backups', 'Todos os clientes, seus dispositivos e a atividade de backup mais recente.': 'All clients, their devices and the latest backup activity.',
+    'na carteira atual': 'in current portfolio', 'Com backup registrado': 'With recorded backup', 'aguardando dados': 'awaiting data', 'Backup mais recente': 'Latest backup', 'Mais dispositivos': 'Most devices',
+    'Ritmo operacional': 'Operational pace', 'Últimos 7 dias comparados com os 7 dias anteriores': 'Last 7 days compared with the previous 7 days',
+    'Tendência': 'Trend', 'últimos 7 dias': 'last 7 days', 'Causas que mais se repetem': 'Most frequent causes', 'Alertas agrupados por tipo para priorizar correções': 'Alerts grouped by type to prioritize fixes',
+    'Recomendações acionáveis': 'Actionable recommendations', 'Sugestões baseadas nos sinais atuais do ambiente': 'Suggestions based on current environment signals',
+    'Ultimos dispositivos com atividade': 'Latest active devices', 'Filtre por status e ordene pelo último backup ou cliente.': 'Filter by status and sort by latest backup or client.',
+    'Hostname': 'Hostname', 'Ultimo backup': 'Latest backup', 'Dias': 'Days', 'Aguardando API': 'Waiting for API', 'Aguardando': 'Waiting',
+    'Hoje e ontem em ordem alfabetica': 'Today and yesterday in alphabetical order', 'Uma linha por dispositivo e plano, usando a ultima execucao de cada dia': 'One row per device and plan, using the latest execution of each day',
+    'Atualizacao automatica': 'Automatic update', 'Contas do painel': 'Panel accounts', 'Crie acessos para administradores, operadores ou usuarios com somente leitura.': 'Create access for administrators, operators or read-only users.',
+    'Controle interno': 'Internal control', 'Voce nao tem permissao para gerenciar contas.': 'You do not have permission to manage accounts.', 'Ultimo login': 'Last login', 'Criado em': 'Created at',
+    'Criar usuario com permissao menor': 'Create a lower-permission user', 'Senha inicial': 'Initial password', 'Conta ativa ao criar': 'Active account on creation',
+    'Somente leitura: visualiza indicadores sem acesso administrativo.': 'Read-only: view indicators without administrative access.', 'Criar conta': 'Create account',
+    'Integrações cadastradas': 'Registered integrations', 'Escolha qual ambiente o painel usa para buscar dados.': 'Choose which environment the panel uses to fetch data.',
+    'Secret protegido': 'Protected secret', 'Voce nao tem permissao para gerenciar integrações.': 'You do not have permission to manage integrations.', 'Região': 'Region', 'Outro': 'Other',
+    'Ativar após salvar': 'Activate after saving', 'Salvar integração': 'Save integration', 'Auditoria de contas': 'Account audit',
+    'Eventos de criacao, edicao, troca de perfil, status e senha.': 'Events involving creation, editing, profile changes, status and password.', 'Somente administradores': 'Administrators only',
+    'Data': 'Date', 'Acao': 'Action', 'Ator': 'Actor', 'Alvo': 'Target', 'Detalhes': 'Details', 'Perfil e segurança': 'Profile and security',
+    'Informações gerais, permissões e configurações de acesso.': 'General information, permissions and access settings.', 'Contato principal': 'Primary contact',
+    'Identificação': 'Identification', 'Conta ativa': 'Active account', 'Idioma': 'Language', 'Minhas permissões': 'My permissions', 'Carregando dados da Acronis...': 'Loading Acronis data...',
+    'Atividade recente por dispositivo, plano, horario, status e volume processado.': 'Recent activity by device, plan, time, status and processed volume.',
+    'Volume protegido consolidado e distribuicao do consumo entre clientes.': 'Consolidated protected volume and usage distribution among clients.',
+    'Indicadores essenciais para leitura executiva rapida da operacao.': 'Essential indicators for a quick executive view of operations.',
+    'Comparativo entre horarios esperados e execucoes realizadas por empresa e plano.': 'Comparison between expected times and executions by company and plan.',
+    'Distribuicao dos dispositivos protegidos e concentracao da carga por cliente.': 'Distribution of protected devices and workload concentration by client.',
+    'Execucoes de hoje e ontem organizadas por dispositivo para verificacao operacional.': 'Today and yesterday executions organized by device for operational review.',
+    'Investigue tendências, compare períodos, identifique causas recorrentes e priorize ações.': 'Investigate trends, compare periods, identify recurring causes and prioritize actions.',
+    'Central de alertas operacionais.': 'Operational alerts center.', 'Eventos administrativos de criacao, edicao e seguranca de contas.': 'Administrative events involving account creation, editing and security.',
+    'Informacoes gerais, permissoes e seguranca da sua conta.': 'General information, permissions and security for your account.',
+    'Acesso total ao painel, contas, integrações, auditoria e configurações.': 'Full access to the panel, accounts, integrations, audit and settings.',
+    'Consulta dados operacionais e executa rotinas permitidas.': 'View operational data and perform permitted routines.',
+    'Consulta indicadores, clientes, alertas e relatórios.': 'View indicators, clients, alerts and reports.',
+    'Concluído': 'Completed', 'Concluída': 'Completed', 'Não informado': 'Not provided', 'Nao informado': 'Not provided',
+    'Sem informação': 'No information', 'Sem informacao': 'No information', 'Sem plano': 'No plan', 'Aguardando dados': 'Waiting for data',
+    'Cliente não identificado': 'Unidentified client', 'Cliente nao identificado': 'Unidentified client',
+    'Máquina não identificada': 'Unidentified machine', 'Maquina nao identificada': 'Unidentified machine',
+    'Nenhum cliente encontrado.': 'No clients found.', 'Nenhum resultado encontrado.': 'No results found.', 'Sem dados disponíveis': 'No data available',
+    'Sem dados disponiveis': 'No data available', 'Proteção': 'Protection', 'Backup': 'Backup', 'Em andamento': 'In progress',
+    'Pendente': 'Pending', 'Desconhecido': 'Unknown', 'Desativado': 'Disabled', 'Ativo': 'Active', 'Inativo': 'Inactive',
+    'Nenhuma falha identificada no período atual.': 'No failures identified in the current period.', 'Aguardando a lista de clientes da Acronis.': 'Waiting for the Acronis client list.',
+    'Aguardando clientes': 'Waiting for clients', 'clientes monitorados': 'monitored clients', 'com último backup há mais de 7 dias.': 'with the last backup more than 7 days ago.',
+    'Nenhuma execução diária disponível para consulta.': 'No daily execution available for review.', 'execuções registradas nesse dia.': 'executions recorded on that day.',
+    'Falha ao carregar janelas': 'Failed to load windows', 'Tente abrir esta secao novamente.': 'Try opening this section again.',
+    'Nenhuma janela retornada pela API.': 'No windows returned by the API.', 'Nenhum cliente encontrado para': 'No client found for',
+    'Sem janelas configuradas': 'No windows configured', 'Sem resultado': 'No results', 'Ajuste o nome do cliente para localizar a janela correta.': 'Adjust the client name to find the correct window.',
+    'Indisponivel': 'Unavailable', 'Carregando resultado dos backups...': 'Loading backup results...', 'Verificando a cobertura da carteira...': 'Checking portfolio coverage...',
+    'Consultando a série diária...': 'Querying the daily series...', 'Carregando cobertura...': 'Loading coverage...', 'Calculando recomendações...': 'Calculating recommendations...'
+  };
+  const applyLanguage = () => {
+    const language = localStorage.getItem('nyxcloud_language') || 'pt-BR';
+    document.documentElement.lang = language;
+    if (language === 'pt-BR') return;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    const entries = Object.entries(uiTranslations).sort((left, right) => right[0].length - left[0].length);
+    nodes.forEach(node => {
+      const original = node.nodeValue || '';
+      if (!original.trim()) return;
+      let translated = original;
+      entries.forEach(([source, target]) => { translated = translated.replaceAll(source, target); });
+      if (translated !== original) node.nodeValue = translated;
+    });
+    document.querySelectorAll('[placeholder]').forEach(element => {
+      const translated = uiTranslations[element.getAttribute('placeholder')];
+      if (translated) element.setAttribute('placeholder', translated);
+    });
+  };
+  let languageObserver = null;
+  const startLanguageObserver = () => {
+    if (languageObserver) return;
+    languageObserver = new MutationObserver(() => applyLanguage());
+    languageObserver.observe(document.body, { childList: true, subtree: true });
+  };
+  const canAccessSection = section => sectionPermissions[String(state.me?.perfil || '').toLowerCase()]?.has(section) ?? false;
+  const applyRoleVisibility = () => {
+    if (!state.me) return;
+    const restricted = String(state.me?.perfil || '').toLowerCase() === 'admin'
+      ? new Set()
+      : new Set(['accounts', 'integrations', 'audit']);
+    document.querySelectorAll('.rail-item[data-section]').forEach(item => {
+      item.hidden = !canAccessSection(item.dataset.section || '');
+    });
+    document.querySelectorAll('[data-panel-section]').forEach(panel => {
+      const sections = `${panel.dataset.panelSection || ''} ${panel.dataset.panelExtraSections || ''}`.split(/\s+/).filter(Boolean);
+      if (sections.some(section => restricted.has(section))) {
+        panel.hidden = true;
+      }
+    });
+    if (root.dataset.activeSection && !canAccessSection(root.dataset.activeSection)) {
+      activateSection('overview', false);
+    }
+  };
 
   const renderProfile = () => {
     if (!state.me) {
@@ -541,6 +669,7 @@
     ['commandProfileRole'].forEach(id => setText(id, role));
     ['railProfileAvatar', 'commandProfileAvatar'].forEach(id => setText(id, profileInitial(name)));
     renderProfilePage();
+    applyRoleVisibility();
     const manageRules = document.getElementById('manageWindowRules');
     if (manageRules) manageRules.hidden = !canManageAccounts();
   };
@@ -863,7 +992,7 @@
         .filter(device => state.executionStatus === 'all' || statusMeta(device.status || device.situacao || '').className === state.executionStatus)
         .sort((a, b) => {
           if (state.executionSort === 'client') {
-            return displayCompanyName(a.cliente || resolveCustomer(a)?.nome || '').localeCompare(displayCompanyName(b.cliente || resolveCustomer(b)?.nome || ''), 'pt-BR');
+            return displayCompanyName(a.cliente || resolveCustomer(a)?.nome || '').localeCompare(displayCompanyName(b.cliente || resolveCustomer(b)?.nome || ''), uiLocale());
           }
           const difference = new Date(b.ultimo_backup || 0).getTime() - new Date(a.ultimo_backup || 0).getTime();
           return state.executionSort === 'oldest' ? -difference : difference;
@@ -1007,8 +1136,8 @@
       .filter(item => !query || item.searchText.includes(query))
       .sort((left, right) => {
         if (state.clientsSort === 'recent') return new Date(right.lastBackup || 0).getTime() - new Date(left.lastBackup || 0).getTime();
-        if (state.clientsSort === 'devices') return right.deviceCount - left.deviceCount || left.customerName.localeCompare(right.customerName, 'pt-BR');
-        return left.customerName.localeCompare(right.customerName, 'pt-BR');
+        if (state.clientsSort === 'devices') return right.deviceCount - left.deviceCount || left.customerName.localeCompare(right.customerName, uiLocale());
+        return left.customerName.localeCompare(right.customerName, uiLocale());
       });
     setText('clientsTotalLabel', query ? `${fmtInt(items.length)} encontrados` : `${fmtInt(rows.length)} clientes`);
     node.replaceChildren();
@@ -1052,7 +1181,7 @@
         ? sourceRows.filter(item => [item.cliente, item.hostname, item.plano, item.ip].map(normalizeText).join(' ').toLocaleLowerCase('pt-BR').includes(query))
         : sourceRows;
       const date = payload?.datas?.[key] ? new Date(`${payload.datas[key]}T12:00:00`) : null;
-      setText(dateId, date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString('pt-BR') : '--');
+      setText(dateId, date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString(uiLocale()) : '--');
       setText(countId, `${fmtInt(rows.length)} ${query ? 'encontrados' : 'registros'}`);
       list.replaceChildren();
 
@@ -1132,7 +1261,7 @@
       const windowCompare = parseWindowStart(left.janela) - parseWindowStart(right.janela);
       if (windowCompare !== 0) return windowCompare;
 
-      return displayPlanName(left.plano || '').localeCompare(displayPlanName(right.plano || ''), 'pt-BR');
+      return displayPlanName(left.plano || '').localeCompare(displayPlanName(right.plano || ''), uiLocale());
     });
 
     const companyGroups = sortedItems.reduce((groups, item) => {
@@ -1316,7 +1445,7 @@
     setText('metricDevices', fmtInt(dashboard.total_dispositivos || state.devices.length || 0));
     const operationDate = document.getElementById('operationDate');
     if (operationDate) {
-      const label = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+      const label = new Date().toLocaleDateString(uiLocale(), { day: '2-digit', month: 'long', year: 'numeric' });
       operationDate.innerHTML = `<span class="pulse"></span> OPERAÇÃO AO VIVO · ${label.toUpperCase()}`;
     }
 
@@ -1333,8 +1462,8 @@
 
     const executionCount = document.querySelector('.rail-item[data-section="executions"] em');
     const alertCount = document.querySelector('.danger-count');
-    if (executionCount) executionCount.textContent = String(dashboard.total_backups || 0);
-    if (alertCount) alertCount.textContent = state.alertsLoaded ? String(recentAlerts.length) : '--';
+    if (executionCount) executionCount.textContent = Number(dashboard.total_backups || 0).toLocaleString(uiLocale());
+    if (alertCount) alertCount.textContent = state.alertsLoaded ? Number(recentAlerts.length).toLocaleString(uiLocale()) : '--';
   };
 
   const updateKpis = () => {
@@ -1439,7 +1568,7 @@
       ? 'Hoje'
       : sameDay(activityDate, yesterday)
         ? 'Ontem'
-        : activityDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '');
+        : activityDate.toLocaleDateString(uiLocale(), { day: '2-digit', month: 'short' }).replace('.', '');
     setText('overviewLastActivity', activityLabel);
     setText('overviewLastActivityHint', `${fmtInt(latestActivity.backups || 0)} execuções registradas nesse dia.`);
   };
@@ -1811,6 +1940,11 @@
     try {
       const payload = await fetchJson('me.php', { timeout: 8000 });
       state.me = payload;
+      if (payload?.idioma === 'pt-BR' || payload?.idioma === 'en-US') {
+        localStorage.setItem('nyxcloud_language', payload.idioma);
+      }
+      applyLanguage();
+      startLanguageObserver();
       renderPartialData();
     } catch (error) {
       markProfileUnavailable();
@@ -2016,7 +2150,7 @@
     if (label) label.textContent = message;
   };
 
-  const syncTimeLabel = () => `Atualizado ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  const syncTimeLabel = () => `${uiLocale() === 'en-US' ? 'Updated' : 'Atualizado'} ${new Date().toLocaleTimeString(uiLocale(), { hour: '2-digit', minute: '2-digit' })}`;
 
   const updateSectionIntro = section => {
     const intro = document.getElementById('sectionIntro');
@@ -2089,7 +2223,7 @@
   };
 
   const activateSection = (section, updateHistory = true) => {
-    const selected = sectionLabels[section] ? section : 'overview';
+    const selected = sectionLabels[section] && canAccessSection(section) ? section : 'overview';
     const activationId = ++sectionActivationId;
     root.dataset.activeSection = selected;
     root.classList.toggle('alerts-immersive', selected === 'alerts');
@@ -2270,7 +2404,12 @@
     document.querySelectorAll('[data-page-profile-tab]').forEach(item => item.classList.toggle('is-active', item === tab));
     document.querySelectorAll('[data-page-profile-panel]').forEach(panel => panel.classList.toggle('is-active', panel.dataset.pageProfilePanel === target));
   }));
-  document.getElementById('pageProfileLanguage')?.addEventListener('change', event => localStorage.setItem('nyxcloud_language', event.target.value));
+  document.getElementById('pageProfileLanguage')?.addEventListener('change', event => {
+    localStorage.setItem('nyxcloud_language', event.target.value);
+    fetchJson('update-language.php', { method: 'PATCH', body: { idioma: event.target.value } })
+      .then(() => window.location.reload())
+      .catch(error => notify(error.message || 'Nao foi possivel salvar o idioma.'));
+  });
   document.getElementById('pageSaveProfileButton')?.addEventListener('click', async () => {
     const nova = document.getElementById('pageProfileNewPassword').value;
     if (nova !== document.getElementById('pageProfileNewPasswordConfirm').value) { document.getElementById('pageProfileMessage').textContent = 'Novas senhas nao conferem.'; return; }
@@ -2380,7 +2519,7 @@
     if (message) message.textContent = 'Criando conta...';
     try {
       const created = await fetchJson('contas.php', { method: 'POST', body: payload });
-      state.accounts = [created, ...state.accounts].sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'));
+      state.accounts = [created, ...state.accounts].sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), uiLocale()));
       renderAccounts();
       dataRequests.delete('audit');
       loadAudit().catch(() => {});

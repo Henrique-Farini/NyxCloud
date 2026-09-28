@@ -1,0 +1,30 @@
+Options -Indexes
+RewriteEngine On
+RewriteBase /nyxcloud/
+
+# Recupera redirecionamentos antigos que expuseram o caminho local do Windows.
+RewriteRule ^C:/xampp/htdocs/NyxCloud/painel/?$ /nyxcloud/painel/ [R=302,L,NE]
+
+# Rotas publicas limpas.
+RewriteRule ^painel/?$ painel-demo/index.php [END]
+RewriteRule ^login/?$ back/index.php [END]
+RewriteRule ^logout/?$ back/logout.php [END]
+RewriteRule ^alertas/?$ painel-demo/alertas.php [END]
+RewriteRule ^redefinir-senha/?$ back/redefinir-senha.php [END]
+RewriteRule ^api/(.*)$ back/api/$1 [END]
+
+# URLs antigas redirecionam para as rotas limpas com caminho absoluto.
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*/painel-demo/(?:index\.php)?(?:\?|[\s]) [NC]
+RewriteRule ^painel-demo/(?:index\.php)?$ /nyxcloud/painel/ [R=302,L,NE]
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*/back/index\.php(?:\?|[\s]) [NC]
+RewriteRule ^back/index\.php$ /nyxcloud/login/ [R=302,L,NE]
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*/back/logout\.php(?:\?|[\s]) [NC]
+RewriteRule ^back/logout\.php$ /nyxcloud/logout/ [R=302,L,NE]
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*/painel-demo/alertas\.php(?:\?|[\s]) [NC]
+RewriteRule ^painel-demo/alertas\.php$ /nyxcloud/alertas/ [R=302,L,NE]
+
+# Bloqueia diretorios internos.
+RewriteRule ^(?:\.git|app|database|storage|tools|tests)(?:/|$) - [F,END]
+<FilesMatch "^(?:\.env|\.gitignore|debug_state\.json|composer\.(?:json|lock))$">
+    Require all denied
+</FilesMatch>

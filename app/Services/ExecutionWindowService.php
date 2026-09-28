@@ -9,7 +9,7 @@ use DateTimeZone;
 
 final class ExecutionWindowService extends AbstractAcronisService
 {
-    private const CACHE_VERSION = 'v17';
+    private const CACHE_VERSION = 'v18';
     private ?array $windowsConfigCache = null;
     private ?DateTimeZone $timezoneCache = null;
     private array $lookupKeyCache = [];
@@ -48,7 +48,7 @@ final class ExecutionWindowService extends AbstractAcronisService
                     fn (array $task): bool => $task['is_backup']
                 ));
 
-                $rules = $this->rules();
+                $rules = $this->mergeRules($this->automaticRules(), $this->rules());
                 $date = $this->resolveEffectiveDate($backupTasks, $requestedDate, array_key_exists('date', $filters), $rules);
                 $historicalItems = $this->buildHistoricalSuggestions($backupTasks, $date);
                 $ruleItems = $rules !== [] ? $this->matchRules($rules, $backupTasks, $date) : [];
@@ -150,6 +150,123 @@ final class ExecutionWindowService extends AbstractAcronisService
                 'dias_semana' => $diasSemana,
             ];
         }, $rules)));
+    }
+
+    private function automaticRules(): array
+    {
+        try {
+            $tenantNames = [];
+            $tenants = $this->items($this->api->get($this->endpoint('tenants'), $this->tenantScopeFilters(['limit' => 1000])));
+            foreach ($tenants as $tenant) {
+                if (!is_array($tenant)) {
+                    continue;
+                }
+                $name = $this->firstString($tenant, ['name'], '');
+                foreach (['id', 'uuid', 'tenant_id'] as $idField) {
+                    $id = trim((string) ($tenant[$idField] ?? ''));
+                    if ($id !== '' && $name !== '') {
+                        $tenantNames[$id] = $name;
+                    }
+                }
+            }
+
+            $plans = [];
+            foreach ($this->policyItems() as $container) {
+                $policies = is_array($container['policy'] ?? null) ? $container['policy'] : [];
+                $total = null;
+                foreach ($policies as $policy) {
+                    if (is_array($policy) && ($policy['type'] ?? '') === 'policy.protection.total') {
+                        $total = $policy;
+                        break;
+                    }
+                }
+                if (!is_array($total)) {
+                    continue;
+                }
+                $planName = trim((string) ($total['name'] ?? ''));
+                if ($planName === '') {
+                    continue;
+                }
+                $tenantId = trim((string) ($total['tenant_id'] ?? $container['tenant_id'] ?? ''));
+                $empresa = $tenantNames[$tenantId] ?? ($tenantId !== '' ? $tenantId : 'Todos os clientes');
+
+                foreach ($policies as $policy) {
+                    if (!is_array($policy) || ($policy['type'] ?? '') !== 'policy.backup.machine') {
+                        continue;
+                    }
+                    $backupSets = $policy['settings']['scheduling']['backup_sets'] ?? [];
+                    foreach (is_array($backupSets) ? $backupSets : [] as $backupSet) {
+                        $schedule = is_array($backupSet) ? ($backupSet['schedule'] ?? []) : [];
+                        $time = is_array($schedule) ? ($schedule['alarms']['time'] ?? []) : [];
+                        $times = is_array($time['repeat_at'] ?? null) ? $time['repeat_at'] : [];
+                        if ($times === [] && isset($time['hour'])) {
+                            $times = [$time];
+                        }
+                        $weekdays = $this->automaticWeekdays($time['weekdays'] ?? [], $schedule['type'] ?? '');
+                        foreach ($times as $scheduled) {
+                            if (!is_array($scheduled)) {
+                                continue;
+                            }
+                            $hour = max(0, min(23, (int) ($scheduled['hour'] ?? 0)));
+                            $minute = max(0, min(59, (int) ($scheduled['minute'] ?? 0)));
+                            $start = sprintf('%02d:%02d', $hour, $minute);
+                            $plans[] = [
+                                'empresa' => $empresa,
+                                'plano' => $planName,
+                                'maquina' => '',
+                                'inicio' => $start,
+                                'fim' => $start,
+                                'dias_semana' => $weekdays,
+                                'meta' => 1,
+                                'origem' => 'acronis',
+                            ];
+                        }
+                    }
+                }
+            }
+
+            return $plans;
+        } catch (\Throwable $e) {
+            error_log('Nao foi possivel carregar os agendamentos dos planos Acronis: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function automaticWeekdays(mixed $days, string $scheduleType): array
+    {
+        $map = ['sun' => 0, 'mon' => 1, 'tue' => 2, 'wed' => 3, 'thu' => 4, 'fri' => 5, 'sat' => 6];
+        $result = [];
+        foreach (is_array($days) ? $days : [] as $day) {
+            $key = strtolower(trim((string) $day));
+            if (isset($map[$key])) {
+                $result[] = $map[$key];
+            }
+        }
+        if ($result !== []) {
+            return array_values(array_unique($result));
+        }
+        return strtolower($scheduleType) === 'weekly' ? [1, 2, 3, 4, 5, 6] : [0, 1, 2, 3, 4, 5, 6];
+    }
+
+    private function mergeRules(array $automatic, array $manual): array
+    {
+        $result = [];
+        $keys = [];
+        foreach (array_merge($automatic, $manual) as $rule) {
+            $key = implode('|', [
+                $this->normalizeLookupText((string) ($rule['empresa'] ?? '')),
+                $this->normalizeLookupText((string) ($rule['plano'] ?? '')),
+                (string) ($rule['inicio'] ?? ''),
+                (string) ($rule['fim'] ?? ''),
+                implode(',', array_map('strval', $rule['dias_semana'] ?? [])),
+            ]);
+            if (isset($keys[$key])) {
+                continue;
+            }
+            $keys[$key] = true;
+            $result[] = $rule;
+        }
+        return $result;
     }
 
     private function matchRules(array $rules, array $tasks, string $date): array

@@ -41,8 +41,9 @@ if ($login === '' || $senha === '') {
 verificarLimiteLogin($login);
 
 $perfilSelect = tabelaUsuarioTemPerfil($pdo) ? 'perfil' : "'admin' AS perfil";
+$idiomaSelect = tabelaUsuarioTemIdioma($pdo) ? 'idioma' : "'pt-BR' AS idioma";
 $stmt = $pdo->prepare(
-    "SELECT id, nome, email, {$perfilSelect}, senha_hash
+    "SELECT id, nome, email, {$perfilSelect}, {$idiomaSelect}, senha_hash
      FROM usuario
      WHERE ativo = TRUE
        AND (
@@ -95,6 +96,7 @@ echo json_encode([
         'email' => $usuario['email'],
         'perfil' => normalizarPerfil((string) ($usuario['perfil'] ?? '')),
         'perfil_nome' => nomePerfil((string) ($usuario['perfil'] ?? '')),
+        'idioma' => in_array($usuario['idioma'] ?? '', ['pt-BR', 'en-US'], true) ? $usuario['idioma'] : 'pt-BR',
     ],
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 

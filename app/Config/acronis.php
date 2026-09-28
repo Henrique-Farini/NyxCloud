@@ -84,6 +84,7 @@ return [
         'workloads' => '/api/workload_management/v5/workloads',
         'alerts' => '/api/alert_manager/v1/alerts',
         'tasks' => '/api/task_manager/v2/tasks',
+        'policies' => '/api/policy_management/v4/policies',
         'resource_statuses' => '/api/resource_management/v4/resource_statuses',
     ],
     'cache_ttl' => [

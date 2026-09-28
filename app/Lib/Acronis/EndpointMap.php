@@ -13,6 +13,7 @@ namespace NyxCloud\Lib\Acronis;
  * - Workload Management API v5: /api/workload_management/v5/workloads.
  * - Alert Manager API v1: /api/alert_manager/v1/alerts.
  * - Task Manager API v2: /api/task_manager/v2/tasks.
+ * - Policy Management API v4: /api/policy_management/v4/policies.
  * - Resource Management API v4: /api/resource_management/v4/resource_statuses?type=resource.machine.
  */
 final class EndpointMap
@@ -24,6 +25,7 @@ final class EndpointMap
                 'clientes' => 'GET /api/2/tenants -> items[*].id|uuid|name|kind|enabled',
                 'dispositivos' => 'GET /api/workload_management/v5/workloads?include_status=true&include_all_attributes=true -> items[*]',
                 'backups' => 'GET /api/task_manager/v2/tasks -> items[*].state|result.code|completedAt|updatedAt|context.Persistent.Name',
+                'planos_agendamentos' => 'GET /api/policy_management/v4/policies -> policy.backup.machine.settings.scheduling.backup_sets[*].schedule',
                 'espaco_utilizado' => 'GET /api/2/tenants/{tenant_id}/usages -> offering_items/usages conforme contrato do tenant',
                 'status_protecao' => 'GET /api/resource_management/v4/resource_statuses?type=resource.machine&include_attributes=true -> items[*].status|attributes',
             ],

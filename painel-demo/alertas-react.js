@@ -19,6 +19,7 @@
 
   const AlertDetails = () => {
     const [row, setRow] = useState(null);
+    const [profileRole, setProfileRole] = useState(document.body.dataset.profile || 'unknown');
 
     useEffect(() => {
       const openDetails = event => {
@@ -27,6 +28,12 @@
       };
       window.addEventListener('nyxcloud-alert-details', openDetails);
       return () => window.removeEventListener('nyxcloud-alert-details', openDetails);
+    }, []);
+
+    useEffect(() => {
+      const ready = event => setProfileRole(event.detail?.role || 'leitura');
+      window.addEventListener('nyxcloud-profile-ready', ready);
+      return () => window.removeEventListener('nyxcloud-profile-ready', ready);
     }, []);
 
     useEffect(() => {
@@ -53,13 +60,14 @@
       ['Tratativa', resolved ? 'Confirmado como resolvido neste painel.' : (known ? 'Marcado como conhecido neste painel.' : 'Sem tratativa manual.')]
     ];
 
+    const readOnly = profileRole === 'leitura' || profileRole === 'unknown';
     return h(Fragment, null,
       h('div', { className: 'alert-details-head' },
         h('div', null, h('span', null, 'DETALHES DO EVENTO'), h('h2', { id: 'alertDetailsTitle' }, `${row.client} - ${row.server}`), h('b', { className: `alert-detail-status status-${row.status}` }, statusLabels[row.status] || row.status)),
         h('button', { type: 'button', id: 'closeAlertDetails', 'aria-label': 'Fechar detalhes', onClick: close }, h('i', { 'data-lucide': 'x' }))
       ),
       h('dl', { id: 'alertDetailsContent' }, details.map(([label, value]) => h(DetailRow, { key: label, label, value }))),
-      h('div', { className: 'alert-details-actions' },
+      !readOnly && h('div', { className: 'alert-details-actions' },
         h('button', { type: 'button', id: 'resolveAlert', onClick: () => { emit('resolve'); close(); } }, h('i', { 'data-lucide': 'circle-check' }), h('span', null, resolved ? 'Remover resolvido' : 'Confirmar resolvido')),
         h('button', { type: 'button', id: 'markKnownAlert', onClick: () => emit('known') }, h('i', { 'data-lucide': 'shield-check' }), h('span', null, known ? 'Remover conhecido' : 'Marcar conhecido')),
         h('button', { type: 'button', id: 'hideAlertFromPanel', 'data-tone': 'danger', onClick: () => { emit('hide'); close(); } }, h('i', { 'data-lucide': 'eye-off' }), h('span', null, 'Ocultar do painel'))

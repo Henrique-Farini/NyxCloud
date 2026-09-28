@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/_bootstrap.php';
 
 $usuario = exigirPerfilAdministrador($pdo);
+$administradorGeral = usuarioEhAdministradorGeral($pdo, $usuario);
 
 try {
     $hasPerfil = tabelaUsuarioTemPerfil($pdo);
@@ -15,11 +16,23 @@ try {
 
     if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
         $perfilSelect = $hasPerfil ? 'perfil' : "'admin' AS perfil";
-        $stmt = $pdo->query(
-            "SELECT id, nome, email, {$perfilSelect}, ativo, ultimo_login_em, criado_em, atualizado_em
-             FROM usuario
-             ORDER BY ativo DESC, nome ASC, email ASC"
+        $scope = $administradorGeral
+            ? ''
+            : ' AND (u.id = :viewer_id OR EXISTS (
+                    SELECT 1 FROM usuario_empresa ue_viewer
+                    INNER JOIN usuario_empresa ue_target ON ue_target.empresa_id = ue_viewer.empresa_id
+                    WHERE ue_viewer.usuario_id = :viewer_id_scope AND ue_target.usuario_id = u.id
+                ))';
+        $stmt = $pdo->prepare(
+            "SELECT u.id, u.nome, u.email, {$perfilSelect}, u.ativo, u.ultimo_login_em, u.criado_em, u.atualizado_em
+             FROM usuario u
+             WHERE 1 = 1 {$scope}
+             ORDER BY u.ativo DESC, u.nome ASC, u.email ASC"
         );
+        $stmt->execute($administradorGeral ? [] : [
+            'viewer_id' => (int) $usuario['id'],
+            'viewer_id_scope' => (int) $usuario['id'],
+        ]);
         $contas = array_map(static function (array $item): array {
             $item['id'] = (int) $item['id'];
             $item['perfil'] = normalizarPerfil((string) ($item['perfil'] ?? ''));
@@ -28,9 +41,30 @@ try {
             return $item;
         }, $stmt->fetchAll() ?: []);
 
+        $empresaStmt = $pdo->query(
+            'SELECT ue.usuario_id, e.id, e.nome
+             FROM usuario_empresa ue
+             INNER JOIN empresa e ON e.id = ue.empresa_id
+             ORDER BY e.nome ASC'
+        );
+        $empresasPorUsuario = [];
+        foreach ($empresaStmt->fetchAll() ?: [] as $empresa) {
+            $empresasPorUsuario[(int) $empresa['usuario_id']][] = [
+                'id' => (int) $empresa['id'],
+                'nome' => $empresa['nome'],
+            ];
+        }
+        foreach ($contas as &$conta) {
+            $conta['empresas'] = $empresasPorUsuario[(int) $conta['id']] ?? [];
+            $conta['empresa_ids'] = array_column($conta['empresas'], 'id');
+        }
+        unset($conta);
+
         apiResponse(true, [
             'items' => $contas,
             'perfis' => perfisDisponiveis(),
+            'empresas' => empresasAcessiveis($pdo, $usuario),
+            'administrador_geral' => $administradorGeral,
             'viewer' => [
                 'id' => (int) $usuario['id'],
                 'perfil' => normalizarPerfil((string) ($usuario['perfil'] ?? '')),
@@ -59,6 +93,8 @@ try {
             ? filter_var($payload['ativo'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
             : null;
         $senha = (string) ($payload['senha'] ?? '');
+        $temEmpresas = array_key_exists('empresa_ids', $payload);
+        $empresaIds = $temEmpresas ? normalizarEmpresaIds($payload['empresa_ids']) : [];
 
         if ($id <= 0) {
             apiResponse(false, new stdClass(), [], 'Conta invalida.', 422);
@@ -71,6 +107,12 @@ try {
         }
         if ($senha !== '' && strlen($senha) < 8) {
             apiResponse(false, new stdClass(), [], 'A nova senha deve ter pelo menos 8 caracteres.', 422);
+        }
+        if ($temEmpresas) {
+            validarEmpresasAcessiveis($pdo, $usuario, $empresaIds);
+            if ($empresaIds === [] && $self) {
+                apiResponse(false, new stdClass(), [], 'Nao remova todas as empresas do seu proprio usuario.', 422);
+            }
         }
 
         $stmt = $pdo->prepare('SELECT id, nome, email, perfil, ativo FROM usuario WHERE id = :id LIMIT 1');
@@ -110,6 +152,9 @@ try {
         );
         $update->execute($params);
         $conta = $mysql ? buscarContaSalva($pdo, $id, $contaColumns) : ($update->fetch() ?: []);
+        if ($temEmpresas) {
+            salvarEmpresasDoUsuario($pdo, $id, $empresaIds);
+        }
         registrarAuditoriaConta($pdo, (int) $usuario['id'], $id, 'conta_atualizada', [
             'perfil_anterior' => $contaAtual['perfil'] ?? null,
             'perfil_novo' => $perfil,
@@ -125,6 +170,7 @@ try {
     $email = strtolower(trim((string) ($payload['email'] ?? '')));
     $senha = (string) ($payload['senha'] ?? '');
     $perfil = normalizarPerfil((string) ($payload['perfil'] ?? 'leitura'));
+    $empresaIds = normalizarEmpresaIds($payload['empresa_ids'] ?? []);
     $ativo = array_key_exists('ativo', $payload)
         ? filter_var($payload['ativo'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
         : true;
@@ -141,6 +187,7 @@ try {
     if (!array_key_exists($perfil, perfisDisponiveis())) {
         apiResponse(false, new stdClass(), [], 'Perfil invalido.', 422);
     }
+    validarEmpresasAcessiveis($pdo, $usuario, $empresaIds);
 
     $stmt = $pdo->prepare('SELECT id FROM usuario WHERE LOWER(email) = LOWER(:email) LIMIT 1');
     $stmt->execute(['email' => $email]);
@@ -181,6 +228,7 @@ try {
     $conta = $mysql
         ? buscarContaSalva($pdo, (int) $pdo->lastInsertId(), $contaColumns)
         : ($insert->fetch() ?: []);
+    salvarEmpresasDoUsuario($pdo, (int) ($conta['id'] ?? 0), $empresaIds);
     registrarAuditoriaConta($pdo, (int) $usuario['id'], (int) ($conta['id'] ?? 0), 'conta_criada', [
         'perfil' => $perfil,
         'ativo' => $ativo !== false,
@@ -231,5 +279,52 @@ function registrarAuditoriaConta(PDO $pdo, int $atorId, int $alvoId, string $aca
         ]);
     } catch (Throwable $e) {
         error_log('Auditoria indisponivel: ' . $e->getMessage());
+    }
+}
+
+function normalizarEmpresaIds(mixed $ids): array
+{
+    if (!is_array($ids)) {
+        return [];
+    }
+    $ids = array_map(static fn (mixed $id): int => (int) $id, $ids);
+    $ids = array_filter($ids, static fn (int $id): bool => $id > 0);
+    return array_values(array_unique($ids));
+}
+
+function validarEmpresasAcessiveis(PDO $pdo, array $usuario, array $empresaIds): void
+{
+    if ($empresaIds === []) {
+        return;
+    }
+    $permitidas = array_column(empresasAcessiveis($pdo, $usuario), 'id');
+    if (count(array_diff($empresaIds, array_map('intval', $permitidas))) !== 0) {
+        apiResponse(false, new stdClass(), [], 'Uma ou mais empresas nao estao disponiveis para este administrador.', 403);
+    }
+}
+
+function salvarEmpresasDoUsuario(PDO $pdo, int $usuarioId, array $empresaIds): void
+{
+    if ($usuarioId <= 0) {
+        return;
+    }
+    $pdo->beginTransaction();
+    try {
+        $delete = $pdo->prepare('DELETE FROM usuario_empresa WHERE usuario_id = :usuario_id');
+        $delete->execute(['usuario_id' => $usuarioId]);
+        if ($empresaIds !== []) {
+            $insert = $pdo->prepare(
+                'INSERT INTO usuario_empresa (usuario_id, empresa_id) VALUES (:usuario_id, :empresa_id)'
+            );
+            foreach ($empresaIds as $empresaId) {
+                $insert->execute(['usuario_id' => $usuarioId, 'empresa_id' => $empresaId]);
+            }
+        }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
     }
 }

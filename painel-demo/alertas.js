@@ -2,8 +2,58 @@
   'use strict';
 
   const body = document.body;
+  const alertTranslations = {
+    'Alertas': 'Alerts', 'Dispositivos e planos': 'Devices and plans', 'Hoje': 'Today', 'Ontem': 'Yesterday',
+    'Últimos 7 dias': 'Last 7 days', 'Últimos 30 dias': 'Last 30 days', 'Total no período': 'Total in period',
+    'Resolvidos': 'Resolved', 'Falhas abertas': 'Open failures', 'Em andamento': 'In progress', 'Cliente': 'Client',
+    'Dispositivo': 'Device', 'Plano': 'Plan', 'Tamanho': 'Size', 'Horário': 'Time', 'Ações': 'Actions',
+    'Status': 'Status', 'Motivo': 'Reason', 'Salvar seleção': 'Save selection', 'Mostrar todos': 'Show all',
+    'Visão geral': 'Overview', 'Atividade recente': 'Recent activity', 'Armazenamento': 'Storage', 'Resumo': 'Summary',
+    'Janelas de execução': 'Execution windows', 'Clientes': 'Clients', 'Contas': 'Accounts', 'Integrações': 'Integrations',
+    'Execuções por dispositivo': 'Executions by device', 'Análises': 'Analytics', 'Auditoria administrativa': 'Administrative audit',
+    'Meu perfil': 'My profile', 'CENTRAL DE ALERTAS · AO VIVO': 'LIVE ALERT CENTER', 'Identifique, priorize e trate ocorrências de backup em um único lugar.': 'Identify, prioritize and handle backup events in one place.',
+    'Total no período': 'Total in period', 'Mostrar todos os eventos': 'Show all events', 'Filtrar alertas fechados ou limpos': 'Filter closed or cleared alerts',
+    'Filtrar itens que exigem intervenção': 'Filter items requiring intervention', 'Filtrar eventos em processamento': 'Filter events in progress', 'Lista de alertas': 'Alert list',
+    'Eventos': 'Events', 'Prioridade': 'Priority', 'IP': 'IP', 'Código': 'Code', 'Tipo': 'Type', 'Tratativa': 'Handling',
+    'Ver detalhes': 'View details', 'Nenhum alerta encontrado com estes filtros.': 'No alerts found with these filters.', 'Nenhum alerta encontrado': 'No alerts found',
+    'Atualizado': 'Updated', 'Atualizando alertas': 'Updating alerts', 'Alertas atualizados.': 'Alerts updated.', 'Alerta confirmado como resolvido.': 'Alert marked as resolved.',
+    'Alerta marcado como conhecido.': 'Alert marked as known.', 'Alerta ocultado do painel.': 'Alert hidden from panel.', 'Alertas ocultos restaurados.': 'Hidden alerts restored.',
+    'Seleção por cliente, máquina e plano aplicada.': 'Selection by client, device and plan applied.', 'Todos os dispositivos e planos foram reativados.': 'All devices and plans were re-enabled.',
+    'Resolvido': 'Resolved', 'Falha': 'Failed', 'Em andamento': 'In progress', 'Conhecido': 'Known', 'Crítica': 'Critical',
+    'Alta': 'High', 'Média': 'Medium', 'Baixa': 'Low', 'DETALHES DO EVENTO': 'EVENT DETAILS', 'Código': 'Code', 'Motivo': 'Reason',
+    'Tratativa': 'Handling', 'Sem tratativa manual.': 'No manual handling.', 'Confirmar resolvido': 'Mark as resolved', 'Remover resolvido': 'Remove resolved',
+    'Marcar conhecido': 'Mark as known', 'Remover conhecido': 'Remove known', 'Ocultar do painel': 'Hide from panel',
+    'Concluído': 'Completed', 'Concluída': 'Completed', 'Não informado': 'Not provided', 'Nao informado': 'Not provided',
+    'Sem plano': 'No plan', 'Cliente não identificado': 'Unidentified client', 'Cliente nao identificado': 'Unidentified client',
+    'Máquina não identificada': 'Unidentified machine', 'Maquina nao identificada': 'Unidentified machine', 'Pendente': 'Pending', 'Desconhecido': 'Unknown',
+    'Aguardando API': 'Waiting for API', 'Aguardando': 'Waiting', 'Nenhum alerta encontrado com estes filtros.': 'No alerts found with these filters.',
+    'Nenhum alerta encontrado': 'No alerts found', 'Falha na sincronizacao': 'Synchronization failed', 'Atualizando alertas': 'Updating alerts',
+    'Carregando alertas...': 'Loading alerts...', 'Causa não informada': 'Cause not provided', 'Recurso não informado': 'Resource not provided'
+  };
+  const applyAlertLanguage = () => {
+    const language = localStorage.getItem('nyxcloud_language') || 'pt-BR';
+    document.documentElement.lang = language;
+    if (language === 'pt-BR') return;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    const entries = Object.entries(alertTranslations).sort((left, right) => right[0].length - left[0].length);
+    nodes.forEach(node => {
+      const original = node.nodeValue || '';
+      if (!original.trim()) return;
+      let translated = original;
+      entries.forEach(([source, target]) => { translated = translated.replaceAll(source, target); });
+      if (translated !== original) node.nodeValue = translated;
+    });
+  };
+  let alertLanguageObserver = null;
+  const startAlertLanguageObserver = () => {
+    if (alertLanguageObserver) return;
+    alertLanguageObserver = new MutationObserver(applyAlertLanguage);
+    alertLanguageObserver.observe(document.body, { childList: true, subtree: true });
+  };
   const basePageSize = 10;
-  const state = { rows: [], inventoryRows: [], quickFilter: 'all' };
+  const state = { rows: [], rawRows: [], inventoryRows: [], quickFilter: 'all' };
   let page = 1;
   let sortKey = 'time';
   let sortDir = 'desc';
@@ -11,6 +61,8 @@
   let resizeTimer;
   let loadingRows = false;
   let currentDetailRow = null;
+  let preferencesLoaded = false;
+  let preferenceSaveQueue = Promise.resolve();
 
   const toast = document.getElementById('alertsToast');
   const detailsDialog = document.getElementById('alertDetailsDialog');
@@ -54,6 +106,17 @@
   const renderProfile = user => {
     const name = String(user?.nome || 'Usuario').trim();
     const role = String(user?.perfil_nome || 'Perfil').trim();
+    if (user?.idioma === 'pt-BR' || user?.idioma === 'en-US') {
+      localStorage.setItem('nyxcloud_language', user.idioma);
+    }
+    applyAlertLanguage();
+    startAlertLanguageObserver();
+    body.dataset.profile = String(user?.perfil || '').toLowerCase();
+    const readOnly = body.dataset.profile === 'leitura';
+    document.querySelector('[data-alert-tab="visibility"]')?.toggleAttribute('hidden', readOnly);
+    const visibilityPanel = document.getElementById('alertVisibilityPanel');
+    if (readOnly && visibilityPanel) visibilityPanel.hidden = true;
+    window.dispatchEvent(new CustomEvent('nyxcloud-profile-ready', { detail: { role: body.dataset.profile } }));
     const initial = (name.charAt(0) || 'U').toUpperCase();
     ['alertsRailProfileName', 'alertsCommandProfileName'].forEach(id => {
       const node = document.getElementById(id);
@@ -79,7 +142,8 @@
     if (label) label.textContent = message;
   };
 
-  const syncTimeLabel = () => `Atualizado ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  const uiLocale = () => localStorage.getItem('nyxcloud_language') === 'en-US' ? 'en-US' : 'pt-BR';
+  const syncTimeLabel = () => `${uiLocale() === 'en-US' ? 'Updated' : 'Atualizado'} ${new Date().toLocaleTimeString(uiLocale(), { hour: '2-digit', minute: '2-digit' })}`;
   const knownStorageKey = 'nyxcloud-known-alerts';
   const hiddenStorageKey = 'nyxcloud-hidden-alerts';
   const resolvedStorageKey = 'nyxcloud-resolved-alerts';
@@ -143,10 +207,73 @@
     }
   };
   const writeStoredMap = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+
+  const csrfToken = () => {
+    const match = document.cookie.match(/(?:^|; )csrf_token=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : '';
+  };
+  const preferencePayload = () => ({
+    known: [...knownAlertKeys()],
+    hidden: [...hiddenAlertKeys()],
+    resolved: [...resolvedAlertKeys()],
+    hidden_clients: [...readStoredSet(hiddenClientVisibilityKey)],
+    hidden_devices: [...readStoredSet(hiddenDeviceVisibilityKey)],
+    hidden_plans: [...readStoredSet(hiddenPlanVisibilityKey)],
+    device_categories: readStoredMap(deviceAlertCategoriesKey)
+  });
+  const persistPreferences = () => {
+    if (!preferencesLoaded) return Promise.resolve();
+    preferenceSaveQueue = preferenceSaveQueue.catch(() => {}).then(async () => {
+      const headers = { Accept: 'application/json', 'Content-Type': 'application/json' };
+      const csrf = csrfToken();
+      if (csrf) headers['X-CSRF-Token'] = csrf;
+      const response = await fetch('../back/api/alert-preferences.php', {
+        method: 'PUT', headers, credentials: 'include', body: JSON.stringify(preferencePayload())
+      });
+      if (!response.ok) throw new Error('Nao foi possivel salvar as preferencias compartilhadas.');
+    });
+    return preferenceSaveQueue;
+  };
+  const persistPreferencesQuietly = () => persistPreferences().catch(() => notify('Nao foi possivel sincronizar a alteracao com os outros usuarios.'));
+  const applyPreferences = preferences => {
+    const set = (key, value) => writeStoredSet(key, new Set(Array.isArray(value) ? value : []));
+    set(knownStorageKey, preferences.known);
+    set(hiddenStorageKey, preferences.hidden);
+    set(resolvedStorageKey, preferences.resolved);
+    set(hiddenClientVisibilityKey, preferences.hidden_clients);
+    set(hiddenDeviceVisibilityKey, preferences.hidden_devices);
+    set(hiddenPlanVisibilityKey, preferences.hidden_plans);
+    writeStoredMap(deviceAlertCategoriesKey, preferences.device_categories && typeof preferences.device_categories === 'object' ? preferences.device_categories : {});
+  };
+  const loadPreferences = async () => {
+    const response = await fetch('../back/api/alert-preferences.php', { headers: { Accept: 'application/json' }, credentials: 'include' });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload?.success) throw new Error(payload?.message || 'Falha ao carregar preferencias.');
+    const preferences = payload.data && typeof payload.data === 'object' ? payload.data : {};
+    const hasServerState = Object.keys(preferences).length > 0;
+    if (hasServerState) applyPreferences(preferences);
+    preferencesLoaded = true;
+    const localState = preferencePayload();
+    if (!hasServerState && (localState.known.length + localState.hidden.length + localState.resolved.length + localState.hidden_clients.length + localState.hidden_devices.length + localState.hidden_plans.length > 0 || Object.keys(localState.device_categories).length > 0)) {
+      persistPreferencesQuietly();
+    }
+  };
   const knownAlertKeys = () => readStoredSet(knownStorageKey);
   const hiddenAlertKeys = () => readStoredSet(hiddenStorageKey);
   const resolvedAlertKeys = () => readStoredSet(resolvedStorageKey);
-  const rowStorageKey = row => [row.source || '', row.sourceId || '', row.client, row.server, row.code, row.sortTime].join('|').toLocaleLowerCase('pt-BR');
+  const rowDateTimeKey = row => {
+    const date = new Date(row.sortTime);
+    if (Number.isNaN(date.getTime())) return '';
+    return [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0'),
+      String(date.getHours()).padStart(2, '0'),
+      String(date.getMinutes()).padStart(2, '0'),
+      String(date.getSeconds()).padStart(2, '0')
+    ].join('-');
+  };
+  const rowStorageKey = row => [row.source || '', row.sourceId || '', row.client, row.server, row.code, rowDateTimeKey(row)].join('|').toLocaleLowerCase('pt-BR');
   const legacyRowStorageKey = row => [row.sourceId || '', row.client, row.server, row.code, row.sortTime].join('|').toLocaleLowerCase('pt-BR');
   const hasStoredAlert = (items, row) => items.has(rowStorageKey(row)) || items.has(legacyRowStorageKey(row));
   const isKnownAlert = row => hasStoredAlert(knownAlertKeys(), row);
@@ -213,12 +340,14 @@
     if (nextKnown) items.add(key);
     else items.delete(key);
     writeStoredSet(knownStorageKey, items);
+    persistPreferencesQuietly();
     return nextKnown;
   };
   const hideAlert = row => {
     const items = hiddenAlertKeys();
     items.add(rowStorageKey(row));
     writeStoredSet(hiddenStorageKey, items);
+    persistPreferencesQuietly();
   };
   const toggleResolvedAlert = row => {
     const items = resolvedAlertKeys();
@@ -230,9 +359,13 @@
       items.delete(legacyRowStorageKey(row));
     }
     writeStoredSet(resolvedStorageKey, items);
+    persistPreferencesQuietly();
     return nextResolved;
   };
-  const clearHiddenAlerts = () => writeStoredSet(hiddenStorageKey, new Set());
+  const clearHiddenAlerts = () => {
+    writeStoredSet(hiddenStorageKey, new Set());
+    persistPreferencesQuietly();
+  };
 
   const alertGuidance = row => {
     const code = rowCodeKey(row);
@@ -369,7 +502,7 @@
   const formatAlertTime = iso => {
     const date = new Date(iso);
     if (!iso || Number.isNaN(date.getTime())) return '--';
-    return date.toLocaleString('pt-BR', {
+    return date.toLocaleString(uiLocale(), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -495,7 +628,7 @@
 
     document.querySelectorAll('[data-quick-count]').forEach(node => {
       const key = node.dataset.quickCount;
-      node.textContent = Number(counts[key] || 0).toLocaleString('pt-BR');
+      node.textContent = Number(counts[key] || 0).toLocaleString(uiLocale());
     });
     document.querySelectorAll('[data-quick-filter]').forEach(button => {
       const selected = button.dataset.quickFilter === state.quickFilter;
@@ -517,7 +650,7 @@
     const first = [...openRows].sort((left, right) => {
       const priority = (priorityWeight[left.priority] ?? 9) - (priorityWeight[right.priority] ?? 9);
       if (priority !== 0) return priority;
-      return String(right.sortTime || '').localeCompare(String(left.sortTime || ''), 'pt-BR');
+      return String(right.sortTime || '').localeCompare(String(left.sortTime || ''), uiLocale());
     })[0];
 
     const title = document.getElementById('actionQueueTitle');
@@ -548,7 +681,7 @@
       badge.className = 'action-queue-chip';
       badge.classList.toggle('is-active', state.quickFilter === key);
       badge.setAttribute('aria-pressed', String(state.quickFilter === key));
-      badge.innerHTML = `<span>${label}</span><b>${Number(count).toLocaleString('pt-BR')}</b>`;
+      badge.innerHTML = `<span>${label}</span><b>${Number(count).toLocaleString(uiLocale())}</b>`;
       badge.addEventListener('click', () => {
         state.quickFilter = key;
         page = 1;
@@ -587,7 +720,7 @@
       .sort((left, right) => {
         const leftValue = sortKey === 'time' ? left.sortTime : sortKey === 'status' ? effectiveStatus(left) : left[sortKey];
         const rightValue = sortKey === 'time' ? right.sortTime : sortKey === 'status' ? effectiveStatus(right) : right[sortKey];
-        return String(leftValue || '').localeCompare(String(rightValue || ''), 'pt-BR', { numeric: true }) * factor;
+        return String(leftValue || '').localeCompare(String(rightValue || ''), uiLocale(), { numeric: true }) * factor;
       });
   };
 
@@ -753,7 +886,7 @@
       const select = document.getElementById(id);
       select.querySelectorAll('option:not([value="all"])').forEach(option => option.remove());
       [...new Set(values.filter(value => value && value !== '--'))]
-        .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+        .sort((a, b) => a.localeCompare(b, uiLocale()))
         .forEach(value => {
           const option = cell('option', value);
           option.value = value;
@@ -765,7 +898,7 @@
   };
 
   const visibilityValues = values => [...new Set(values.filter(value => value && value !== '--'))]
-    .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    .sort((a, b) => a.localeCompare(b, uiLocale()));
 
   const inventoryFromDevices = devices => {
     const rows = [];
@@ -895,6 +1028,7 @@
       }
     });
     writeStoredMap(deviceAlertCategoriesKey, categories);
+    persistPreferencesQuietly();
     page = 1;
     renderRows();
     setAlertTab('events');
@@ -906,6 +1040,7 @@
     writeStoredSet(hiddenDeviceVisibilityKey, new Set());
     writeStoredSet(hiddenPlanVisibilityKey, new Set());
     writeStoredMap(deviceAlertCategoriesKey, {});
+    persistPreferencesQuietly();
     renderVisibilityOptions();
     page = 1;
     renderRows();
@@ -913,6 +1048,7 @@
   };
 
   const setAlertTab = tab => {
+    if (tab === 'visibility' && body.dataset.profile === 'leitura') tab = 'events';
     const visibility = tab === 'visibility';
     body.classList.toggle('alerts-visibility-mode', visibility);
     const panel = document.getElementById('alertVisibilityPanel');
@@ -936,10 +1072,16 @@
     ];
     document.querySelectorAll('[data-alert-count]').forEach((element, index) => {
       element.dataset.alertCount = String(values[index] || 0);
-      element.textContent = Number(values[index] || 0).toLocaleString('pt-BR');
+      element.textContent = Number(values[index] || 0).toLocaleString(uiLocale());
     });
     const dangerCount = document.querySelector('.danger-count');
-    if (dangerCount) dangerCount.textContent = String(values[2]);
+    const sidebarRows = state.rawRows.filter(isInsidePeriod);
+    if (dangerCount) dangerCount.textContent = Number(sidebarRows.length || 0).toLocaleString(uiLocale());
+  };
+
+  const updateActivityCount = dashboard => {
+    const activityCount = document.querySelector('.rail-item[href*="#executions"] em');
+    if (activityCount) activityCount.textContent = Number(dashboard?.total_backups || 0).toLocaleString(uiLocale());
   };
 
   const downloadBlob = (blob, filename) => {
@@ -991,12 +1133,15 @@
     setSyncStatus('Atualizando alertas', 'loading');
 
     try {
-      const [alerts, devices] = await Promise.all([
+      const [alerts, devices, dashboard] = await Promise.all([
         fetchJson('alertas.php'),
-        fetchJson('devices.php').catch(() => [])
+        fetchJson('devices.php').catch(() => []),
+        fetchJson('dashboard.php?fast=1').catch(() => ({}))
       ]);
+      updateActivityCount(dashboard);
       state.inventoryRows = inventoryFromDevices(devices);
-      state.rows = deduplicateRows((Array.isArray(alerts) ? alerts : []).map(mapAlertRow))
+      state.rawRows = (Array.isArray(alerts) ? alerts : []).map(mapAlertRow);
+      state.rows = deduplicateRows(state.rawRows)
         .map(row => ({
           ...row,
           error: [
@@ -1223,10 +1368,12 @@
   });
 
   if (window.parent !== window) {
-    document.querySelectorAll('a[href*="index.php"]').forEach(link => {
+    document.querySelectorAll('.rail-brand a, .rail-item').forEach(link => {
       link.addEventListener('click', event => {
+        const href = link.getAttribute('href') || '';
+        if (!href || href.startsWith('#')) return;
         event.preventDefault();
-        window.top.location.href = new URL(link.getAttribute('href'), window.location.href).href;
+        window.top.location.href = new URL(href, window.location.href).href;
       });
     });
   }
@@ -1234,10 +1381,13 @@
   setRailOpen(desktopRail.matches ? localStorage.getItem('nyxcloud-rail-collapsed') !== '1' : false);
   setAlertsMaximized(localStorage.getItem('nyxcloud-alerts-maximized') === '1');
 
-  loadRows()
+  loadPreferences()
+    .then(() => loadRows())
     .catch(error => notify(error.message || 'Falha ao carregar alertas.'));
   setInterval(() => {
     if (document.hidden || loadingRows) return;
-    loadRows().catch(error => notify(error.message || 'Falha ao atualizar alertas.'));
+    loadPreferences()
+      .then(() => loadRows())
+      .catch(error => notify(error.message || 'Falha ao atualizar alertas.'));
   }, 120000);
 })();

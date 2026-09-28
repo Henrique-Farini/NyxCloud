@@ -1,4 +1,11 @@
-<?php require_once __DIR__ . '/_auth_guard.php'; ?>
+<?php
+require_once __DIR__ . '/_auth_guard.php';
+$requestPath = (string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH) ?: '');
+$cleanPanelRoute = preg_match('#/painel(?:/|$)#i', $requestPath) === 1;
+$panelAssetPrefix = $cleanPanelRoute ? '../painel-demo/' : '';
+$panelAlertsPath = $cleanPanelRoute ? '../alertas/' : 'alertas.php';
+$podeGerenciarPainel = usuarioPodeGerenciarContas($usuarioPainel);
+?>
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -10,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260915-light-theme-2">
+  <link rel="stylesheet" href="<?= htmlspecialchars($panelAssetPrefix, ENT_QUOTES, 'UTF-8') ?>styles.css?v=20260915-light-theme-2">
 </head>
 <body data-mode="dark">
   <a class="skip-link" href="#mainContent">Pular para o conteudo</a>
@@ -35,11 +42,13 @@
           <a class="rail-item" href="#windows" data-section="windows"><i data-lucide="waypoints"></i><span>Janelas de execução</span></a>
           <span class="rail-caption">Ambiente</span>
           <a class="rail-item" href="#clients" data-section="clients"><i data-lucide="building-2"></i><span>Clientes</span></a>
+          <?php if ($podeGerenciarPainel): ?>
           <a class="rail-item" href="#accounts" data-section="accounts"><i data-lucide="users-round"></i><span>Contas</span></a>
           <a class="rail-item" href="#integrations" data-section="integrations"><i data-lucide="key-round"></i><span>Integrações</span></a>
+          <?php endif; ?>
           <a class="rail-item" href="#infrastructure" data-section="infrastructure"><i data-lucide="server-cog"></i><span>Execuções por dispositivo</span></a>
           <a class="rail-item" href="#analytics" data-section="analytics"><i data-lucide="chart-no-axes-combined"></i><span>Análises</span></a>
-          <a class="rail-item" href="#audit" data-section="audit"><i data-lucide="scroll-text"></i><span>Auditoria administrativa</span></a>
+          <?php if ($podeGerenciarPainel): ?><a class="rail-item" href="#audit" data-section="audit"><i data-lucide="scroll-text"></i><span>Auditoria administrativa</span></a><?php endif; ?>
           <span class="rail-caption">Usuário</span>
           <a class="rail-item" href="#profile" data-section="profile"><i data-lucide="circle-user-round"></i><span>Meu perfil</span></a>
         </nav>
@@ -150,8 +159,8 @@
           <article class="surface table-surface" id="recent"><div class="surface-head"><div><span class="surface-eyebrow">MAQUINAS RECENTES</span><h2>Ultimos dispositivos com atividade</h2><small class="surface-note">Filtre por status e ordene pelo último backup ou cliente.</small></div><button class="text-action" data-toast="Leitura resumida das maquinas mais recentes">Atualizado agora <i data-lucide="arrow-up-right"></i></button></div><div class="executions-toolbar"><label class="windows-search"><i data-lucide="search"></i><input type="search" id="executionSearch" placeholder="Buscar hostname, cliente ou plano" aria-label="Buscar nas execuções"></label><label class="compact-select"><span>Status</span><select id="executionStatus"><option value="all">Todos</option><option value="success">Concluído</option><option value="failed">Falha</option><option value="queued">Atenção</option></select></label><label class="compact-select"><span>Ordenar</span><select id="executionSort"><option value="recent">Mais recente</option><option value="oldest">Mais antigo</option><option value="client">Cliente A–Z</option></select></label></div><div class="data-scroll"><table><thead><tr><th>Cliente</th><th>Hostname</th><th>Plano</th><th>Ultimo backup</th><th>Status</th><th>Dias</th><th>Tamanho</th><th>IP</th></tr></thead><tbody><tr><td><b>Carregando</b><small>Aguardando API</small></td><td>--</td><td>--</td><td class="mono">--</td><td><em class="job-state queued">Aguardando</em></td><td>--</td><td>--</td><td>--</td></tr></tbody></table></div></article>
         </section>
         <section class="surface daily-devices-surface" id="daily-devices" data-panel-section="infrastructure"><div class="surface-head"><div><span class="surface-eyebrow">EXECUCOES POR DISPOSITIVO</span><h2>Hoje e ontem em ordem alfabetica</h2><small class="surface-note">Uma linha por dispositivo e plano, usando a ultima execucao de cada dia</small></div><span class="health-badge"><i></i> Atualizacao automatica</span></div><div class="daily-device-columns"><article><div class="daily-device-head"><div><small>HOJE</small><b id="todayExecutionDate">--</b></div><strong id="todayExecutionCount">--</strong></div><div class="daily-device-list" id="todayExecutionRows"><div class="daily-device-empty">Carregando execucoes de hoje...</div></div></article><article><div class="daily-device-head"><div><small>ONTEM</small><b id="yesterdayExecutionDate">--</b></div><strong id="yesterdayExecutionCount">--</strong></div><div class="daily-device-list" id="yesterdayExecutionRows"><div class="daily-device-empty">Carregando execucoes de ontem...</div></div></article></div></section>
-        <section class="immersive-alerts" data-panel-section="alerts"><iframe src="alertas.php?inside=1&v=20260915-alert-visibility-5" title="Central de alertas" loading="lazy"></iframe></section>
-        <section class="accounts-grid" data-panel-section="accounts">
+        <section class="immersive-alerts" data-panel-section="alerts"><iframe src="<?= htmlspecialchars($panelAlertsPath, ENT_QUOTES, 'UTF-8') ?>?inside=1&v=20260915-alert-visibility-5" title="Central de alertas" loading="lazy"></iframe></section>
+         <?php if ($podeGerenciarPainel): ?><section class="accounts-grid" data-panel-section="accounts">
           <article class="surface accounts-surface">
             <div class="surface-head">
               <div>
@@ -192,8 +201,8 @@
               <p class="account-form-message" id="accountFormMessage" aria-live="polite"></p>
             </form>
           </article>
-        </section>
-        <section class="accounts-grid integrations-grid" data-panel-section="integrations">
+         </section>
+         <section class="accounts-grid integrations-grid" data-panel-section="integrations">
           <article class="surface accounts-surface">
             <div class="surface-head">
               <div>
@@ -228,8 +237,8 @@
               <p class="account-form-message" id="integrationFormMessage" aria-live="polite"></p>
             </form>
           </article>
-        </section>
-        <section class="surface audit-surface" data-panel-section="audit">
+         </section>
+         <section class="surface audit-surface" data-panel-section="audit">
           <div class="surface-head">
             <div>
               <span class="surface-eyebrow">TRILHA ADMINISTRATIVA</span>
@@ -248,32 +257,14 @@
               </tbody>
             </table>
           </div>
-        </section>
+         </section><?php endif; ?>
         <section class="profile-page" data-panel-section="profile"><div class="profile-page-head"><div><span class="surface-eyebrow">MINHA CONTA</span><h1>Perfil e segurança</h1><p>Informações gerais, permissões e configurações de acesso.</p></div><div class="profile-page-avatar" id="pageProfileAvatar">?</div></div><div class="profile-page-tabs" role="tablist"><button type="button" class="profile-page-tab is-active" data-page-profile-tab="overview">Visão geral</button><button type="button" class="profile-page-tab" data-page-profile-tab="security">Dados e segurança</button></div><div class="profile-page-panel is-active" data-page-profile-panel="overview"><div class="profile-summary"><div class="profile-summary-avatar" id="pageProfileSummaryAvatar">?</div><div><strong id="pageProfileSummaryName">--</strong><span id="pageProfileSummaryRole">--</span></div></div><div class="profile-info-grid"><div><span>Contato principal</span><strong id="pageProfileSummaryEmail">--</strong></div><div><span>Identificação</span><strong id="pageProfileSummaryId">--</strong></div><div><span>Status</span><strong class="profile-status">Conta ativa</strong></div><div><span>Idioma</span><select id="pageProfileLanguage"><option value="pt-BR">Português (Brasil)</option><option value="en-US">English (US)</option></select></div></div><div class="profile-permissions"><span>Minhas permissões</span><p id="pageProfilePermissionsText">--</p></div></div><div class="profile-page-panel" data-page-profile-panel="security"><div class="profile-fields"><label><span>Nome</span><input id="pageProfileNameInput" type="text" maxlength="150" required></label><label><span>E-mail / contato</span><input id="pageProfileEmailInput" type="email" maxlength="254" required></label><label><span>Senha atual</span><input id="pageProfileCurrentPassword" type="password" autocomplete="current-password" required></label><label><span>Nova senha <small>(opcional)</small></span><input id="pageProfileNewPassword" type="password" minlength="8" autocomplete="new-password"></label><label><span>Confirmar nova senha</span><input id="pageProfileNewPasswordConfirm" type="password" minlength="8" autocomplete="new-password"></label></div><div class="profile-actions"><button class="solid-action" type="button" id="pageSaveProfileButton"><i data-lucide="save"></i><span>Salvar alterações</span></button><a class="outline-action" href="../back/logout.php"><i data-lucide="log-out"></i><span>Sair</span></a></div><p class="account-form-message" id="pageProfileMessage" aria-live="polite"></p></div></section>
         <section class="bottom-grid" data-section-container><article class="surface schedule-surface" id="schedules" data-panel-section="summary"><div class="surface-head"><div><span class="surface-eyebrow">RESUMO EXECUTIVO</span><h2>Leitura operacional rapida</h2></div><button class="text-action" data-toast="Resumo atualizado com os dados atuais">Atualizar leitura <i data-lucide="arrow-up-right"></i></button></div><div class="schedule-list" id="summaryList"><div><time>OK</time><b>Backups com sucesso</b><span>Execucoes concluidas sem erro</span><em id="summarySuccess">--</em></div><div><time>ALR</time><b>Alertas ativos</b><span>Itens que exigem verificacao</span><em id="summaryAlerts">--</em></div><div><time>CLI</time><b>Clientes</b><span>Empresas visiveis no tenant</span><em id="summaryClients">--</em></div><div><time>DSP</time><b>Dispositivos</b><span>Maquinas com protecao mapeada</span><em id="summaryDevices">--</em></div></div></article><article class="surface fleet-surface" id="fleetSummary" data-panel-section="summary"><div class="surface-head"><div><span class="surface-eyebrow">CONTEXTO DO RESUMO</span><h2>Escala do ambiente</h2><small class="surface-note">Dimensão atual usada para interpretar os indicadores acima.</small></div><span class="health-badge"><i></i> Operacional</span></div><div class="fleet-stats"><div><span>Clientes</span><b id="fleetClients">--</b></div><div><span>Dispositivos</span><b id="fleetDevices">--</b></div><div><span>Backups</span><b id="fleetBackups">--</b></div><div><span>Falhas</span><b id="fleetFailures">--</b></div><div><span>Sucesso</span><b id="fleetSuccess">--</b></div><div><span>Espaco</span><b id="fleetStorage">--</b></div></div></article></section>
-        <section class="surface windows-surface" id="windows" data-panel-section="windows"><div class="surface-head"><div><span class="surface-eyebrow">JANELAS DE EXECUCAO</span><h2>Meta x realizado por empresa e plano</h2></div><div class="window-actions"><button class="text-action" type="button" id="manageWindowRules" hidden><i data-lucide="settings-2"></i> Editar regras</button><button class="text-action" data-toast="Comparativo baseado nas execucoes reais da Acronis">Dados reais <i data-lucide="arrow-up-right"></i></button></div></div><div class="windows-toolbar"><label class="windows-search"><i data-lucide="search"></i><input type="search" id="windowsSearch" placeholder="Pesquisar cliente na aba Janelas" aria-label="Pesquisar cliente nas janelas"></label></div><div class="windows-summary" id="windowsSummary">Carregando monitoramento por janela...</div><div class="windows-scroll"><div class="windows-list" id="windowsList"><div class="window-card is-empty"><div><b>Carregando monitoramento</b><small>Aguardando retorno da API</small></div></div></div></div></section>
+        <section class="surface windows-surface" id="windows" data-panel-section="windows"><div class="surface-head"><div><span class="surface-eyebrow">JANELAS DE EXECUCAO</span><h2>Meta x realizado por empresa e plano</h2></div><div class="window-actions"><span class="health-badge"><i></i> Agendamento Acronis</span><button class="text-action" data-toast="Comparativo baseado nas execucoes reais da Acronis">Dados reais <i data-lucide="arrow-up-right"></i></button></div></div><div class="windows-toolbar"><label class="windows-search"><i data-lucide="search"></i><input type="search" id="windowsSearch" placeholder="Pesquisar cliente na aba Janelas" aria-label="Pesquisar cliente nas janelas"></label></div><div class="windows-summary" id="windowsSummary">Carregando monitoramento por janela...</div><div class="windows-scroll"><div class="windows-list" id="windowsList"><div class="window-card is-empty"><div><b>Carregando monitoramento</b><small>Aguardando retorno da API</small></div></div></div></div></section>
         <footer class="console-footer"><span>Painel Operacional NyxCloud - Ambiente conectado</span><span>v2.5.0 - <a href="../back/index.php">Acessar login</a></span></footer>
       </div>
     </main>
   </div>
-  <dialog class="window-rules-dialog" id="windowRulesDialog">
-    <form method="dialog" class="window-rules-modal">
-      <div class="surface-head">
-        <div>
-          <span class="surface-eyebrow">REGRAS VERSIONADAS</span>
-          <h2>Editar janelas de backup</h2>
-          <small class="surface-note" id="windowRulesMeta">Carregando regras...</small>
-        </div>
-        <button type="submit" class="surface-menu" aria-label="Fechar"><i data-lucide="x"></i></button>
-      </div>
-      <label class="window-rules-field"><span>JSON das regras</span><textarea id="windowRulesEditor" spellcheck="false"></textarea></label>
-      <p class="account-form-message" id="windowRulesMessage" aria-live="polite"></p>
-      <div class="window-rules-actions">
-        <button class="outline-action" type="button" id="reloadWindowRules"><i data-lucide="rotate-ccw"></i><span>Recarregar</span></button>
-        <button class="solid-action" type="button" id="saveWindowRules"><i data-lucide="save"></i><span>Salvar regras</span></button>
-      </div>
-    </form>
-  </dialog>
   <dialog class="profile-dialog" id="profileDialog">
     <form method="dialog" class="profile-modal" id="profileForm">
       <div class="surface-head"><div><span class="surface-eyebrow">MINHA CONTA</span><h2>Perfil e segurança</h2><small class="surface-note">Atualize seus dados de acesso.</small></div><button type="submit" class="surface-menu" aria-label="Fechar"><i data-lucide="x"></i></button></div>
@@ -286,6 +277,6 @@
   <div id="toast" class="console-toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.1"></script>
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-<script src="app.js?v=20260917-profile-fast-1"></script>
+<script src="<?= htmlspecialchars($panelAssetPrefix, ENT_QUOTES, 'UTF-8') ?>app.js?v=20260928-language-5"></script>
 </body>
 </html>

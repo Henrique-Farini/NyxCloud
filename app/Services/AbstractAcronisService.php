@@ -177,6 +177,33 @@ abstract class AbstractAcronisService
         });
     }
 
+    protected function policyItems(): array
+    {
+        return $this->remember('acronis.policies.v1', 300, function (): array {
+            $items = [];
+            $after = '';
+
+            for ($page = 0; $page < 100; $page++) {
+                $query = $after === '' ? ['limit' => 1000] : ['limit' => 1000, 'after' => $after];
+                $payload = $this->api->get($this->endpoint('policies'), $query);
+                $pageItems = $this->items($payload);
+                foreach ($pageItems as $item) {
+                    if (is_array($item)) {
+                        $items[] = $item;
+                    }
+                }
+
+                $next = is_array($payload) ? (string) ($payload['paging']['cursors']['after'] ?? '') : '';
+                if ($pageItems === [] || $next === '' || $next === $after) {
+                    break;
+                }
+                $after = $next;
+            }
+
+            return $items;
+        });
+    }
+
     protected function workloadItems(array $query = []): array
     {
         $baseQuery = array_merge([

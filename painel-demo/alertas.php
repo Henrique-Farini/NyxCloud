@@ -1,4 +1,12 @@
-<?php require_once __DIR__ . '/_auth_guard.php'; ?>
+<?php
+require_once __DIR__ . '/_auth_guard.php';
+$requestPath = (string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH) ?: '');
+$cleanAlertsRoute = preg_match('#/alertas(?:/|$)#i', $requestPath) === 1;
+$alertsAssetPrefix = $cleanAlertsRoute ? '../painel-demo/' : '';
+$alertsPanelPath = $cleanAlertsRoute ? '../painel/' : 'index.php';
+$alertsSelfPath = $cleanAlertsRoute ? '../alertas/' : 'alertas.php';
+$podeGerenciarAlertas = normalizarPerfil((string) ($usuarioPainel['perfil'] ?? '')) !== 'leitura';
+?>
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -10,39 +18,42 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260915-light-theme-2">
-  <link rel="stylesheet" href="alertas.css?v=20260915-light-theme-2">
+  <link rel="stylesheet" href="<?= htmlspecialchars($alertsAssetPrefix, ENT_QUOTES, 'UTF-8') ?>styles.css?v=20260915-light-theme-2">
+  <link rel="stylesheet" href="<?= htmlspecialchars($alertsAssetPrefix, ENT_QUOTES, 'UTF-8') ?>alertas.css?v=20260915-light-theme-2">
 </head>
 <body data-mode="dark">
   <a class="skip-link" href="#alert-events">Pular para os alertas</a>
   <div class="console-frame">
     <aside class="rail" id="rail">
       <div class="rail-brand">
-        <a href="index.php" aria-label="NyxCloud"><img src="../assets/img/icone.png" alt=""><span>NYX<span>CLOUD</span></span></a>
-        <button id="railClose" aria-label="Fechar menu">&times;</button>
+        <a href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>" aria-label="NyxCloud"><img src="../assets/img/icone.png" alt=""><span>NYX<span>CLOUD</span></span></a>
+        <button id="railClose" type="button" aria-label="Fechar menu">&times;</button>
       </div>
-      <div class="tenant-switch"><span class="tenant-mark">N</span><span><b>NyxCloud Enterprise</b><small>Ambiente de produção</small></span><i data-lucide="chevrons-up-down"></i></div>
+      <div class="tenant-switch"><span class="tenant-mark">N</span><span><b>NyxCloud</b><small>Ambiente de producao</small></span><i data-lucide="chevrons-up-down"></i></div>
       <div class="rail-scroll">
         <nav class="rail-nav" aria-label="Navegação do painel">
           <span class="rail-caption">Monitoramento</span>
-          <a class="rail-item" href="index.php#overview"><i data-lucide="layout-dashboard"></i><span>Visão geral</span></a>
-          <a class="rail-item" href="index.php#executions"><i data-lucide="database-zap"></i><span>Atividade recente</span><em>0</em></a>
-          <a class="rail-item is-current" href="alertas.php"><i data-lucide="siren"></i><span>Alertas</span><em class="danger-count">0</em></a>
-          <a class="rail-item" href="index.php#storage"><i data-lucide="hard-drive"></i><span>Armazenamento</span></a>
-          <a class="rail-item" href="index.php#schedules"><i data-lucide="calendar-clock"></i><span>Resumo</span></a>
-          <a class="rail-item" href="index.php#windows"><i data-lucide="waypoints"></i><span>Janelas de execução</span></a>
+          <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#overview"><i data-lucide="layout-dashboard"></i><span>Visão geral</span></a>
+          <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#executions"><i data-lucide="database-zap"></i><span>Atividade recente</span><em>--</em></a>
+          <a class="rail-item is-current" href="<?= htmlspecialchars($alertsSelfPath, ENT_QUOTES, 'UTF-8') ?>"><i data-lucide="siren"></i><span>Alertas</span><em class="danger-count">--</em></a>
+          <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#storage"><i data-lucide="hard-drive"></i><span>Armazenamento</span></a>
+          <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#schedules"><i data-lucide="calendar-clock"></i><span>Resumo</span></a>
+          <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#windows"><i data-lucide="waypoints"></i><span>Janelas de execução</span></a>
           <span class="rail-caption">Ambiente</span>
-          <a class="rail-item" href="index.php#clients"><i data-lucide="building-2"></i><span>Clientes</span></a>
-          <a class="rail-item" href="index.php#accounts"><i data-lucide="users-round"></i><span>Contas</span></a>
-          <a class="rail-item" href="index.php#integrations"><i data-lucide="key-round"></i><span>Integrações</span></a>
-          <a class="rail-item" href="index.php#infrastructure"><i data-lucide="server-cog"></i><span>Execuções por dispositivo</span></a>
-          <a class="rail-item" href="index.php#analytics"><i data-lucide="chart-no-axes-combined"></i><span>Análises</span></a>
-          <a class="rail-item" href="index.php#audit"><i data-lucide="scroll-text"></i><span>Auditoria administrativa</span></a>
+          <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#clients"><i data-lucide="building-2"></i><span>Clientes</span></a>
+           <?php if (usuarioPodeGerenciarContas($usuarioPainel)): ?>
+           <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#accounts"><i data-lucide="users-round"></i><span>Contas</span></a>
+           <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#integrations"><i data-lucide="key-round"></i><span>Integrações</span></a>
+           <?php endif; ?>
+          <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#infrastructure"><i data-lucide="server-cog"></i><span>Execuções por dispositivo</span></a>
+          <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#analytics"><i data-lucide="chart-no-axes-combined"></i><span>Análises</span></a>
+           <?php if (usuarioPodeGerenciarContas($usuarioPainel)): ?><a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#audit"><i data-lucide="scroll-text"></i><span>Auditoria administrativa</span></a><?php endif; ?>
+          <span class="rail-caption">Usuário</span>
+          <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#profile"><i data-lucide="circle-user-round"></i><span>Meu perfil</span></a>
         </nav>
       </div>
       <div class="rail-bottom">
         <div class="platform-state"><span class="state-dot"></span><div><b>Painel conectado</b><small>Dados sincronizados com a Acronis</small></div></div>
-        <button class="profile-strip" id="profileButton"><span class="profile-avatar" id="alertsRailProfileAvatar">U</span><span><b id="alertsRailProfileName">Usuario</b><small id="alertsRailProfileRole">Carregando perfil</small></span><i data-lucide="more-horizontal"></i></button>
       </div>
     </aside>
 
@@ -68,7 +79,7 @@
 
         <nav class="alert-view-tabs" aria-label="Visualização da central de alertas">
           <button type="button" class="is-active" data-alert-tab="events" aria-selected="true"><i data-lucide="bell"></i> Alertas</button>
-          <button type="button" data-alert-tab="visibility" aria-selected="false"><i data-lucide="network"></i> Dispositivos e planos</button>
+          <?php if ($podeGerenciarAlertas): ?><button type="button" data-alert-tab="visibility" aria-selected="false"><i data-lucide="network"></i> Dispositivos e planos</button><?php endif; ?>
         </nav>
 
         <section class="alert-visibility-panel" id="alertVisibilityPanel" hidden>
@@ -122,9 +133,9 @@
   </dialog>
   <div class="alerts-toast" id="alertsToast" role="status" aria-live="polite"></div>
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script src="alertas.js?v=20260915-alert-visibility-5"></script>
+  <script src="<?= htmlspecialchars($alertsAssetPrefix, ENT_QUOTES, 'UTF-8') ?>alertas.js?v=20260928-language-5"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="alertas-react.js?v=20260903-alerts-react-1"></script>
+  <script src="<?= htmlspecialchars($alertsAssetPrefix, ENT_QUOTES, 'UTF-8') ?>alertas-react.js?v=20260928-language-5"></script>
 </body>
 </html>

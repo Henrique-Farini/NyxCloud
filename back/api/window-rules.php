@@ -7,6 +7,10 @@ require_once __DIR__ . '/_bootstrap.php';
 $usuario = exigirPerfilAdministrador($pdo);
 $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
+if (in_array($method, ['PUT', 'PATCH'], true)) {
+    apiResponse(false, new stdClass(), [], 'As janelas de execucao sao importadas automaticamente dos planos Acronis.', 409);
+}
+
 try {
     if ($method === 'GET') {
         $data = carregarConfigJanelas();
@@ -53,7 +57,7 @@ function carregarConfigJanelas(): array
         if (is_array($payload)) {
             return [
                 'source' => 'json',
-                'editable' => true,
+                'editable' => false,
                 'path' => 'storage/config/backup_windows.json',
                 'version' => (string) ($payload['version'] ?? (string) filemtime($path)),
                 'timezone' => (string) ($payload['timezone'] ?? 'America/Sao_Paulo'),
@@ -68,7 +72,7 @@ function carregarConfigJanelas(): array
 
     return [
         'source' => 'php_fallback',
-        'editable' => true,
+        'editable' => false,
         'path' => 'app/Config/backup_windows.php',
         'version' => is_file($fallbackPath) ? (string) filemtime($fallbackPath) : 'none',
         'timezone' => (string) ($fallback['timezone'] ?? 'America/Sao_Paulo'),

@@ -11,6 +11,8 @@
   const emailGroup = document.getElementById('email').closest('.field-group');
   const passwordGroup = password.closest('.field-group');
   const forgot = document.getElementById('forgotPassword');
+  const cleanLoginRoute = /\/login\/?$/i.test(window.location.pathname);
+  const apiBase = cleanLoginRoute ? '../api/' : 'api/';
 
   function safeNextUrl() {
     const value = new URLSearchParams(window.location.search).get('next');
@@ -40,7 +42,7 @@
     if (!next) return;
 
     try {
-      const response = await fetch('api/me.php', {
+      const response = await fetch(`${apiBase}me.php`, {
         headers: { Accept: 'application/json' },
         credentials: 'same-origin'
       });
@@ -57,7 +59,7 @@
     const email = document.getElementById('email').value.trim();
     if (!email) { message.textContent = 'Informe seu e-mail para receber o link.'; return; }
     try {
-      const response = await fetch('api/forgot-password.php', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ email }) });
+      const response = await fetch(`${apiBase}forgot-password.php`, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ email }) });
       const data = await response.json();
       message.textContent = data.message || 'Verifique seu e-mail.';
       message.classList.add('is-info');
@@ -121,7 +123,7 @@
       localStorage.removeItem('access_token');
       sessionStorage.removeItem('access_token');
 
-      window.location.replace(safeNextUrl() || 'painel.php');
+      window.location.replace(safeNextUrl() || (cleanLoginRoute ? '../painel/' : 'painel.php'));
     } catch (error) {
       message.textContent = error.message;
     } finally {

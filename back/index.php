@@ -1,4 +1,9 @@
-<?php declare(strict_types=1); ?>
+<?php
+declare(strict_types=1);
+$requestPath = (string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH) ?: '');
+$cleanLoginRoute = preg_match('#/login/?$#i', $requestPath) === 1;
+$loginApiPath = $cleanLoginRoute ? '../api/login.php' : 'api/login.php';
+?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -38,7 +43,7 @@
             <div class="form-card">
                 <div class="mobile-brand brand"><img class="brand-logo" src="../assets/img/icone.png" alt=""><span>Nyx<span>Cloud</span></span></div>
                 <header class="form-header"><p class="eyebrow">Área do cliente</p><h2 id="login-title">Bem-vindo de volta</h2><p>Entre para acessar seu painel de controle.</p></header>
-                <form action="api/login.php" method="POST" class="login-form" id="loginForm" novalidate>
+                <form action="<?= htmlspecialchars($loginApiPath, ENT_QUOTES, 'UTF-8') ?>" method="POST" class="login-form" id="loginForm" novalidate>
                     <div class="field-group"><label for="email">E-mail / Usuário</label><div class="input-wrap"><span class="field-icon" aria-hidden="true">@</span><input type="email" name="email" id="email" placeholder="seu@email.com" autocomplete="username" required></div><small class="field-error" id="emailError"></small></div>
                     <div class="field-group"><label for="senha">Senha</label><div class="input-wrap"><span class="field-icon lock-small" aria-hidden="true">◆</span><input type="password" name="senha" id="senha" placeholder="Digite sua senha" autocomplete="current-password" required><button type="button" class="toggle-password" id="togglePassword" aria-label="Mostrar senha" aria-pressed="false"><svg class="eye-icon eye-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-5 9.5-5 9.5 5 9.5 5-3.5 5-9.5 5-9.5-5-9.5-5Z"></path><circle cx="12" cy="12" r="2.5"></circle></svg><svg class="eye-icon eye-closed" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.9A10.7 10.7 0 0 1 12 7c6 0 9.5 5 9.5 5a17 17 0 0 1-3.2 3.4M6.2 6.2C3.9 7.6 2.5 12 2.5 12s3.5 5 9.5 5c1.1 0 2.1-.2 3-.5"></path><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"></path></svg></button></div><small class="field-error" id="passwordError"></small></div>
                     <div class="form-options"><label class="remember"><input type="checkbox" name="lembrar" value="1"><span class="checkmark"></span>Lembrar de mim</label><a href="forgot-password.php" class="forgot-link" id="forgotPassword">Esqueci minha senha</a></div>
