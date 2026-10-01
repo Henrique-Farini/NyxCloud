@@ -19,7 +19,7 @@ $administradorGeralPainel = $podeGerenciarPainel && usuarioEhAdministradorGeral(
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= htmlspecialchars($panelAssetPrefix, ENT_QUOTES, 'UTF-8') ?>styles.css?v=20260915-light-theme-2">
+  <link rel="stylesheet" href="<?= htmlspecialchars($panelAssetPrefix, ENT_QUOTES, 'UTF-8') ?>styles.css?v=20261001-client-activity-1">
 </head>
 <body data-mode="dark">
   <a class="skip-link" href="#mainContent">Pular para o conteudo</a>
@@ -138,6 +138,7 @@ $administradorGeralPainel = $podeGerenciarPainel && usuarioEhAdministradorGeral(
               <label class="windows-search"><i data-lucide="search"></i><input type="search" id="clientsSearch" placeholder="Buscar cliente, dispositivo ou plano" aria-label="Buscar cliente, dispositivo ou plano"></label>
               <label class="compact-select"><span>Ordenar</span><select id="clientsSort"><option value="name">Cliente A–Z</option><option value="recent">Backup mais recente</option><option value="devices">Mais dispositivos</option></select></label>
             </div>
+            <div class="client-activity-panel" id="clientActivityPanel" hidden aria-live="polite"></div>
             <div class="clients-directory" id="clientsDirectory" aria-live="polite"><div class="clients-empty"><b>Carregando clientes</b><small>Consultando clientes, dispositivos e últimos backups.</small></div></div>
           </article>
         </section>
@@ -265,6 +266,10 @@ $administradorGeralPainel = $podeGerenciarPainel && usuarioEhAdministradorGeral(
             </div>
             <span class="health-badge"><i></i> Somente administradores</span>
           </div>
+          <div class="audit-toolbar">
+            <label class="compact-select"><span>Período</span><select id="auditPeriodFilter"><option value="7">Últimos 7 dias</option><option value="30" selected>Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="0">Todo o histórico</option></select></label>
+            <div class="audit-pagination"><span id="auditPageLabel">Carregando eventos...</span><button type="button" id="auditPrevPage" aria-label="Página anterior" disabled>‹</button><button type="button" id="auditNextPage" aria-label="Próxima página" disabled>›</button></div>
+          </div>
           <div class="data-scroll audit-table-wrap">
             <table class="audit-table">
               <thead>
@@ -295,6 +300,6 @@ $administradorGeralPainel = $podeGerenciarPainel && usuarioEhAdministradorGeral(
   <div id="toast" class="console-toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.1"></script>
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-<script src="<?= htmlspecialchars($panelAssetPrefix, ENT_QUOTES, 'UTF-8') ?>app.js?v=20261001-period-failures-3"></script>
+<script src="<?= htmlspecialchars($panelAssetPrefix, ENT_QUOTES, 'UTF-8') ?>app.js?v=20261001-client-activity-7"></script>
 </body>
 </html>

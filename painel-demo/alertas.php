@@ -18,8 +18,8 @@ $podeGerenciarAlertas = normalizarPerfil((string) ($usuarioPainel['perfil'] ?? '
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= htmlspecialchars($alertsAssetPrefix, ENT_QUOTES, 'UTF-8') ?>styles.css?v=20260915-light-theme-2">
-  <link rel="stylesheet" href="<?= htmlspecialchars($alertsAssetPrefix, ENT_QUOTES, 'UTF-8') ?>alertas.css?v=20260915-light-theme-2">
+  <link rel="stylesheet" href="<?= htmlspecialchars($alertsAssetPrefix, ENT_QUOTES, 'UTF-8') ?>styles.css?v=20261001-page-transition-1">
+  <link rel="stylesheet" href="<?= htmlspecialchars($alertsAssetPrefix, ENT_QUOTES, 'UTF-8') ?>alertas.css?v=20261001-panel-aligned-1">
 </head>
 <body data-mode="dark">
   <a class="skip-link" href="#alert-events">Pular para os alertas</a>
@@ -103,7 +103,7 @@ $podeGerenciarAlertas = normalizarPerfil((string) ($usuarioPainel['perfil'] ?? '
         </section>
 
         <section class="filter-panel" aria-label="Filtros de alertas">
-          <div class="filter-field"><label for="statusFilter">Status</label><select id="statusFilter"><option value="all">Todos</option><option value="failed">Falha</option><option value="success">Sucesso</option><option value="running">Em andamento</option></select></div>
+          <div class="filter-field"><label for="statusFilter">Status</label><select id="statusFilter"><option value="all">Todos</option><option value="failed">Falha</option><option value="success">Sucesso</option><option value="known">Marcado como conhecido</option><option value="running">Em andamento</option></select></div>
           <div class="filter-field"><label for="priorityFilter">Prioridade</label><select id="priorityFilter"><option value="all">Todas</option><option value="critical">Crítica</option><option value="high">Alta</option><option value="medium">Média</option><option value="low">Baixa</option></select></div>
           <div class="filter-field"><label for="clientFilter">Cliente</label><select id="clientFilter"><option value="all">Todos os clientes</option></select></div>
           <div class="filter-field"><label for="serverFilter">Dispositivo</label><select id="serverFilter"><option value="all">Todos os dispositivos</option></select></div>

@@ -1,6 +1,19 @@
 (() => {
   'use strict';
 
+  document.body.classList.add('console-page-enter');
+  if (window.top === window.self) {
+    document.addEventListener('click', event => {
+      const link = event.target.closest('a[href]');
+      if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target === '_blank') return;
+      const url = new URL(link.href, window.location.href);
+      if (url.origin !== window.location.origin || url.pathname === window.location.pathname && url.hash) return;
+      event.preventDefault();
+      document.body.classList.add('console-page-leaving');
+      window.setTimeout(() => { window.location.href = url.href; }, 140);
+    });
+  }
+
   const body = document.body;
   const alertTranslations = {
     'Alertas': 'Alerts', 'Dispositivos e planos': 'Devices and plans', 'Hoje': 'Today', 'Ontem': 'Yesterday',

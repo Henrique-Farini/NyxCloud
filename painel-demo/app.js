@@ -1,6 +1,19 @@
 (() => {
   'use strict';
 
+  document.body.classList.add('console-page-enter');
+  if (window.top === window.self) {
+    document.addEventListener('click', event => {
+      const link = event.target.closest('a[href]');
+      if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target === '_blank') return;
+      const url = new URL(link.href, window.location.href);
+      if (url.origin !== window.location.origin || url.pathname === window.location.pathname && url.hash) return;
+      event.preventDefault();
+      document.body.classList.add('console-page-leaving');
+      window.setTimeout(() => { window.location.href = url.href; }, 140);
+    });
+  }
+
   const root = document.body;
   const rail = document.getElementById('rail');
   const toast = document.getElementById('toast');
@@ -28,6 +41,7 @@
     integrationsError: '',
     audit: [],
     auditError: '',
+    auditPagination: { page: 1, pages: 1, total: 0, limit: 25, period: 30 },
     windowRules: null,
     windowRulesError: '',
     windowsSearch: '',
@@ -36,7 +50,8 @@
     executionStatus: 'all',
     executionSort: 'recent',
     clientsSearch: '',
-    clientsSort: 'name'
+    clientsSort: 'name',
+    selectedClientActivity: ''
   };
 
   const dataRequests = new Map();
@@ -500,6 +515,9 @@
         ultimo_backup: detail?.ultimo_backup || device?.ultimo_backup || '',
         dias_sem_backup: Number.isInteger(detail?.dias_sem_backup) ? detail.dias_sem_backup : null,
         tamanho_realizado: String(detail?.tamanho_realizado || 'Nao informado').trim() || 'Nao informado',
+        tamanho_realizado_bytes: Number(detail?.tamanho_realizado_bytes || 0),
+        media_tamanho_bytes: Number(detail?.mediana_tamanho_bytes || detail?.media_tamanho_bytes || 0),
+        media_tamanho: String(detail?.mediana_tamanho || detail?.media_tamanho || 'Nao informado').trim() || 'Nao informado',
         status: detail?.status || device?.status || 'unknown'
       }));
     }
@@ -509,6 +527,9 @@
       ultimo_backup: device?.ultimo_backup || '',
       dias_sem_backup: Number.isInteger(device?.dias_sem_backup) ? device.dias_sem_backup : null,
       tamanho_realizado: backupSizeLabel(device),
+      tamanho_realizado_bytes: Number(device?.tamanho_realizado_bytes || 0),
+      media_tamanho_bytes: 0,
+      media_tamanho: 'Nao informado',
       status: device?.status || 'unknown'
     }));
   };
@@ -894,6 +915,16 @@
     const body = document.getElementById('auditRows');
     if (!body) return;
 
+    const pagination = state.auditPagination || {};
+    const periodFilter = document.getElementById('auditPeriodFilter');
+    const pageLabel = document.getElementById('auditPageLabel');
+    const previous = document.getElementById('auditPrevPage');
+    const next = document.getElementById('auditNextPage');
+    if (periodFilter) periodFilter.value = String(pagination.period || 30);
+    if (pageLabel) pageLabel.textContent = `${pagination.total || 0} eventos · página ${pagination.page || 1} de ${pagination.pages || 1}`;
+    if (previous) previous.disabled = Number(pagination.page || 1) <= 1;
+    if (next) next.disabled = Number(pagination.page || 1) >= Number(pagination.pages || 1);
+
     body.replaceChildren();
     if (state.auditError) {
       body.innerHTML = `<tr><td colspan="6">${escapeHtml(state.auditError)}</td></tr>`;
@@ -1030,8 +1061,12 @@
       raw.tenant,
       raw.tenant_id,
       raw.tenant?.id,
+      raw.customerUuid,
+      raw.customer_uuid,
+      raw.customer_id,
       device.tenant,
-      device.customer_tenant
+      device.customer_tenant,
+      device.customer_uuid
     ].filter(Boolean).map(String);
 
     return state.customers.find(item => {
@@ -1041,11 +1076,50 @@
         item.uuid,
         item.raw?.id,
         item.raw?.uuid,
-        item.raw?.tenant_id
+        item.raw?.tenant_id,
+        item.raw?.customerUuid,
+        item.raw?.customer_uuid,
+        item.raw?.customer_id
       ].filter(Boolean).map(String);
 
-      return tenantCandidates.some(candidate => values.includes(candidate));
+      if (tenantCandidates.some(candidate => values.includes(candidate))) return true;
+      return customerMatchesDevice(device, item);
     }) || null;
+  };
+
+  const customerMatchesDevice = (device, customer) => {
+    const raw = device?.raw || {};
+    const deviceNames = [
+      device?.cliente,
+      device?.customer_name,
+      device?.empresa,
+      raw.tenant?.name,
+      raw.tenant_name,
+      raw.customer_name,
+      raw.empresa,
+      raw.tenant?.customer_name
+    ].filter(Boolean).map(normalizeLookupKey).filter(value => value.length >= 3);
+    const customerNames = [
+      customer?.nome,
+      customer?.name,
+      customer?.tenant,
+      customer?.raw?.name,
+      customer?.raw?.customer_name,
+      customer?.raw?.uuid,
+      customer?.raw?.id,
+      customer?.raw?.tenant_id
+    ].filter(Boolean).map(normalizeLookupKey).filter(value => value.length >= 3);
+    return deviceNames.some(deviceName => customerNames.some(customerName => deviceName === customerName || deviceName.includes(customerName) || customerName.includes(deviceName)));
+  };
+
+  const devicesForCustomer = customer => {
+    const liveDevices = (Array.isArray(state.devices) ? state.devices : []).filter(device => resolveCustomer(device) === customer || customerMatchesDevice(device, customer));
+    const inventoryDevices = Array.isArray(customer?.dispositivos) ? customer.dispositivos : [];
+    const known = new Set(liveDevices.map(device => normalizeLookupKey(device.hostname || device.raw?.name)).filter(Boolean));
+    return [...liveDevices, ...inventoryDevices.filter(device => {
+      const key = normalizeLookupKey(device.hostname || device.raw?.name);
+      return key === '' || !known.has(key);
+    })];
   };
 
   const buildRecentRows = () => {
@@ -1159,6 +1233,8 @@
     });
   };
 
+  const customerActivityKey = customer => String(customer?.id || customer?.uuid || customer?.tenant || customer?.nome || '');
+
   const buildClientDirectory = () => {
     const node = document.getElementById('clientsDirectory');
     if (!node) return;
@@ -1167,11 +1243,7 @@
     const devices = Array.isArray(state.devices) ? state.devices : [];
     const rows = customers.map(customer => {
       const customerName = displayCompanyName(customer.nome || 'Cliente');
-      const customerDevices = devices.filter(device => {
-        const resolved = resolveCustomer(device);
-        if (resolved === customer) return true;
-        return normalizeText(device.cliente).toLocaleLowerCase('pt-BR') === normalizeText(customer.nome).toLocaleLowerCase('pt-BR');
-      });
+      const customerDevices = devicesForCustomer(customer);
       const backupEntries = customerDevices.flatMap(device => planEntries(device).map(entry => ({
         ...entry,
         hostname: normalizeText(device.hostname),
@@ -1218,6 +1290,7 @@
         return left.customerName.localeCompare(right.customerName, uiLocale());
       });
     setText('clientsTotalLabel', query ? `${fmtInt(items.length)} encontrados` : `${fmtInt(rows.length)} clientes`);
+    renderClientActivity();
     node.replaceChildren();
     if (!items.length) {
       node.innerHTML = `<div class="clients-empty"><b>${query ? 'Nenhum cliente encontrado' : 'Nenhum cliente disponível'}</b><small>${query ? 'Ajuste o termo de busca para ver outros clientes.' : 'A API ainda não retornou empresas para este ambiente.'}</small></div>`;
@@ -1225,22 +1298,77 @@
     }
     const heading = document.createElement('div');
     heading.className = 'client-directory-head';
-    heading.innerHTML = '<span>Cliente</span><span>Dispositivos</span><span>Último backup</span><span>Origem</span><span>Status</span><span>Volume</span>';
+    heading.innerHTML = '<span>Cliente</span><span>Dispositivos</span><span>Último backup</span><span>Origem</span><span>Status</span><span>Volume</span><span>Ações</span>';
     node.append(heading);
     items.forEach(item => {
       const row = document.createElement('div');
       row.className = 'client-directory-row';
       const relativeBackup = item.lastBackup ? (backupDaysFromEntry({ ultimo_backup: item.lastBackup }) === '0 dias' ? 'hoje' : `há ${backupDaysFromEntry({ ultimo_backup: item.lastBackup })}`) : 'sem histórico';
       row.innerHTML = [
-        `<div class="client-identity" data-label="Cliente"><span class="client-avatar">${escapeHtml(profileInitial(item.customerName))}</span><span><b>${escapeHtml(item.customerName)}</b><small>${escapeHtml(item.customer.tenant || 'Ambiente protegido')}</small></span></div>`,
+        `<div class="client-identity" data-label="Cliente"><span class="client-avatar">${escapeHtml(profileInitial(item.customerName))}</span><span><b>${escapeHtml(item.customerName)}</b><small>${state.accountsMeta.administrador_geral || state.me?.administrador_geral ? escapeHtml(item.customer.tenant || 'Ambiente protegido') : 'Ambiente protegido'}</small></span></div>`,
         `<div class="client-device-total" data-label="Dispositivos"><strong>${fmtInt(item.deviceCount)}</strong><small>protegidos</small></div>`,
         `<div class="client-last-backup" data-label="Último backup"><time>${escapeHtml(toShortTime(item.lastBackup))}</time><small>${escapeHtml(relativeBackup)}</small></div>`,
         `<div class="client-backup-source" data-label="Origem"><b>${escapeHtml(item.hostname)}</b><small>${escapeHtml(displayPlanName(item.plan))}</small></div>`,
         `<div data-label="Status"><em class="job-state ${item.status.className}">${escapeHtml(item.lastBackup ? item.status.label : 'Sem backup')}</em></div>`,
-        `<div class="client-backup-size" data-label="Volume"><b>${escapeHtml(item.size)}</b></div>`
+        `<div class="client-backup-size" data-label="Volume"><b>${escapeHtml(item.size)}</b></div>`,
+        `<div class="client-activity-action"><button type="button" class="text-action client-activity-button" data-client-activity="${escapeHtml(customerActivityKey(item.customer))}">Ver atividades <i data-lucide="arrow-up-right"></i></button></div>`
       ].join('');
       node.append(row);
     });
+    window.lucide?.createIcons();
+  };
+
+  const renderClientActivity = () => {
+    const panel = document.getElementById('clientActivityPanel');
+    if (!panel) return;
+    const customer = state.customers.find(item => customerActivityKey(item) === state.selectedClientActivity);
+    if (!customer) {
+      panel.hidden = true;
+      panel.replaceChildren();
+      return;
+    }
+
+    const devices = devicesForCustomer(customer)
+      .map(device => {
+        const entries = planEntries(device);
+        const latest = [...entries].sort((left, right) => new Date(right.ultimo_backup || 0).getTime() - new Date(left.ultimo_backup || 0).getTime())[0] || {};
+        const timestamp = latest.ultimo_backup || device.ultimo_backup || device.last_backup || '';
+        return {
+          hostname: normalizeText(device.hostname),
+          entries: entries.length ? entries : [{ plano: 'Sem plano', ultimo_backup: timestamp, tamanho_realizado: backupSizeLabel(device), status: device.status || 'unknown' }],
+          fallbackTimestamp: timestamp,
+          ip: normalizeText(device.ip || device.endereco_ip),
+          deviceStatus: device.status || device.situacao || ''
+        };
+      })
+    const activityRows = devices.flatMap(device => device.entries.map(entry => ({
+      hostname: device.hostname,
+      plan: displayPlanName(entry.plano || 'Sem plano'),
+      timestamp: entry.ultimo_backup || device.fallbackTimestamp || '',
+      size: normalizeText(entry.tamanho_realizado || 'Nao informado'),
+      currentBytes: Number(entry.tamanho_realizado_bytes || 0),
+      averageBytes: Number(entry.media_tamanho_bytes || 0),
+      average: normalizeText(entry.media_tamanho || 'Nao informado'),
+      ip: device.ip,
+      status: statusMeta(entry.status || device.deviceStatus || '')
+    }))).sort((left, right) => new Date(right.timestamp || 0).getTime() - new Date(left.timestamp || 0).getTime());
+    activityRows.forEach(item => {
+      const date = item.timestamp ? new Date(item.timestamp) : null;
+      const now = new Date();
+      item.today = Boolean(date && !Number.isNaN(date.getTime()) && date.toDateString() === now.toDateString());
+    });
+    const withActivity = devices.filter(item => item.entries.some(entry => entry.ultimo_backup || item.fallbackTimestamp)).length;
+    panel.hidden = false;
+    panel.innerHTML = `
+      <div class="client-activity-head">
+        <div><span class="surface-eyebrow">ATIVIDADE DA EMPRESA</span><h3>${escapeHtml(displayCompanyName(customer.nome || 'Cliente'))}</h3><small>Última atividade disponível de cada dispositivo, mesmo fora do dia atual.</small></div>
+        <button type="button" class="surface-menu" data-client-activity-close aria-label="Fechar atividades"><i data-lucide="x"></i></button>
+      </div>
+      <div class="client-activity-summary"><span><b>${fmtInt(devices.length)}</b> dispositivos</span><span><b>${fmtInt(withActivity)}</b> com atividade</span><span><b>${fmtInt(devices.length - withActivity)}</b> sem histórico</span></div>
+      <div class="client-activity-list">
+        ${activityRows.length ? activityRows.map(item => `<div class="client-activity-row"><div><b>${escapeHtml(item.hostname)}</b><small>${escapeHtml(item.plan)} · IP ${escapeHtml(item.ip)}</small></div><time>${escapeHtml(item.timestamp ? `${toShortTime(item.timestamp)}${item.today ? '' : ' · sem execução hoje'}` : 'Sem atividade registrada')}</time><span class="client-activity-size"><b>Último</b>${escapeHtml(item.size)}</span><span class="client-activity-average"><b>Padrão mediano</b>${escapeHtml(item.average)}</span><em class="job-state ${item.timestamp ? item.status.className : 'failed'}">${escapeHtml(item.timestamp ? (item.today ? item.status.label : 'Sem execução hoje') : 'Sem histórico')}</em></div>`).join('') : `<div class="client-activity-empty">O inventário ainda não retornou os detalhes dos ${fmtInt(Number(customer.quantidade_dispositivos || 0))} dispositivos desta empresa. Nenhum dispositivo será ocultado por não executar backup hoje.</div>`}
+      </div>`;
+    window.lucide?.createIcons();
   };
 
   const buildDailyExecutionRows = () => {
@@ -2159,11 +2287,12 @@
     }
   });
 
-  const loadAudit = () => requestOnce('audit', async () => {
+  const loadAudit = ({ page = state.auditPagination.page || 1, period = state.auditPagination.period || 30 } = {}) => requestOnce('audit', async () => {
     state.auditError = '';
     try {
-      const payload = await fetchJson('auditoria.php');
+      const payload = await fetchJson(`auditoria.php?page=${Number(page)}&period=${Number(period)}&limit=25`);
       state.audit = Array.isArray(payload?.items) ? payload.items : [];
+      state.auditPagination = payload?.pagination || { page, pages: 1, total: state.audit.length, limit: 25, period };
       safeRun(renderAudit);
     } catch (error) {
       state.audit = [];
@@ -2397,6 +2526,17 @@
       return;
     }
 
+    const criticalChange = Object.prototype.hasOwnProperty.call(payload, 'perfil')
+      || Object.prototype.hasOwnProperty.call(payload, 'ativo')
+      || Object.prototype.hasOwnProperty.call(payload, 'empresa_ids')
+      || Object.prototype.hasOwnProperty.call(payload, 'administrador_geral')
+      || Object.prototype.hasOwnProperty.call(payload, 'senha');
+    let senhaConfirmacao = String(payload.senha_confirmacao || '');
+    if (criticalChange && !senhaConfirmacao) {
+      senhaConfirmacao = window.prompt('Digite sua senha para confirmar esta alteração:') || '';
+      if (!senhaConfirmacao) return;
+    }
+
     await fetchJson('contas.php', {
       method: 'PATCH',
       body: {
@@ -2404,7 +2544,8 @@
         nome: account.nome,
         perfil: account.perfil,
         ativo: Boolean(account.ativo),
-        ...payload
+        ...payload,
+        ...(criticalChange ? { senha_confirmacao: senhaConfirmacao } : {})
       }
     });
     await refreshAccountsAndAudit();
@@ -2541,6 +2682,18 @@
     state.clientsSort = event.currentTarget.value || 'name';
     safeRun(buildClientDirectory);
   });
+  document.getElementById('clientsDirectory')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-client-activity]');
+    if (!button) return;
+    state.selectedClientActivity = button.dataset.clientActivity || '';
+    safeRun(renderClientActivity);
+    document.getElementById('clientActivityPanel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+  document.getElementById('clientActivityPanel')?.addEventListener('click', event => {
+    if (!event.target.closest('[data-client-activity-close]')) return;
+    state.selectedClientActivity = '';
+    safeRun(renderClientActivity);
+  });
   document.getElementById('manageWindowRules')?.addEventListener('click', async () => {
     const dialog = document.getElementById('windowRulesDialog');
     if (!canManageAdmin()) {
@@ -2553,6 +2706,22 @@
   });
   document.getElementById('reloadWindowRules')?.addEventListener('click', () => {
     loadWindowRules().catch(error => notify(error.message || 'Falha ao recarregar regras.'));
+  });
+  document.getElementById('auditPeriodFilter')?.addEventListener('change', event => {
+    state.auditPagination.page = 1;
+    state.auditPagination.period = Number(event.currentTarget.value || 30);
+    dataRequests.delete('audit');
+    loadAudit({ page: 1, period: state.auditPagination.period }).catch(() => {});
+  });
+  document.getElementById('auditPrevPage')?.addEventListener('click', () => {
+    const page = Math.max(1, Number(state.auditPagination.page || 1) - 1);
+    dataRequests.delete('audit');
+    loadAudit({ page, period: state.auditPagination.period }).catch(() => {});
+  });
+  document.getElementById('auditNextPage')?.addEventListener('click', () => {
+    const page = Math.min(Number(state.auditPagination.pages || 1), Number(state.auditPagination.page || 1) + 1);
+    dataRequests.delete('audit');
+    loadAudit({ page, period: state.auditPagination.period }).catch(() => {});
   });
   document.getElementById('saveWindowRules')?.addEventListener('click', () => {
     saveWindowRules().catch(error => notify(error.message || 'Falha ao salvar regras.'));
@@ -2727,11 +2896,15 @@
       perfil: String(data.get('perfil') || 'leitura').trim(),
       administrador_geral: data.get('administrador_geral') !== null,
       senha: String(data.get('senha') || ''),
+      senha_confirmacao: '',
       ativo: data.get('ativo') !== null,
       empresa_ids: Array.from(document.querySelectorAll('#accountCompanyOptions select[name="empresa_ids[]"]'))
         .map(option => Number(option.value))
         .filter(Boolean)
     };
+
+    payload.senha_confirmacao = window.prompt('Digite sua senha para confirmar a criação desta conta:') || '';
+    if (!payload.senha_confirmacao) return;
 
     submitButton.disabled = true;
     if (message) message.textContent = 'Criando conta...';

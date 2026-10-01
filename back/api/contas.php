@@ -208,15 +208,14 @@ try {
             $adminGeral = filter_var($contaAtual['administrador_geral'] ?? false, FILTER_VALIDATE_BOOLEAN);
         }
         $adminGeralAtual = filter_var($contaAtual['administrador_geral'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        if ($adminGeralInformado && $adminGeral !== $adminGeralAtual) {
-            if ($senhaConfirmacao === '') {
-                apiResponse(false, new stdClass(), [], 'Digite sua senha para alterar o acesso de administrador geral.', 422);
-            }
-            $senhaStmt = $pdo->prepare('SELECT senha_hash FROM usuario WHERE id = :id LIMIT 1');
-            $senhaStmt->execute(['id' => (int) ($usuario['id'] ?? 0)]);
-            if (!password_verify($senhaConfirmacao, (string) $senhaStmt->fetchColumn())) {
-                apiResponse(false, new stdClass(), [], 'Senha de confirmacao incorreta.', 422);
-            }
+        $ativoAtual = filter_var($contaAtual['ativo'] ?? true, FILTER_VALIDATE_BOOLEAN);
+        $alteracaoCritica = $perfil !== normalizarPerfil((string) ($contaAtual['perfil'] ?? ''))
+            || ($ativo !== null && $ativo !== $ativoAtual)
+            || $temEmpresas
+            || ($adminGeralInformado && $adminGeral !== $adminGeralAtual)
+            || $senha !== '';
+        if ($alteracaoCritica) {
+            validarSenhaConfirmacao($pdo, $usuario, $senhaConfirmacao);
         }
         if ($adminGeral && !$administradorGeral) {
             apiResponse(false, new stdClass(), [], 'Somente um administrador geral pode conceder acesso global.', 403);
@@ -326,6 +325,7 @@ try {
     } elseif ($empresaIds === []) {
         apiResponse(false, new stdClass(), [], 'Selecione pelo menos uma empresa para este usuario.', 422);
     }
+    validarSenhaConfirmacao($pdo, $usuario, (string) ($payload['senha_confirmacao'] ?? ''));
 
     $stmt = $pdo->prepare('SELECT id FROM usuario WHERE LOWER(email) = LOWER(:email) LIMIT 1');
     $stmt->execute(['email' => $email]);
@@ -474,6 +474,18 @@ function idsDasEmpresasDoUsuario(PDO $pdo, int $usuarioId): array
     $stmt = $pdo->prepare('SELECT empresa_id FROM usuario_empresa WHERE usuario_id = :usuario_id');
     $stmt->execute(['usuario_id' => $usuarioId]);
     return array_values(array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN) ?: []));
+}
+
+function validarSenhaConfirmacao(PDO $pdo, array $usuario, string $senha): void
+{
+    if ($senha === '') {
+        apiResponse(false, new stdClass(), [], 'Digite sua senha para confirmar esta alteracao.', 422);
+    }
+    $stmt = $pdo->prepare('SELECT senha_hash FROM usuario WHERE id = :id LIMIT 1');
+    $stmt->execute(['id' => (int) ($usuario['id'] ?? 0)]);
+    if (!password_verify($senha, (string) $stmt->fetchColumn())) {
+        apiResponse(false, new stdClass(), [], 'Senha de confirmacao incorreta.', 422);
+    }
 }
 
 function contaEstaNoEscopo(PDO $pdo, array $usuario, array $conta, bool $self): bool

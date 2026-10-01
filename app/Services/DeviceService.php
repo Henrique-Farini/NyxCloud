@@ -6,7 +6,7 @@ namespace NyxCloud\Services;
 
 final class DeviceService extends AbstractAcronisService
 {
-    private const CACHE_VERSION = 'v13';
+    private const CACHE_VERSION = 'v16';
 
     public function listDevices(array $filters = []): array
     {
@@ -110,7 +110,19 @@ final class DeviceService extends AbstractAcronisService
     {
         $attributes = is_array($device['attributes'] ?? null) ? $device['attributes'] : [];
         $merged = array_merge($device, ['attributes' => $attributes]);
-        $tenantId = $this->firstString($merged, ['tenant_id']);
+        $tenantId = $this->firstString($merged, [
+            'tenant_id',
+            'customerUuid',
+            'customer_uuid',
+            'tenant.uuid',
+            'tenant.id',
+        ]);
+        $tenantName = $this->firstString($merged, [
+            'tenant.name',
+            'tenant_name',
+            'customer_name',
+            'attributes.tenant_name',
+        ]);
         $hostname = $this->firstString($merged, ['name', 'attributes.hostname', 'attributes.host_name']);
         $plans = $this->extractPlans($this->firstString($merged, [
             'cross_policy_status.names',
@@ -140,9 +152,12 @@ final class DeviceService extends AbstractAcronisService
         ]);
         $lastBackup = $this->latestDate($deviceLastBackup, (string) ($primaryDetail['ultimo_backup'] ?? ''));
         $sizeBytes = (int) ($primaryDetail['tamanho_realizado_bytes'] ?? 0);
+        if ($sizeBytes <= 0) {
+            $sizeBytes = $this->deviceBackupBytes($merged);
+        }
 
         return [
-            'cliente' => $tenantMap[$tenantId]['nome'] ?? 'Cliente nao identificado',
+            'cliente' => $tenantMap[$tenantId]['nome'] ?? ($tenantName !== '' ? $tenantName : 'Cliente nao identificado'),
             'tenant' => $tenantId,
             'hostname' => $hostname,
             'sistema_operacional' => $this->firstString($merged, [
@@ -193,12 +208,16 @@ final class DeviceService extends AbstractAcronisService
                 continue;
             }
 
-            $key = $this->planKey($tenant, $machine, $plan);
-            if (isset($stats[$key]) && strtotime($stats[$key]['ultimo_backup']) >= strtotime($completedAt)) {
-                continue;
-            }
-
             $sizeBytes = $this->firstTaskBytes($task);
+            $key = $this->planKey($tenant, $machine, $plan);
+            if (isset($stats[$key])) {
+                if ($sizeBytes > 0) {
+                    $stats[$key]['_amostras_tamanho'][] = $sizeBytes;
+                }
+                if (strtotime($stats[$key]['ultimo_backup']) >= strtotime($completedAt)) {
+                    continue;
+                }
+            }
             $stats[$key] = [
                 'plano' => $plan,
                 'ultimo_backup' => $completedAt,
@@ -206,8 +225,22 @@ final class DeviceService extends AbstractAcronisService
                 'tamanho_realizado_bytes' => $sizeBytes,
                 'tamanho_realizado' => $sizeBytes > 0 ? $this->formatBytes((float) $sizeBytes) : 'Nao informado',
                 'status' => $this->normalizeTaskStatus($task),
+                '_amostras_tamanho' => array_merge($stats[$key]['_amostras_tamanho'] ?? [], $sizeBytes > 0 ? [$sizeBytes] : []),
             ];
         }
+
+        foreach ($stats as &$stat) {
+            $samples = array_values(array_filter($stat['_amostras_tamanho'] ?? [], static fn ($value): bool => is_numeric($value) && (int) $value > 0));
+            sort($samples, SORT_NUMERIC);
+            $count = count($samples);
+            $median = $count === 0 ? 0 : ($count % 2 ? $samples[intdiv($count, 2)] : (int) round(($samples[$count / 2 - 1] + $samples[$count / 2]) / 2));
+            $stat['media_tamanho_bytes'] = $median;
+            $stat['media_tamanho'] = $median > 0 ? $this->formatBytes((float) $median) : 'Nao informado';
+            $stat['mediana_tamanho_bytes'] = $median;
+            $stat['mediana_tamanho'] = $stat['media_tamanho'];
+            unset($stat['_amostras_tamanho']);
+        }
+        unset($stat);
 
         return $stats;
     }
@@ -320,6 +353,16 @@ final class DeviceService extends AbstractAcronisService
             $task['context']['_runtime']['bytesProcessed'] ?? null,
             $task['progress']['bytesSaved'] ?? null,
             $task['context']['_runtime']['bytesSaved'] ?? null,
+            $task['result']['bytesProcessed'] ?? null,
+            $task['result']['bytesSaved'] ?? null,
+            $task['result']['totalBytes'] ?? null,
+            $task['result']['payload']['bytesProcessed'] ?? null,
+            $task['result']['payload']['bytesSaved'] ?? null,
+            $task['result']['payload']['totalBytes'] ?? null,
+            $task['statistics']['bytesProcessed'] ?? null,
+            $task['statistics']['totalBytes'] ?? null,
+            $task['data']['bytesProcessed'] ?? null,
+            $task['data']['totalBytes'] ?? null,
         ];
 
         foreach ($candidates as $value) {
@@ -329,6 +372,24 @@ final class DeviceService extends AbstractAcronisService
         }
 
         return null;
+    }
+
+    private function deviceBackupBytes(array $device): int
+    {
+        foreach ([
+            'per_policy_type_statuses.0.last_success_run_size',
+            'per_policy_type_statuses.0.last_success_run_bytes',
+            'attributes.last_successful_backup_size',
+            'attributes.last_successful_backup_bytes',
+            'attributes.last_backup_size',
+            'attributes.last_backup_bytes',
+        ] as $path) {
+            $value = $this->firstString($device, [$path]);
+            if (is_numeric($value)) {
+                return max(0, (int) $value);
+            }
+        }
+        return 0;
     }
 
     private function normalizeTaskStatus(array $task): string
