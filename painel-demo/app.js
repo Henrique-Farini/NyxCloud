@@ -21,7 +21,8 @@
     executionWindows: null,
     executionWindowsError: '',
     accounts: [],
-    accountsMeta: { perfis: {}, viewer: null },
+    companies: [],
+    accountsMeta: { perfis: {}, empresas: [], viewer: null, administrador_geral: false },
     accountsError: '',
     integrations: [],
     integrationsError: '',
@@ -214,6 +215,14 @@
     window.location.replace(login.href);
   };
 
+  const clientErrorMessage = (message, fallback = 'Não foi possível carregar os dados agora. Tente novamente em instantes.') => {
+    const text = String(message || '').trim();
+    if (!text || /\.php(?:\b|[?#])/i.test(text) || /tempo esgotado|timed out|failed to fetch|networkerror|load failed|abort/i.test(text)) {
+      return fallback;
+    }
+    return text;
+  };
+
   const fetchJson = async (endpoint, options = {}) => {
     const controller = new AbortController();
     const timeoutMs = Number(options.timeout || 12000);
@@ -233,9 +242,11 @@
       });
     } catch (error) {
       if (error?.name === 'AbortError') {
-        throw new Error(`Tempo esgotado ao carregar ${endpoint}.`);
+        console.warn('[NyxCloud] A requisição excedeu o tempo limite.', { endpoint, error });
+        throw new Error('Não foi possível carregar os dados agora. Tente novamente em instantes.');
       }
-      throw error;
+      console.warn('[NyxCloud] Falha de comunicação com o serviço.', { endpoint, error });
+      throw new Error(clientErrorMessage(error?.message));
     } finally {
       window.clearTimeout(timeout);
     }
@@ -255,7 +266,9 @@
     }
 
     if (!response.ok || !payload?.success) {
-      throw new Error(payload?.message || `Falha ao carregar ${endpoint}`);
+      const message = clientErrorMessage(payload?.message, 'Não foi possível concluir esta operação. Tente novamente em instantes.');
+      console.warn('[NyxCloud] A API não concluiu a requisição.', { endpoint, status: response.status, message: payload?.message });
+      throw new Error(message);
     }
 
     return payload.data;
@@ -707,7 +720,7 @@
     if (!body) return;
 
     if (!canManageAccounts()) {
-      body.innerHTML = '<tr><td colspan="7">Acesso restrito a administradores.</td></tr>';
+      body.innerHTML = '<tr><td colspan="8">Acesso restrito a administradores.</td></tr>';
       if (notice) notice.hidden = false;
       if (form) {
         form.querySelectorAll('input, select, button').forEach(field => {
@@ -726,11 +739,11 @@
 
     body.replaceChildren();
     if (state.accountsError) {
-      body.innerHTML = `<tr><td colspan="7">${escapeHtml(state.accountsError)}</td></tr>`;
+      body.innerHTML = `<tr><td colspan="8">${escapeHtml(state.accountsError)}</td></tr>`;
       return;
     }
     if (!Array.isArray(state.accounts) || !state.accounts.length) {
-      body.innerHTML = '<tr><td colspan="7">Nenhuma conta cadastrada.</td></tr>';
+      body.innerHTML = '<tr><td colspan="8">Nenhuma conta cadastrada.</td></tr>';
       return;
     }
 
@@ -742,21 +755,34 @@
       const roleOptions = Object.entries(state.accountsMeta.perfis || {})
         .map(([value, label]) => `<option value="${escapeHtml(value)}"${value === account.perfil ? ' selected' : ''}>${escapeHtml(label)}</option>`)
         .join('');
+      const companyNames = Array.isArray(account.empresas) && account.empresas.length
+        ? account.empresas.map(item => cleanLabel(item.nome)).join(', ')
+        : (state.accountsMeta.administrador_geral ? 'Todas (administrador geral)' : 'Nenhuma');
       row.innerHTML = `
         <td><b>${escapeHtml(cleanLabel(account.nome))}</b><small>ID ${fmtInt(account.id)}</small></td>
         <td>${escapeHtml(cleanLabel(account.email))}</td>
+        <td>${escapeHtml(companyNames)}</td>
         <td><select class="account-inline-select" data-account-role="${accountId}" aria-label="Perfil">${roleOptions}</select></td>
         <td><em class="job-state ${statusClass}">${statusLabel}</em></td>
         <td>${formatDateTime(account.ultimo_login_em)}</td>
         <td>${formatDateTime(account.criado_em)}</td>
         <td class="account-actions">
           <button type="button" data-account-save="${accountId}" data-tooltip="Salvar perfil"><i data-lucide="save"></i></button>
+          <button type="button" data-account-access="${accountId}" data-tooltip="Gerenciar permissões"><i data-lucide="key-round"></i></button>
           <button type="button" data-account-toggle="${accountId}" data-tooltip="${account.ativo ? 'Inativar conta' : 'Ativar conta'}"><i data-lucide="${account.ativo ? 'user-x' : 'user-check'}"></i></button>
-          <button type="button" data-account-password="${accountId}" data-tooltip="Redefinir senha"><i data-lucide="key-round"></i></button>
+          <button type="button" data-account-password="${accountId}" data-tooltip="Redefinir senha"><i data-lucide="lock-keyhole"></i></button>
         </td>
       `;
       body.append(row);
     });
+    const companyOptions = document.getElementById('accountCompanyOptions');
+    if (companyOptions) {
+      const companies = state.accountsMeta.empresas || [];
+      const options = ['<option value="">Selecione uma empresa</option>'].concat(
+        companies.map(company => `<option value="${Number(company.id)}">${escapeHtml(cleanLabel(company.nome))}</option>`)
+      ).join('');
+      companyOptions.innerHTML = `<div class="account-company-row"><select name="empresa_ids[]" class="account-company-select"${companies.length ? '' : ' disabled'}>${options}</select><button type="button" data-add-company aria-label="Adicionar outra empresa">+</button></div>`;
+    }
     window.lucide?.createIcons();
   };
 
@@ -2040,8 +2066,11 @@
     try {
       const payload = await fetchJson('contas.php');
       state.accounts = Array.isArray(payload?.items) ? payload.items : [];
+      state.companies = Array.isArray(payload?.empresas) ? payload.empresas : [];
       state.accountsMeta = {
         perfis: payload?.perfis || {},
+        empresas: Array.isArray(payload?.empresas) ? payload.empresas : [],
+        administrador_geral: Boolean(payload?.administrador_geral),
         viewer: payload?.viewer || null
       };
       safeRun(renderAccounts);
@@ -2335,6 +2364,17 @@
     if (!desktopRail.matches) closeRail();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }));
+  document.querySelectorAll('[data-account-tab]').forEach(tab => tab.addEventListener('click', () => {
+    const target = tab.dataset.accountTab;
+    document.querySelectorAll('[data-account-tab]').forEach(item => {
+      const active = item === tab;
+      item.classList.toggle('is-active', active);
+      item.setAttribute('aria-selected', String(active));
+    });
+    document.querySelectorAll('[data-account-panel]').forEach(panel => {
+      panel.hidden = panel.dataset.accountPanel !== target;
+    });
+  }));
   document.querySelectorAll('.rail-item:not([data-section])').forEach(item => item.addEventListener('click', () => {
     if (!desktopRail.matches) closeRail();
   }));
@@ -2471,16 +2511,51 @@
   document.getElementById('accountRoleSelect')?.addEventListener('change', event => {
     setText('accountPermissionHint', accountRoleHint(event.currentTarget.value));
   });
+  document.getElementById('accountCompanyOptions')?.addEventListener('click', event => {
+    const addButton = event.target.closest('[data-add-company]');
+    const removeButton = event.target.closest('[data-remove-company]');
+    if (removeButton) {
+      const row = removeButton.closest('.account-company-row');
+      const previous = row?.previousElementSibling;
+      row?.remove();
+      previous?.querySelector('[data-add-company]')?.removeAttribute('hidden');
+      return;
+    }
+    if (!addButton) return;
+    const companies = state.accountsMeta.empresas || [];
+    if (!companies.length) return;
+    addButton.hidden = true;
+    const row = document.createElement('div');
+    row.className = 'account-company-row';
+    row.innerHTML = `<select name="empresa_ids[]" class="account-company-select"><option value="">Selecione uma empresa</option>${companies.map(company => `<option value="${Number(company.id)}">${escapeHtml(cleanLabel(company.nome))}</option>`).join('')}</select><button type="button" data-remove-company aria-label="Remover esta empresa">−</button><button type="button" data-add-company aria-label="Adicionar outra empresa">+</button>`;
+    document.getElementById('accountCompanyOptions').append(row);
+  });
   document.getElementById('accountsRows')?.addEventListener('click', async event => {
     const button = event.target.closest('button');
     if (!button) return;
 
-    const id = button.dataset.accountSave || button.dataset.accountToggle || button.dataset.accountPassword;
+    const id = button.dataset.accountSave || button.dataset.accountAccess || button.dataset.accountToggle || button.dataset.accountPassword;
     if (!id) return;
 
     button.disabled = true;
     try {
-      if (button.dataset.accountSave) {
+      if (button.dataset.accountAccess) {
+        const account = state.accounts.find(item => Number(item.id) === Number(id));
+        const dialog = document.getElementById('accountPermissionsDialog');
+        const options = document.getElementById('accountPermissionsOptions');
+        if (!account || !dialog || !options) return;
+        document.getElementById('accountPermissionsTitle').textContent = `Permissões: ${account.nome}`;
+        const selected = new Set((account.empresa_ids || []).map(Number));
+        const companies = state.accountsMeta.empresas || [];
+        const selectedIds = Array.from(selected);
+        const rows = selectedIds.length ? selectedIds : [0];
+        const companyOptions = ['<option value="">Selecione uma empresa</option>'].concat(companies.map(company => `<option value="${Number(company.id)}">${escapeHtml(cleanLabel(company.nome))}</option>`)).join('');
+        options.innerHTML = companies.length
+          ? rows.map((selectedId, index) => `<div class="account-company-row"><select name="permission_empresa_ids[]">${companyOptions.replace(`value="${selectedId}"`, `value="${selectedId}" selected`)}</select>${index > 0 ? '<button type="button" data-remove-permission-company aria-label="Remover empresa">−</button>' : ''}${index === rows.length - 1 ? '<button type="button" data-add-permission-company aria-label="Adicionar empresa">+</button>' : ''}</div>`).join('')
+          : '<small>Nenhuma empresa Acronis sincronizada.</small>';
+        dialog.dataset.accountId = id;
+        dialog.showModal();
+      } else if (button.dataset.accountSave) {
         const role = document.querySelector(`[data-account-role="${id}"]`)?.value || 'leitura';
         await updateAccount(id, { perfil: role }, 'Perfil atualizado.');
       } else if (button.dataset.accountToggle) {
@@ -2495,6 +2570,38 @@
       notify(error.message || 'Falha ao atualizar conta.');
     } finally {
       button.disabled = false;
+    }
+  });
+  document.getElementById('cancelAccountPermissions')?.addEventListener('click', () => document.getElementById('accountPermissionsDialog')?.close());
+  document.getElementById('accountPermissionsOptions')?.addEventListener('click', event => {
+    const container = event.currentTarget;
+    const remove = event.target.closest('[data-remove-permission-company]');
+    if (remove) {
+      const row = remove.closest('.account-company-row');
+      const previous = row?.previousElementSibling;
+      row?.remove();
+      previous?.querySelector('[data-add-permission-company]')?.removeAttribute('hidden');
+      return;
+    }
+    if (!event.target.closest('[data-add-permission-company]')) return;
+    const companies = state.accountsMeta.empresas || [];
+    const row = document.createElement('div');
+    row.className = 'account-company-row';
+    row.innerHTML = `<select name="permission_empresa_ids[]"><option value="">Selecione uma empresa</option>${companies.map(company => `<option value="${Number(company.id)}">${escapeHtml(cleanLabel(company.nome))}</option>`).join('')}</select><button type="button" data-remove-permission-company aria-label="Remover empresa">−</button><button type="button" data-add-permission-company aria-label="Adicionar empresa">+</button>`;
+    container.querySelectorAll('[data-add-permission-company]').forEach(button => { button.hidden = true; });
+    container.append(row);
+  });
+  document.getElementById('accountPermissionsForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const dialog = document.getElementById('accountPermissionsDialog');
+    const id = Number(dialog?.dataset.accountId || 0);
+    if (!id) return;
+    const empresaIds = Array.from(document.querySelectorAll('#accountPermissionsOptions select[name="permission_empresa_ids[]"]')).map(select => Number(select.value)).filter(Boolean);
+    try {
+      await updateAccount(id, { empresa_ids: empresaIds }, 'Permissões atualizadas.');
+      dialog.close();
+    } catch (error) {
+      notify(error.message || 'Falha ao atualizar permissões.');
     }
   });
   document.getElementById('accountForm')?.addEventListener('submit', async event => {
@@ -2512,15 +2619,18 @@
       email: String(data.get('email') || '').trim(),
       perfil: String(data.get('perfil') || 'leitura').trim(),
       senha: String(data.get('senha') || ''),
-      ativo: data.get('ativo') !== null
+      ativo: data.get('ativo') !== null,
+      empresa_ids: Array.from(document.querySelectorAll('#accountCompanyOptions select[name="empresa_ids[]"]'))
+        .map(option => Number(option.value))
+        .filter(Boolean)
     };
 
     submitButton.disabled = true;
     if (message) message.textContent = 'Criando conta...';
     try {
-      const created = await fetchJson('contas.php', { method: 'POST', body: payload });
-      state.accounts = [created, ...state.accounts].sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), uiLocale()));
-      renderAccounts();
+      await fetchJson('contas.php', { method: 'POST', body: payload });
+      dataRequests.delete('accounts');
+      await loadAccounts();
       dataRequests.delete('audit');
       loadAudit().catch(() => {});
       form.reset();

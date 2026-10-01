@@ -6,15 +6,15 @@ namespace NyxCloud\Services;
 
 final class DeviceService extends AbstractAcronisService
 {
-    private const CACHE_VERSION = 'v10';
+    private const CACHE_VERSION = 'v13';
 
     public function listDevices(array $filters = []): array
     {
-        return $this->remember('acronis.devices.' . self::CACHE_VERSION . '.' . md5(json_encode($filters)), (int) $this->config['cache_ttl']['devices'], function () use ($filters): array {
+        return $this->remember('acronis.devices.' . self::CACHE_VERSION . '.' . $this->escopoCacheKey() . '.' . md5(json_encode($filters)), (int) $this->config['cache_ttl']['devices'], function () use ($filters): array {
             $workloads = $this->workloadItems($filters);
 
             try {
-                $tenants = $this->items($this->api->get($this->endpoint('tenants'), $this->tenantScopeFilters()));
+                $tenants = $this->filterTenantScopedItems($this->items($this->api->get($this->endpoint('tenants'), $this->tenantScopeFilters())));
             } catch (\Throwable $e) {
                 error_log('Acronis: inventario carregado sem mapa de clientes: ' . $e->getMessage());
                 $tenants = [];
@@ -38,7 +38,7 @@ final class DeviceService extends AbstractAcronisService
 
     public function dailyExecutions(): array
     {
-        return $this->remember('acronis.devices.daily-executions.v3', 120, function (): array {
+        return $this->remember('acronis.devices.daily-executions.v3.' . $this->escopoCacheKey(), 120, function (): array {
             $devices = $this->listDevices([]);
             $tasks = $this->taskItems(30);
             $deviceMap = $this->deviceLookupMap($devices);
@@ -445,11 +445,14 @@ final class DeviceService extends AbstractAcronisService
 
             $uuid = $this->firstString($task, ['tenant.uuid']);
             $numericId = $this->firstString($task, ['tenant.id']);
-            if ($uuid === '' || $numericId === '' || !isset($tenantByUuid[$uuid])) {
+            if ($uuid === '' || $numericId === '') {
                 continue;
             }
 
-            $map[$numericId] = $tenantByUuid[$uuid];
+            $map[$numericId] = $tenantByUuid[$uuid] ?? [
+                'nome' => $this->firstString($task, ['tenant.name'], 'Cliente nao identificado'),
+                'raw' => $task['tenant'] ?? [],
+            ];
         }
 
         return $map;

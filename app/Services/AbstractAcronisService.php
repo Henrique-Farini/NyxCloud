@@ -10,6 +10,8 @@ use NyxCloud\Lib\Cache\CacheInterface;
 abstract class AbstractAcronisService
 {
     private ?array $tenantScopeCache = null;
+    private ?array $allowedTenantIds = null;
+    private ?array $allowedTenantNames = null;
 
     public function __construct(
         protected readonly AcronisApi $api,
@@ -147,39 +149,136 @@ abstract class AbstractAcronisService
     {
         $days = max(1, $days);
 
-        return $this->remember('acronis.tasks.daily.v2.' . $days, 300, function () use ($days): array {
+        return $this->remember('acronis.tasks.daily.v4.' . $days . '.' . $this->escopoCacheKey(), 300, function () use ($days): array {
             $items = [];
-            $after = '';
             $since = gmdate('Y-m-d\TH:i:s\Z', time() - ($days * 86400));
+            $scopeIds = $this->tenantScopeIds();
+            $taskTenantIds = [];
 
-            for ($page = 0; $page < 100; $page++) {
-                $query = $after === ''
-                    ? ['limit' => 1000, 'completedAt' => 'gt(' . $since . ')']
-                    : ['limit' => 1000, 'after' => $after];
+            if ($scopeIds !== null) {
+                foreach ($this->workloadItems() as $workload) {
+                    if (!is_array($workload)) {
+                        continue;
+                    }
 
-                $payload = $this->api->get($this->endpoint('tasks'), $query);
-                $pageItems = $this->items($payload);
-                foreach ($pageItems as $item) {
-                    if (is_array($item)) {
-                        $items[] = $item;
+                    $numericTenantId = $this->firstString($workload, ['tenant_id']);
+                    if ($numericTenantId !== '') {
+                        $taskTenantIds[$numericTenantId] = true;
                     }
                 }
-
-                $next = is_array($payload) ? (string) ($payload['paging']['cursors']['after'] ?? '') : '';
-                if ($pageItems === [] || $next === '' || $next === $after) {
-                    break;
-                }
-
-                $after = $next;
             }
 
-            return $items;
+            $tenantQueries = $scopeIds === null
+                ? [null]
+                : array_keys($taskTenantIds);
+
+            foreach ($tenantQueries as $tenantId) {
+                $after = '';
+                for ($page = 0; $page < 100; $page++) {
+                    $query = $after === ''
+                        ? ['limit' => 1000, 'completedAt' => 'gt(' . $since . ')']
+                        : ['limit' => 1000, 'after' => $after];
+
+                    if ($tenantId !== null) {
+                        // Task Manager expects the internal numeric tenant id.
+                        $query['tenant'] = $tenantId;
+                    }
+
+                    $payload = $this->api->get($this->endpoint('tasks'), $query);
+                    $pageItems = $this->items($payload);
+                    foreach ($pageItems as $item) {
+                        if (is_array($item)) {
+                            $items[] = $item;
+                        }
+                    }
+
+                    $next = is_array($payload) ? (string) ($payload['paging']['cursors']['after'] ?? '') : '';
+                    if ($pageItems === [] || $next === '' || $next === $after) {
+                        break;
+                    }
+
+                    $after = $next;
+                }
+            }
+
+            if ($scopeIds === null || $taskTenantIds !== []) {
+                return $items;
+            }
+
+            return $this->filterTenantScopedItems($items);
         });
+    }
+
+    public function definirEscopoTenants(?array $tenantIds, ?array $tenantNames = null): void
+    {
+        $this->allowedTenantIds = $tenantIds === null
+            ? null
+            : array_values(array_unique(array_filter(array_map('strval', $tenantIds), static fn (string $id): bool => $id !== '')));
+        $this->allowedTenantNames = $tenantNames === null
+            ? null
+            : array_values(array_unique(array_filter(array_map(
+                static fn (string $name): string => mb_strtolower(trim($name)),
+                $tenantNames
+            ), static fn (string $name): bool => $name !== '')));
+        $this->tenantScopeCache = null;
+    }
+
+    protected function escopoCacheKey(): string
+    {
+        return $this->allowedTenantIds === null
+            ? 'all'
+            : hash('sha256', json_encode([$this->allowedTenantIds, $this->allowedTenantNames]));
+    }
+
+    protected function tenantScopeNames(): array
+    {
+        return $this->allowedTenantNames ?? [];
+    }
+
+    protected function tenantScopeIds(): ?array
+    {
+        return $this->allowedTenantIds;
+    }
+
+    protected function itemPertenceAoEscopo(array $item): bool
+    {
+        if ($this->allowedTenantIds === null) {
+            return true;
+        }
+        if ($this->allowedTenantIds === [] && $this->allowedTenantNames === []) {
+            return false;
+        }
+
+        foreach (['tenant_id', 'tenantID', 'tenant.id', 'tenant.uuid', 'context.tenant_id', 'context.tenant.id', 'context.tenant.uuid', 'id', 'uuid'] as $path) {
+            $value = trim($this->firstString($item, [$path]));
+            if ($value !== '' && in_array($value, $this->allowedTenantIds ?? [], true)) {
+                return true;
+            }
+        }
+
+        if ($this->allowedTenantNames !== null) {
+            foreach (['tenant.name', 'tenant_name', 'cliente', 'empresa', 'name', 'customer_name'] as $path) {
+                $name = mb_strtolower(trim($this->firstString($item, [$path])));
+                if ($name !== '') {
+                    return in_array($name, $this->allowedTenantNames, true);
+                }
+            }
+        }
+
+        return false;
+    }
+
+    protected function filterTenantScopedItems(array $items): array
+    {
+        if ($this->allowedTenantIds === null) {
+            return $items;
+        }
+        return array_values(array_filter($items, fn (mixed $item): bool => is_array($item) && $this->itemPertenceAoEscopo($item)));
     }
 
     protected function policyItems(): array
     {
-        return $this->remember('acronis.policies.v1', 300, function (): array {
+        return $this->remember('acronis.policies.v1.' . $this->escopoCacheKey(), 300, function (): array {
             $items = [];
             $after = '';
 
@@ -200,7 +299,7 @@ abstract class AbstractAcronisService
                 $after = $next;
             }
 
-            return $items;
+            return $this->filterTenantScopedItems($items);
         });
     }
 
@@ -211,31 +310,53 @@ abstract class AbstractAcronisService
             'include_all_attributes' => 'true',
             'limit' => 500,
         ], $query);
-        $cacheKey = 'acronis.workloads.v1.' . md5(json_encode($baseQuery));
+        $cacheKey = 'acronis.workloads.v3.' . $this->escopoCacheKey() . '.' . md5(json_encode($baseQuery));
 
         return $this->remember($cacheKey, (int) ($this->config['cache_ttl']['devices'] ?? 300), function () use ($baseQuery): array {
             $items = [];
-            $after = '';
+            $scopeIds = $this->tenantScopeIds();
+            $tenantQueries = $scopeIds === null ? [null] : $scopeIds;
 
-            for ($page = 0; $page < 100; $page++) {
-                $query = $after === '' ? $baseQuery : array_merge($baseQuery, ['after' => $after]);
-                $payload = $this->api->get($this->endpoint('workloads'), $query);
-                $pageItems = $this->items($payload);
-                foreach ($pageItems as $item) {
-                    if (is_array($item)) {
-                        $items[] = $item;
+            foreach ($tenantQueries as $tenantId) {
+                $after = '';
+                for ($page = 0; $page < 100; $page++) {
+                    $query = $baseQuery;
+                    if ($tenantId !== null) {
+                        // The workload API returns an internal numeric tenant_id
+                        // in items, so filtering by tenant_id with the platform
+                        // UUID can return only aggregate groups. The documented
+                        // customerUuid search returns the actual machines.
+                        $query['search'] = "customerUuid = '" . addslashes($tenantId) . "'";
                     }
-                }
+                    if ($after !== '') {
+                        $query['after'] = $after;
+                    }
 
-                $next = is_array($payload) ? (string) ($payload['paging']['cursors']['after'] ?? '') : '';
-                if ($pageItems === [] || $next === '' || $next === $after) {
-                    break;
-                }
+                    $payload = $this->api->get($this->endpoint('workloads'), $query);
+                    $pageItems = $this->items($payload);
+                    foreach ($pageItems as $item) {
+                        if (is_array($item)) {
+                            $items[] = $item;
+                        }
+                    }
 
-                $after = $next;
+                    $next = is_array($payload) ? (string) ($payload['paging']['cursors']['after'] ?? '') : '';
+                    if ($pageItems === [] || $next === '' || $next === $after) {
+                        break;
+                    }
+
+                    $after = $next;
+                }
             }
 
-            return $items;
+            if ($scopeIds === null) {
+                return $items;
+            }
+
+            // Cada chamada acima já foi feita com customerUuid de um tenant
+            // permitido; não compare o tenant_id numérico retornado no item
+            // com o UUID da empresa, pois são identificadores diferentes.
+            return array_values(array_filter($items, static fn (mixed $item): bool => is_array($item)));
         });
     }
 

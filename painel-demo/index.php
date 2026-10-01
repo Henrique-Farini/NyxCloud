@@ -160,8 +160,8 @@ $podeGerenciarPainel = usuarioPodeGerenciarContas($usuarioPainel);
         </section>
         <section class="surface daily-devices-surface" id="daily-devices" data-panel-section="infrastructure"><div class="surface-head"><div><span class="surface-eyebrow">EXECUCOES POR DISPOSITIVO</span><h2>Hoje e ontem em ordem alfabetica</h2><small class="surface-note">Uma linha por dispositivo e plano, usando a ultima execucao de cada dia</small></div><span class="health-badge"><i></i> Atualizacao automatica</span></div><div class="daily-device-columns"><article><div class="daily-device-head"><div><small>HOJE</small><b id="todayExecutionDate">--</b></div><strong id="todayExecutionCount">--</strong></div><div class="daily-device-list" id="todayExecutionRows"><div class="daily-device-empty">Carregando execucoes de hoje...</div></div></article><article><div class="daily-device-head"><div><small>ONTEM</small><b id="yesterdayExecutionDate">--</b></div><strong id="yesterdayExecutionCount">--</strong></div><div class="daily-device-list" id="yesterdayExecutionRows"><div class="daily-device-empty">Carregando execucoes de ontem...</div></div></article></div></section>
         <section class="immersive-alerts" data-panel-section="alerts"><iframe src="<?= htmlspecialchars($panelAlertsPath, ENT_QUOTES, 'UTF-8') ?>?inside=1&v=20260915-alert-visibility-5" title="Central de alertas" loading="lazy"></iframe></section>
-         <?php if ($podeGerenciarPainel): ?><section class="accounts-grid" data-panel-section="accounts">
-          <article class="surface accounts-surface">
+         <?php if ($podeGerenciarPainel): ?><nav class="account-view-tabs" aria-label="Gestão de contas"><button type="button" class="is-active" data-account-tab="management" aria-selected="true"><i data-lucide="users-round"></i> Contas do painel</button><button type="button" data-account-tab="create" aria-selected="false"><i data-lucide="user-plus"></i> Criar usuário</button></nav><section class="accounts-grid accounts-management-layout" data-panel-section="accounts">
+          <article class="surface accounts-surface" data-account-panel="management">
             <div class="surface-head">
               <div>
                 <span class="surface-eyebrow">GESTAO DE ACESSO</span>
@@ -174,7 +174,7 @@ $podeGerenciarPainel = usuarioPodeGerenciarContas($usuarioPainel);
             <div class="data-scroll accounts-table-wrap">
               <table class="accounts-table">
                 <thead>
-                  <tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Status</th><th>Ultimo login</th><th>Criado em</th><th>Acoes</th></tr>
+                  <tr><th>Nome</th><th>E-mail</th><th>Empresas</th><th>Perfil</th><th>Status</th><th>Ultimo login</th><th>Criado em</th><th>Acoes</th></tr>
                 </thead>
                 <tbody id="accountsRows">
                   <tr><td colspan="7">Carregando contas...</td></tr>
@@ -182,7 +182,7 @@ $podeGerenciarPainel = usuarioPodeGerenciarContas($usuarioPainel);
               </table>
             </div>
           </article>
-          <article class="surface account-form-surface">
+          <article class="surface account-form-surface" data-account-panel="create" hidden>
             <div class="surface-head">
               <div>
                 <span class="surface-eyebrow">NOVA CONTA</span>
@@ -194,6 +194,11 @@ $podeGerenciarPainel = usuarioPodeGerenciarContas($usuarioPainel);
               <label><span>Nome</span><input type="text" name="nome" minlength="3" maxlength="150" placeholder="Ex.: Equipe Operacional" required></label>
               <label><span>E-mail</span><input type="email" name="email" placeholder="usuario@empresa.com" required></label>
               <label><span>Perfil</span><select name="perfil" id="accountRoleSelect"><option value="leitura">Somente leitura</option><option value="operador">Operador</option><option value="admin">Administrador</option></select></label>
+              <div class="account-company-picker" aria-describedby="accountCompanyHint">
+                <span>Empresas permitidas</span>
+                <div id="accountCompanyOptions"></div>
+              </div>
+              <small class="surface-note" id="accountCompanyHint">Empresas sincronizadas da Acronis. Selecione uma ou mais; o usuario verá somente esses dados.</small>
               <label><span>Senha inicial</span><input type="password" name="senha" minlength="8" placeholder="Minimo de 8 caracteres" required></label>
               <label class="account-checkbox"><input type="checkbox" name="ativo" checked><span>Conta ativa ao criar</span></label>
               <div class="account-permission-hint" id="accountPermissionHint">Somente leitura: visualiza indicadores sem acesso administrativo.</div>
@@ -202,6 +207,13 @@ $podeGerenciarPainel = usuarioPodeGerenciarContas($usuarioPainel);
             </form>
           </article>
          </section>
+         <dialog class="account-permissions-dialog" id="accountPermissionsDialog">
+           <form method="dialog" id="accountPermissionsForm">
+             <div class="surface-head"><div><span class="surface-eyebrow">PERMISSÕES</span><h2 id="accountPermissionsTitle">Empresas permitidas</h2><small class="surface-note">Defina quais empresas este usuário pode visualizar.</small></div></div>
+             <div id="accountPermissionsOptions" class="account-company-picker"></div>
+             <div class="account-permissions-actions"><button type="button" class="text-action" id="cancelAccountPermissions">Cancelar</button><button type="submit" class="solid-action" id="saveAccountPermissions">Salvar permissões</button></div>
+           </form>
+         </dialog>
          <section class="accounts-grid integrations-grid" data-panel-section="integrations">
           <article class="surface accounts-surface">
             <div class="surface-head">

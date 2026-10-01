@@ -9,7 +9,7 @@ use DateTimeZone;
 
 final class ExecutionWindowService extends AbstractAcronisService
 {
-    private const CACHE_VERSION = 'v18';
+    private const CACHE_VERSION = 'v19';
     private ?array $windowsConfigCache = null;
     private ?DateTimeZone $timezoneCache = null;
     private array $lookupKeyCache = [];
@@ -19,7 +19,7 @@ final class ExecutionWindowService extends AbstractAcronisService
         $requestedDate = $this->normalizeDate((string) ($filters['date'] ?? date('Y-m-d')));
         $preferStale = filter_var($filters['stale'] ?? false, FILTER_VALIDATE_BOOLEAN);
         unset($filters['stale']);
-        $cacheKey = 'acronis.execution_windows.' . self::CACHE_VERSION . '.' . $this->windowsConfigVersion() . '.' . md5(json_encode([$filters, $requestedDate]));
+        $cacheKey = 'acronis.execution_windows.' . self::CACHE_VERSION . '.' . $this->escopoCacheKey() . '.' . $this->windowsConfigVersion() . '.' . md5(json_encode([$filters, $requestedDate]));
 
         if ($preferStale) {
             $cached = $this->cache->getStale($cacheKey);
@@ -48,7 +48,10 @@ final class ExecutionWindowService extends AbstractAcronisService
                     fn (array $task): bool => $task['is_backup']
                 ));
 
-                $rules = $this->mergeRules($this->automaticRules(), $this->rules());
+                // As janelas agora são derivadas das políticas e do histórico
+                // real da Acronis. Regras manuais antigas não entram mais no
+                // resultado exibido para o usuário.
+                $rules = $this->automaticRules();
                 $date = $this->resolveEffectiveDate($backupTasks, $requestedDate, array_key_exists('date', $filters), $rules);
                 $historicalItems = $this->buildHistoricalSuggestions($backupTasks, $date);
                 $ruleItems = $rules !== [] ? $this->matchRules($rules, $backupTasks, $date) : [];
@@ -110,7 +113,7 @@ final class ExecutionWindowService extends AbstractAcronisService
         $config = $this->windowsConfig();
         $rules = is_array($config['rules'] ?? null) ? $config['rules'] : [];
 
-        return array_values(array_filter(array_map(function (mixed $rule): ?array {
+        $rules = array_values(array_filter(array_map(function (mixed $rule): ?array {
             if (!is_array($rule)) {
                 return null;
             }
@@ -150,13 +153,37 @@ final class ExecutionWindowService extends AbstractAcronisService
                 'dias_semana' => $diasSemana,
             ];
         }, $rules)));
+
+        if ($this->escopoCacheKey() === 'all') {
+            return $rules;
+        }
+
+        $allowedNames = array_map(
+            fn (string $name): string => $this->normalizeLookupText($name),
+            $this->tenantScopeNames()
+        );
+
+        return array_values(array_filter($rules, function (array $rule) use ($allowedNames): bool {
+            $companyNames = array_merge(
+                [(string) ($rule['empresa'] ?? '')],
+                is_array($rule['empresa_aliases'] ?? null) ? $rule['empresa_aliases'] : []
+            );
+
+            foreach ($companyNames as $companyName) {
+                if (in_array($this->normalizeLookupText((string) $companyName), $allowedNames, true)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }));
     }
 
     private function automaticRules(): array
     {
         try {
             $tenantNames = [];
-            $tenants = $this->items($this->api->get($this->endpoint('tenants'), $this->tenantScopeFilters(['limit' => 1000])));
+                $tenants = $this->filterTenantScopedItems($this->items($this->api->get($this->endpoint('tenants'), $this->tenantScopeFilters(['limit' => 1000]))));
             foreach ($tenants as $tenant) {
                 if (!is_array($tenant)) {
                     continue;

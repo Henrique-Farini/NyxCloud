@@ -19,7 +19,8 @@
 
   const AlertDetails = () => {
     const [row, setRow] = useState(null);
-    const [profileRole, setProfileRole] = useState(document.body.dataset.profile || 'unknown');
+    const profileFromPage = () => String(window.__nyxcloudProfileRole || document.body.dataset.profile || 'unknown').toLowerCase();
+    const [profileRole, setProfileRole] = useState(profileFromPage());
 
     useEffect(() => {
       const openDetails = event => {
@@ -31,7 +32,11 @@
     }, []);
 
     useEffect(() => {
-      const ready = event => setProfileRole(event.detail?.role || 'leitura');
+      // Sincroniza novamente porque me.php e o React são carregados em
+      // paralelo; assim o administrador não fica preso no modo somente leitura
+      // caso o evento tenha sido emitido antes deste listener existir.
+      setProfileRole(profileFromPage());
+      const ready = event => setProfileRole(String(event.detail?.role || profileFromPage()).toLowerCase());
       window.addEventListener('nyxcloud-profile-ready', ready);
       return () => window.removeEventListener('nyxcloud-profile-ready', ready);
     }, []);

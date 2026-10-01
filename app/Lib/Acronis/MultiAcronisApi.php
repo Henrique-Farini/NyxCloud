@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyxCloud\Lib\Acronis;
 
+use NyxCloud\Lib\Acronis\Exceptions\CommunicationException;
+
 final class MultiAcronisApi
 {
     /**
@@ -17,62 +19,72 @@ final class MultiAcronisApi
     public function get(string $uri, array $query = [], array $headers = []): mixed
     {
         $results = [];
+        $errors = [];
         foreach ($this->apis as $api) {
             try {
                 $results[] = $api->get($uri, $query, $headers);
             } catch (\Throwable $e) {
-                continue;
+                $errors[] = $e;
             }
         }
 
-        return $this->mergeResults($results);
+        return $this->mergeResults($results, $errors);
     }
 
     public function post(string $uri, mixed $payload = null, array $headers = [], array $query = []): mixed
     {
         $results = [];
+        $errors = [];
         foreach ($this->apis as $api) {
             try {
                 $results[] = $api->post($uri, $payload, $headers, $query);
             } catch (\Throwable $e) {
-                continue;
+                $errors[] = $e;
             }
         }
 
-        return $this->mergeResults($results);
+        return $this->mergeResults($results, $errors);
     }
 
     public function put(string $uri, mixed $payload = null, array $headers = [], array $query = []): mixed
     {
         $results = [];
+        $errors = [];
         foreach ($this->apis as $api) {
             try {
                 $results[] = $api->put($uri, $payload, $headers, $query);
             } catch (\Throwable $e) {
-                continue;
+                $errors[] = $e;
             }
         }
 
-        return $this->mergeResults($results);
+        return $this->mergeResults($results, $errors);
     }
 
     public function delete(string $uri, array $query = [], array $headers = []): mixed
     {
         $results = [];
+        $errors = [];
         foreach ($this->apis as $api) {
             try {
                 $results[] = $api->delete($uri, $query, $headers);
             } catch (\Throwable $e) {
-                continue;
+                $errors[] = $e;
             }
         }
 
-        return $this->mergeResults($results);
+        return $this->mergeResults($results, $errors);
     }
 
-    private function mergeResults(array $results): mixed
+    private function mergeResults(array $results, array $errors = []): mixed
     {
         if ($results === []) {
+            if ($errors !== []) {
+                $lastError = $errors[array_key_last($errors)];
+                error_log('Acronis: todas as contas configuradas estao indisponiveis. ' . $lastError->getMessage());
+                throw new CommunicationException('As contas Acronis configuradas estao indisponiveis no momento.');
+            }
+
             return [];
         }
 

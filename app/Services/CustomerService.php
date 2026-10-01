@@ -6,18 +6,17 @@ namespace NyxCloud\Services;
 
 final class CustomerService extends AbstractAcronisService
 {
-    private const CACHE_VERSION = 'v9';
+    private const CACHE_VERSION = 'v14';
 
     public function listCustomers(array $filters = []): array
     {
-        return $this->remember('acronis.customers.' . self::CACHE_VERSION . '.' . md5(json_encode($filters)), (int) $this->config['cache_ttl']['customers'], function () use ($filters): array {
+        return $this->remember('acronis.customers.' . self::CACHE_VERSION . '.' . $this->escopoCacheKey() . '.' . md5(json_encode($filters)), (int) $this->config['cache_ttl']['customers'], function () use ($filters): array {
             $tenantFilters = array_merge(['limit' => 1000], $filters);
             $tenants = $this->tenantItems($tenantFilters);
-            $devices = array_values(array_filter($this->items($this->api->get($this->endpoint('workloads'), [
-                'include_status' => 'true',
-                'include_all_attributes' => 'true',
-                'limit' => 500,
-            ])), fn (array $device): bool => $this->isRealDevice($device)));
+            $devices = array_values(array_filter(
+                $this->workloadItems(),
+                fn (array $device): bool => $this->isRealDevice($device)
+            ));
             $tasks = $this->taskItems(90);
             $tenantFamilyMap = $this->tenantFamilyMap($tenants);
             $tenantNumericMap = $this->tenantNumericMap($tasks);
@@ -66,7 +65,7 @@ final class CustomerService extends AbstractAcronisService
             $after = $next;
         }
 
-        return $items;
+        return $this->filterTenantScopedItems($items);
     }
 
     private function mapCustomer(array $tenant, array $devicesByTenant, array $tasksByTenant, array $tenantFamilyMap, array $tenantNumericMap): array
@@ -82,8 +81,27 @@ final class CustomerService extends AbstractAcronisService
         $tenantTasks = $this->familyItems($tasksByTenant, $allFamilyIds);
         $deviceCount = count($tenantDevices);
 
-        if ($deviceCount === 0 && $numericFamilyIds !== []) {
-            $deviceCount = $this->workloadCountForTenantFamily($numericFamilyIds);
+        if ($deviceCount === 0) {
+            // Workloads expose an internal numeric tenant_id while the tenant
+            // catalog uses UUIDs. Query by customerUuid when the local maps do
+            // not contain a usable numeric bridge.
+            $deviceCount = $this->workloadCountForTenantFamily($familyIds);
+        }
+
+        $lastBackup = $this->latestDate($tenantTasks, ['completedAt', 'updatedAt', 'startedAt']);
+        if ($lastBackup === '') {
+            $targetName = mb_strtolower(trim((string) $this->firstString($tenant, ['name', 'customer_name'])));
+            $targetName = preg_replace('/\s*\([^)]*\)/u', '', $targetName) ?? $targetName;
+            $nameMatchedTasks = [];
+            foreach ($tasksByTenant as $group) {
+                foreach ($group as $task) {
+                    $taskName = mb_strtolower(trim($this->firstString($task, ['tenant.name'])));
+                    if ($targetName !== '' && $taskName !== '' && (str_contains($taskName, $targetName) || str_contains($targetName, $taskName))) {
+                        $nameMatchedTasks[] = $task;
+                    }
+                }
+            }
+            $lastBackup = $this->latestDate($nameMatchedTasks, ['completedAt', 'updatedAt', 'startedAt']);
         }
 
         return [
@@ -91,7 +109,7 @@ final class CustomerService extends AbstractAcronisService
             'tenant' => $tenantId,
             'quantidade_dispositivos' => $deviceCount,
             'plano' => $this->firstString($tenant, ['edition', 'pricing_mode', 'kind', 'type']),
-            'ultimo_backup' => $this->latestDate($tenantTasks, ['completedAt', 'updatedAt', 'startedAt']),
+            'ultimo_backup' => $lastBackup,
             'raw' => $tenant,
         ];
     }
@@ -204,7 +222,7 @@ final class CustomerService extends AbstractAcronisService
 
     private function workloadCountForTenantFamily(array $familyIds): int
     {
-        $cacheKey = 'acronis.customer.workload-count.' . self::CACHE_VERSION . '.' . md5(json_encode($familyIds));
+        $cacheKey = 'acronis.customer.workload-count.' . self::CACHE_VERSION . '.' . $this->escopoCacheKey() . '.' . md5(json_encode($familyIds));
 
         return $this->remember($cacheKey, (int) $this->config['cache_ttl']['customers'], function () use ($familyIds): int {
             $workloadIds = [];
@@ -212,7 +230,7 @@ final class CustomerService extends AbstractAcronisService
             foreach ($familyIds as $familyId) {
                 try {
                 $items = array_values(array_filter($this->items($this->api->get($this->endpoint('workloads'), [
-                    'tenant_id' => $familyId,
+                    'search' => "customerUuid = '" . addslashes($familyId) . "'",
                     'include_status' => 'true',
                     'include_all_attributes' => 'true',
                     'limit' => 500,

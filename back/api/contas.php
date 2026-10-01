@@ -8,6 +8,7 @@ $usuario = exigirPerfilAdministrador($pdo);
 $administradorGeral = usuarioEhAdministradorGeral($pdo, $usuario);
 
 try {
+    sincronizarEmpresasAcronis($pdo);
     $hasPerfil = tabelaUsuarioTemPerfil($pdo);
     $mysql = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql';
     $contaColumns = 'id, nome, email, ' . ($hasPerfil ? 'perfil' : "'admin' AS perfil")
@@ -111,8 +112,8 @@ try {
         }
         if ($temEmpresas) {
             validarEmpresasAcessiveis($pdo, $usuario, $empresaIds);
-            if ($empresaIds === [] && $self) {
-                apiResponse(false, new stdClass(), [], 'Nao remova todas as empresas do seu proprio usuario.', 422);
+            if ($empresaIds === []) {
+                apiResponse(false, new stdClass(), [], 'Selecione pelo menos uma empresa para este usuario.', 422);
             }
         }
 
@@ -188,6 +189,9 @@ try {
         apiResponse(false, new stdClass(), [], 'Perfil invalido.', 422);
     }
     validarEmpresasAcessiveis($pdo, $usuario, $empresaIds);
+    if ($empresaIds === []) {
+        apiResponse(false, new stdClass(), [], 'Selecione pelo menos uma empresa para este usuario.', 422);
+    }
 
     $stmt = $pdo->prepare('SELECT id FROM usuario WHERE LOWER(email) = LOWER(:email) LIMIT 1');
     $stmt->execute(['email' => $email]);

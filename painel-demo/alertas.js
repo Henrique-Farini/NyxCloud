@@ -76,6 +76,14 @@
     window.location.replace(login.href);
   };
 
+  const clientErrorMessage = (message, fallback = 'Não foi possível carregar os alertas agora. Tente novamente em instantes.') => {
+    const text = String(message || '').trim();
+    if (!text || /\.php(?:\b|[?#])/i.test(text) || /tempo esgotado|timed out|failed to fetch|networkerror|load failed|abort/i.test(text)) {
+      return fallback;
+    }
+    return text;
+  };
+
   const fetchJson = async endpoint => {
     const response = await fetch(`../back/api/${endpoint}`, {
       headers: { Accept: 'application/json' },
@@ -89,7 +97,7 @@
         sessionStorage.removeItem('access_token');
         redirectToLogin();
       }
-      throw new Error(payload?.message || `Falha ao carregar ${endpoint}`);
+      throw new Error(clientErrorMessage(payload?.message));
     }
 
     return payload.data;
@@ -112,6 +120,10 @@
     applyAlertLanguage();
     startAlertLanguageObserver();
     body.dataset.profile = String(user?.perfil || '').toLowerCase();
+    // O detalhe do alerta é montado por React, que pode carregar depois deste
+    // script. Mantenha o perfil disponível também para evitar perder o evento
+    // quando a resposta de me.php chegar durante a montagem do componente.
+    window.__nyxcloudProfileRole = body.dataset.profile;
     const readOnly = body.dataset.profile === 'leitura';
     document.querySelector('[data-alert-tab="visibility"]')?.toggleAttribute('hidden', readOnly);
     const visibilityPanel = document.getElementById('alertVisibilityPanel');

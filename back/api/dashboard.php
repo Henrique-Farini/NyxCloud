@@ -7,11 +7,12 @@ require_once __DIR__ . '/_bootstrap.php';
 use NyxCloud\Services\DashboardService;
 
 apiMethod('GET');
-exigirAutenticacao($pdo);
+$usuario = exigirAutenticacao($pdo);
 
 try {
     /** @var DashboardService $service */
     $service = apiService(DashboardService::class);
+    aplicarEscopoAcronis($service, $pdo, $usuario);
     $filters = apiFilters();
     $data = $service->summary($filters);
 

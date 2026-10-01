@@ -6,12 +6,12 @@ namespace NyxCloud\Services;
 
 final class DashboardService extends AbstractAcronisService
 {
-    private const CACHE_VERSION = 'v12';
+    private const CACHE_VERSION = 'v16';
 
     public function summary(array $filters = []): array
     {
         $fast = filter_var($filters['fast'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        $cacheKey = 'acronis.dashboard.' . self::CACHE_VERSION . '.' . md5(json_encode($filters));
+        $cacheKey = 'acronis.dashboard.' . self::CACHE_VERSION . '.' . $this->escopoCacheKey() . '.' . md5(json_encode($filters));
 
         if ($fast) {
             $cached = $this->cache->getStale($cacheKey);
@@ -24,7 +24,7 @@ final class DashboardService extends AbstractAcronisService
         return $this->remember($cacheKey, (int) $this->config['cache_ttl']['dashboard'], function () use ($filters, $fast): array {
             $tenantFilters = $filters;
             unset($tenantFilters['fast']);
-            $tenants = $this->items($this->api->get($this->endpoint('tenants'), $this->tenantScopeFilters($tenantFilters)));
+            $tenants = $this->filterTenantScopedItems($this->items($this->api->get($this->endpoint('tenants'), $this->tenantScopeFilters($tenantFilters))));
             $customers = $this->customerTenants($tenants);
             $devices = array_values(array_filter($this->workloadItems(), fn (array $device): bool => $this->isRealDevice($device)));
             $tasks = $this->taskItems(30);
@@ -54,7 +54,7 @@ final class DashboardService extends AbstractAcronisService
                 $fastFilters = $filters;
                 $fastFilters['fast'] = '1';
                 $this->cache->set(
-                    'acronis.dashboard.' . self::CACHE_VERSION . '.' . md5(json_encode($fastFilters)),
+                    'acronis.dashboard.' . self::CACHE_VERSION . '.' . $this->escopoCacheKey() . '.' . md5(json_encode($fastFilters)),
                     $summary,
                     (int) $this->config['cache_ttl']['dashboard']
                 );
@@ -66,7 +66,7 @@ final class DashboardService extends AbstractAcronisService
 
     private function storageForDashboard(array $customers, bool $fast): array
     {
-        $cacheKey = 'acronis.dashboard.storage.v2';
+        $cacheKey = 'acronis.dashboard.storage.v2.' . $this->escopoCacheKey();
 
         if ($fast) {
             $cached = $this->cache->get($cacheKey);

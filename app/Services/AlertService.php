@@ -9,14 +9,14 @@ use DateTimeZone;
 
 final class AlertService extends AbstractAcronisService
 {
-    private const CACHE_VERSION = 'v25';
+    private const CACHE_VERSION = 'v26';
     private ?array $windowRulesCache = null;
     private ?DateTimeZone $timezoneCache = null;
 
     public function listAlerts(array $filters = []): array
     {
-        return $this->remember('acronis.alerts.' . self::CACHE_VERSION . '.' . md5(json_encode($filters)), (int) $this->config['cache_ttl']['alerts'], function () use ($filters): array {
-            $tenants = $this->items($this->api->get($this->endpoint('tenants'), $this->tenantScopeFilters()));
+        return $this->remember('acronis.alerts.' . self::CACHE_VERSION . '.' . $this->escopoCacheKey() . '.' . md5(json_encode($filters)), (int) $this->config['cache_ttl']['alerts'], function () use ($filters): array {
+            $tenants = $this->filterTenantScopedItems($this->items($this->api->get($this->endpoint('tenants'), $this->tenantScopeFilters())));
             $tenantMap = $this->buildTenantMap($tenants);
             $workloads = $this->workloadItems();
             $workloadMap = $this->buildWorkloadMap($workloads, $tenantMap);
@@ -26,7 +26,7 @@ final class AlertService extends AbstractAcronisService
             ], $filters));
             $tasks = [];
             $taskIndex = [];
-            $alertItems = $this->items($payload);
+            $alertItems = $this->filterTenantScopedItems($this->items($payload));
             $taskLookbackDays = $this->taskLookbackDaysForAlerts($alertItems);
             try {
                 $tasks = $this->taskItems($taskLookbackDays);

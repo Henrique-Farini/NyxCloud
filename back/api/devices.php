@@ -7,11 +7,12 @@ require_once __DIR__ . '/_bootstrap.php';
 use NyxCloud\Services\DeviceService;
 
 apiMethod('GET');
-exigirAutenticacao($pdo);
+$usuario = exigirAutenticacao($pdo);
 
 try {
     /** @var DeviceService $service */
     $service = apiService(DeviceService::class);
+    aplicarEscopoAcronis($service, $pdo, $usuario);
     $filters = apiFilters(['limit', 'offset', 'tenant_id', 'type', 'status', 'name', 'include_status', 'include_all_attributes']);
     $data = $service->listDevices($filters);
 

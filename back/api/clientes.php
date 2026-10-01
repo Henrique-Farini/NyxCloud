@@ -7,11 +7,12 @@ require_once __DIR__ . '/_bootstrap.php';
 use NyxCloud\Services\CustomerService;
 
 apiMethod('GET');
-exigirAutenticacao($pdo);
+$usuario = exigirAutenticacao($pdo);
 
 try {
     /** @var CustomerService $service */
     $service = apiService(CustomerService::class);
+    aplicarEscopoAcronis($service, $pdo, $usuario);
     $filters = apiFilters(['limit', 'offset', 'parent_id', 'kind', 'edition', 'id']);
     $data = $service->listCustomers($filters);
 
