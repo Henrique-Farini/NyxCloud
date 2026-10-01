@@ -7,10 +7,19 @@ namespace NyxCloud\Services;
 final class AcronisCredentialStore
 {
     private string $path;
+    private ?\PDO $pdo = null;
+    private bool $useDatabase = false;
 
     public function __construct(?string $path = null)
     {
         $this->path = $path ?? dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'acronis_accounts.json';
+        if ($path === null) {
+            global $pdo;
+            if ($pdo instanceof \PDO) {
+                $this->pdo = $pdo;
+                $this->useDatabase = true;
+            }
+        }
     }
 
     public function listSafe(): array
@@ -46,6 +55,22 @@ final class AcronisCredentialStore
         }
 
         return ['active_id' => $data['active_id'], 'active_ids' => $activeIds, 'items' => $items];
+    }
+
+    public function config(): array
+    {
+        $data = $this->read();
+        $accounts = [];
+        foreach ($data['accounts'] as $account) {
+            $account['client_secret'] = $this->decrypt((string) ($account['client_secret'] ?? ''));
+            $accounts[] = $account;
+        }
+
+        return [
+            'active_id' => (string) ($data['active_id'] ?? ''),
+            'active_ids' => $this->activeIds($data),
+            'accounts' => $accounts,
+        ];
     }
 
     public function activeConfig(): array
@@ -216,6 +241,10 @@ final class AcronisCredentialStore
 
     private function read(): array
     {
+        if ($this->useDatabase) {
+            return $this->readDatabase();
+        }
+
         if (!is_file($this->path)) {
             return ['active_id' => '', 'active_ids' => [], 'accounts' => []];
         }
@@ -234,12 +263,130 @@ final class AcronisCredentialStore
 
     private function write(array $data): void
     {
+        if ($this->useDatabase) {
+            $this->writeDatabase($data);
+            return;
+        }
+
         $dir = dirname($this->path);
         if (!is_dir($dir)) {
             mkdir($dir, 0775, true);
         }
 
         file_put_contents($this->path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
+    }
+
+    private function readDatabase(): array
+    {
+        $stmt = $this->pdo->query(
+            'SELECT id, nome, regiao, base_url, client_id, client_secret_encrypted, ativo, atualizado_em
+             FROM acronis_integracao ORDER BY nome ASC'
+        );
+        $rows = $stmt->fetchAll() ?: [];
+
+        if ($rows === []) {
+            $this->importLegacyJson();
+            $stmt = $this->pdo->query(
+                'SELECT id, nome, regiao, base_url, client_id, client_secret_encrypted, ativo, atualizado_em
+                 FROM acronis_integracao ORDER BY nome ASC'
+            );
+            $rows = $stmt->fetchAll() ?: [];
+        }
+
+        $accounts = [];
+        $activeIds = [];
+        foreach ($rows as $row) {
+            $id = (string) $row['id'];
+            $accounts[] = [
+                'id' => $id,
+                'name' => (string) $row['nome'],
+                'region' => (string) $row['regiao'],
+                'base_url' => rtrim((string) $row['base_url'], '/'),
+                'client_id' => (string) $row['client_id'],
+                'client_secret' => (string) $row['client_secret_encrypted'],
+                'updated_at' => (string) ($row['atualizado_em'] ?? ''),
+            ];
+            if ((bool) $row['ativo']) {
+                $activeIds[] = $id;
+            }
+        }
+
+        return [
+            'active_id' => $activeIds[0] ?? '',
+            'active_ids' => $activeIds,
+            'accounts' => $accounts,
+        ];
+    }
+
+    private function writeDatabase(array $data): void
+    {
+        $this->pdo->beginTransaction();
+        try {
+            foreach ((array) ($data['accounts'] ?? []) as $account) {
+                $id = (string) ($account['id'] ?? '');
+                if ($id === '') {
+                    continue;
+                }
+
+                $exists = $this->pdo->prepare('SELECT 1 FROM acronis_integracao WHERE id = :id');
+                $exists->execute(['id' => $id]);
+                $active = in_array($id, $this->activeIds($data), true);
+                $params = [
+                    'id' => $id,
+                    'nome' => (string) ($account['name'] ?? ''),
+                    'regiao' => (string) ($account['region'] ?? 'BR'),
+                    'base_url' => rtrim((string) ($account['base_url'] ?? ''), '/'),
+                    'client_id' => (string) ($account['client_id'] ?? ''),
+                    'secret' => (string) ($account['client_secret'] ?? ''),
+                    'ativo' => $active ? 1 : 0,
+                ];
+                if ($exists->fetchColumn()) {
+                    $sql = 'UPDATE acronis_integracao
+                            SET nome=:nome, regiao=:regiao, base_url=:base_url, client_id=:client_id,
+                                client_secret_encrypted=:secret, ativo=:ativo, atualizado_em=CURRENT_TIMESTAMP
+                            WHERE id=:id';
+                } else {
+                    $sql = 'INSERT INTO acronis_integracao
+                            (id, nome, regiao, base_url, client_id, client_secret_encrypted, ativo)
+                            VALUES (:id, :nome, :regiao, :base_url, :client_id, :secret, :ativo)';
+                }
+                $this->pdo->prepare($sql)->execute($params);
+            }
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function importLegacyJson(): void
+    {
+        if (!is_file($this->path)) {
+            return;
+        }
+        $data = json_decode((string) file_get_contents($this->path), true);
+        if (!is_array($data) || !is_array($data['accounts'] ?? null)) {
+            return;
+        }
+        $activeIds = $this->normalizeActiveIds($data['active_ids'] ?? ($data['active_id'] ?? ''));
+        $native = $this->nativeAccount();
+        if ($native !== null && !$this->hasEquivalentAccount($data['accounts'], $native['base_url'], $native['client_id'])) {
+            $data['accounts'][] = [
+                'id' => 'nativo',
+                'name' => $native['name'],
+                'region' => $native['region'],
+                'base_url' => $native['base_url'],
+                'client_id' => $native['client_id'],
+                'client_secret' => $this->encrypt($native['client_secret']),
+                'updated_at' => gmdate(DATE_ATOM),
+            ];
+        }
+        $this->writeDatabase([
+            'accounts' => $data['accounts'],
+            'active_ids' => $activeIds,
+        ]);
     }
 
     private function encrypt(string $value): string

@@ -577,7 +577,9 @@
     const seen = new Set();
     return rows.filter(row => {
       const fallback = [row.client, row.server, row.code, row.sortTime, row.plan, row.error].join('|');
-      const key = (row.sourceId || fallback).toLocaleLowerCase('pt-BR');
+      const key = [row.sourceId || fallback, row.code, row.sortTime, row.plan]
+        .join('|')
+        .toLocaleLowerCase('pt-BR');
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -715,12 +717,15 @@
   const filteredRows = () => {
     const filters = getFilters();
     const factor = sortDir === 'asc' ? 1 : -1;
+    const isProblemRow = row => effectiveStatus(row) === 'failed';
 
     return periodRows()
       .filter(row => state.quickFilter === 'hidden' ? isHiddenAlert(row) : !isHiddenAlert(row))
       .filter(row => state.quickFilter === 'hidden' || !isFilteredByVisibility(row))
       .filter(matchesQuickFilter)
-      .filter(row => filters.status === 'success' || !isResolvedAlert(row))
+      .filter(row => filters.status === 'success'
+        ? effectiveStatus(row) === 'success'
+        : isProblemRow(row) && !isResolvedAlert(row))
       .filter(row =>
         (filters.status === 'all' || effectiveStatus(row) === filters.status || (filters.status === 'success' && effectiveStatus(row) === 'resolved')) &&
         (filters.priority === 'all' || row.priority === filters.priority) &&
@@ -871,8 +876,10 @@
       tbody.append(tr);
     });
 
-    const failures = data.filter(row => effectiveStatus(row) === 'failed').length;
-    document.getElementById('failureBadge').textContent = `${failures} ${failures === 1 ? 'falha' : 'falhas'}`;
+    const pending = document.getElementById('statusFilter')?.value === 'all'
+      ? data.length
+      : data.filter(row => !['success', 'resolved', 'running'].includes(effectiveStatus(row))).length;
+    document.getElementById('failureBadge').textContent = `${pending} ${pending === 1 ? 'pendência' : 'pendências'}`;
     document.getElementById('resultSummary').textContent = data.length
       ? `Mostrando ${(page - 1) * pageSize + 1} a ${Math.min(page * pageSize, data.length)} de ${data.length} resultados`
       : 'Nenhum alerta encontrado';
@@ -935,6 +942,7 @@
       const disabledCategories = readStoredMap(deviceAlertCategoriesKey);
     const inventory = state.inventoryRows.length ? state.inventoryRows : state.rows.map(row => ({ client: row.client, server: row.server, plan: row.plan }));
     const clients = visibilityValues(inventory.map(row => row.client));
+    const selectedCategory = document.getElementById('visibilityCategoryFilter')?.value || 'all';
     container.replaceChildren();
     if (!clients.length) {
       container.append(cell('small', 'Nenhum cliente encontrado.', 'visibility-empty'));
@@ -987,7 +995,7 @@
         const categoryList = document.createElement('div');
         categoryList.className = 'visibility-category-list';
         const disabledForDevice = new Set(disabledCategories[deviceKey] || []);
-        alertCategoryOptions.forEach(([category, label]) => {
+        alertCategoryOptions.filter(([category]) => selectedCategory === 'all' || category === selectedCategory).forEach(([category, label]) => {
           const categoryLabel = document.createElement('label');
           categoryLabel.className = 'visibility-check visibility-category-check';
           const categoryInput = document.createElement('input');
@@ -1076,10 +1084,11 @@
   const updateKpis = () => {
     const rows = periodRows();
     const visibleRows = rows.filter(row => !isHiddenAlert(row) && !isFilteredByVisibility(row));
+    const pendingRows = visibleRows.filter(row => effectiveStatus(row) === 'failed' && !isResolvedAlert(row));
     const values = [
       visibleRows.length,
       visibleRows.filter(row => ['success', 'resolved'].includes(effectiveStatus(row))).length,
-      visibleRows.filter(row => effectiveStatus(row) === 'failed').length,
+      pendingRows.length,
       visibleRows.filter(row => effectiveStatus(row) === 'running').length
     ];
     document.querySelectorAll('[data-alert-count]').forEach((element, index) => {
@@ -1145,13 +1154,7 @@
     setSyncStatus('Atualizando alertas', 'loading');
 
     try {
-      const [alerts, devices, dashboard] = await Promise.all([
-        fetchJson('alertas.php'),
-        fetchJson('devices.php').catch(() => []),
-        fetchJson('dashboard.php?fast=1').catch(() => ({}))
-      ]);
-      updateActivityCount(dashboard);
-      state.inventoryRows = inventoryFromDevices(devices);
+      const alerts = await fetchJson('alertas.php');
       state.rawRows = (Array.isArray(alerts) ? alerts : []).map(mapAlertRow);
       state.rows = deduplicateRows(state.rawRows)
         .map(row => ({
@@ -1169,6 +1172,15 @@
       renderRows();
       setSyncStatus(syncTimeLabel(), 'ready');
       if (announce) notify('Alertas atualizados.');
+
+      Promise.all([
+        fetchJson('devices.php').catch(() => []),
+        fetchJson('dashboard.php').catch(() => ({}))
+      ]).then(([devices, dashboard]) => {
+        updateActivityCount(dashboard);
+        state.inventoryRows = inventoryFromDevices(devices);
+        renderVisibilityOptions();
+      }).catch(() => {});
     } catch (error) {
       setSyncStatus('Falha na sincronizacao', 'warning');
       throw error;
@@ -1260,6 +1272,7 @@
   });
   document.getElementById('applyAlertVisibility')?.addEventListener('click', applyVisibilitySelection);
   document.getElementById('resetAlertVisibility')?.addEventListener('click', resetVisibilitySelection);
+  document.getElementById('visibilityCategoryFilter')?.addEventListener('change', renderVisibilityOptions);
   document.querySelectorAll('.quick-alert-filters [data-quick-filter]').forEach(button => {
     button.addEventListener('click', () => {
       state.quickFilter = button.dataset.quickFilter || 'all';

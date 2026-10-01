@@ -186,6 +186,16 @@
     node.replaceChildren(ring);
   };
 
+  const renderStatusDonutCenter = total => {
+    const node = document.getElementById('statusDonut');
+    if (!node) return;
+    node.querySelector('.status-donut-center')?.remove();
+    const center = document.createElement('div');
+    center.className = 'status-donut-center';
+    center.innerHTML = `<strong>${escapeHtml(fmtInt(total))}</strong><span>TOTAL</span>`;
+    node.append(center);
+  };
+
   const setText = (id, value) => {
     const node = document.getElementById(id);
     if (node) {
@@ -539,10 +549,11 @@
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
 
-  const canManageAccounts = () => Boolean(state.me?.pode_gerenciar_contas);
+  const canManageAccounts = () => Boolean(state.me?.pode_acessar_contas || state.me?.pode_gerenciar_contas);
+  const canManageAdmin = () => Boolean(state.me?.pode_gerenciar_contas);
   const sectionPermissions = {
     admin: new Set(['overview', 'executions', 'alerts', 'storage', 'summary', 'windows', 'clients', 'accounts', 'integrations', 'infrastructure', 'analytics', 'audit', 'profile']),
-    operador: new Set(['overview', 'executions', 'alerts', 'storage', 'summary', 'windows', 'clients', 'infrastructure', 'analytics', 'profile']),
+    operador: new Set(['overview', 'executions', 'alerts', 'storage', 'summary', 'windows', 'clients', 'accounts', 'infrastructure', 'analytics', 'profile']),
     leitura: new Set(['overview', 'executions', 'alerts', 'storage', 'summary', 'windows', 'clients', 'infrastructure', 'analytics', 'profile'])
   };
   const uiTranslations = {
@@ -684,7 +695,7 @@
     renderProfilePage();
     applyRoleVisibility();
     const manageRules = document.getElementById('manageWindowRules');
-    if (manageRules) manageRules.hidden = !canManageAccounts();
+    if (manageRules) manageRules.hidden = !canManageAdmin();
   };
 
   const renderProfilePage = () => {
@@ -735,6 +746,12 @@
       form.querySelectorAll('input, select, button').forEach(field => {
         field.disabled = false;
       });
+      const roleSelect = document.getElementById('accountRoleSelect');
+      const globalToggle = document.getElementById('accountGlobalAdmin');
+      if (globalToggle) {
+        globalToggle.disabled = roleSelect?.value !== 'admin';
+        if (globalToggle.disabled) globalToggle.checked = false;
+      }
     }
 
     body.replaceChildren();
@@ -747,30 +764,65 @@
       return;
     }
 
-    state.accounts.forEach(account => {
+    const companyFilterWrap = document.getElementById('accountsCompanyFilterWrap');
+    const companyFilter = document.getElementById('accountsCompanyFilter');
+    const isGeneralAdmin = Boolean(state.accountsMeta.administrador_geral);
+    if (companyFilterWrap) companyFilterWrap.hidden = !isGeneralAdmin;
+    if (companyFilter && isGeneralAdmin) {
+      const selectedCompany = companyFilter.value || 'all';
+      const options = ['<option value="all">Todas as empresas</option><option value="global-admin">Administradores gerais</option>'].concat(
+        (state.accountsMeta.empresas || []).map(company => `<option value="${Number(company.id)}">${escapeHtml(cleanLabel(company.nome))}</option>`)
+      );
+      companyFilter.innerHTML = options.join('');
+      companyFilter.value = selectedCompany;
+    }
+    const selectedCompany = companyFilter?.value || 'all';
+    const visibleAccounts = selectedCompany === 'all'
+      ? state.accounts
+      : selectedCompany === 'global-admin'
+        ? state.accounts.filter(account => Boolean(account.administrador_geral))
+        : state.accounts.filter(account => (account.empresa_ids || []).map(Number).includes(Number(selectedCompany)));
+
+    if (!visibleAccounts.length) {
+      body.innerHTML = '<tr><td colspan="8">Nenhuma conta encontrada para esta empresa.</td></tr>';
+      return;
+    }
+
+    visibleAccounts.forEach(account => {
       const row = document.createElement('tr');
+      const operatorView = state.accountsMeta.viewer?.perfil === 'operador';
+      const companyAdminView = state.accountsMeta.viewer?.perfil === 'admin' && !state.accountsMeta.administrador_geral;
+      const readOnlyTarget = account.perfil === 'leitura';
       const statusClass = account.ativo ? 'success' : 'failed';
       const statusLabel = account.ativo ? 'Ativa' : 'Inativa';
       const accountId = Number(account.id || 0);
+      const viewerId = Number(state.accountsMeta.viewer?.id || state.me?.id || 0);
+      const canDeleteAccount = accountId !== viewerId && (
+        Boolean(state.accountsMeta.administrador_geral)
+        || (companyAdminView && ['operador', 'leitura'].includes(account.perfil))
+      );
       const roleOptions = Object.entries(state.accountsMeta.perfis || {})
+        .filter(([value]) => (!operatorView || value === 'leitura' || value === account.perfil)
+          && (!companyAdminView || value !== 'admin' || account.perfil === 'admin'))
         .map(([value, label]) => `<option value="${escapeHtml(value)}"${value === account.perfil ? ' selected' : ''}>${escapeHtml(label)}</option>`)
         .join('');
       const companyNames = Array.isArray(account.empresas) && account.empresas.length
         ? account.empresas.map(item => cleanLabel(item.nome)).join(', ')
-        : (state.accountsMeta.administrador_geral ? 'Todas (administrador geral)' : 'Nenhuma');
+        : (account.administrador_geral ? 'Todas (administrador geral)' : 'Nenhuma');
       row.innerHTML = `
         <td><b>${escapeHtml(cleanLabel(account.nome))}</b><small>ID ${fmtInt(account.id)}</small></td>
         <td>${escapeHtml(cleanLabel(account.email))}</td>
         <td>${escapeHtml(companyNames)}</td>
-        <td><select class="account-inline-select" data-account-role="${accountId}" aria-label="Perfil">${roleOptions}</select></td>
+        <td><select class="account-inline-select" data-account-role="${accountId}" aria-label="Perfil"${operatorView && !readOnlyTarget ? ' disabled' : ''}>${roleOptions}</select></td>
         <td><em class="job-state ${statusClass}">${statusLabel}</em></td>
         <td>${formatDateTime(account.ultimo_login_em)}</td>
         <td>${formatDateTime(account.criado_em)}</td>
         <td class="account-actions">
-          <button type="button" data-account-save="${accountId}" data-tooltip="Salvar perfil"><i data-lucide="save"></i></button>
-          <button type="button" data-account-access="${accountId}" data-tooltip="Gerenciar permissões"><i data-lucide="key-round"></i></button>
-          <button type="button" data-account-toggle="${accountId}" data-tooltip="${account.ativo ? 'Inativar conta' : 'Ativar conta'}"><i data-lucide="${account.ativo ? 'user-x' : 'user-check'}"></i></button>
-          <button type="button" data-account-password="${accountId}" data-tooltip="Redefinir senha"><i data-lucide="lock-keyhole"></i></button>
+          <button type="button" data-account-save="${accountId}" data-tooltip="Salvar perfil"${operatorView && !readOnlyTarget ? ' disabled' : ''}><i data-lucide="save"></i></button>
+          <button type="button" data-account-access="${accountId}" data-tooltip="Gerenciar permissões"${operatorView && !readOnlyTarget ? ' disabled' : ''}><i data-lucide="key-round"></i></button>
+          <button type="button" data-account-toggle="${accountId}" data-tooltip="${account.ativo ? 'Inativar conta' : 'Ativar conta'}"${operatorView && !readOnlyTarget ? ' disabled' : ''}><i data-lucide="${account.ativo ? 'user-x' : 'user-check'}"></i></button>
+          <button type="button" data-account-password="${accountId}" data-tooltip="Redefinir senha"${operatorView && !readOnlyTarget ? ' disabled' : ''}><i data-lucide="lock-keyhole"></i></button>
+          ${canDeleteAccount ? `<button type="button" data-account-delete="${accountId}" data-tooltip="Excluir conta"><i data-lucide="trash-2"></i></button>` : ''}
         </td>
       `;
       body.append(row);
@@ -792,7 +844,7 @@
     const form = document.getElementById('integrationForm');
     if (!list) return;
 
-    if (!canManageAccounts()) {
+    if (!canManageAdmin()) {
       list.innerHTML = '<div class="accounts-empty">Acesso restrito a administradores.</div>';
       if (notice) notice.hidden = false;
       form?.querySelectorAll('input, select, button').forEach(field => {
@@ -1522,7 +1574,7 @@
 
     setText('kpiHintA', `${fmtInt(dashboard.backups_ok || 0)} execucoes concluidas com sucesso.`);
     setText('kpiHintB', `${fmtInt(dashboard.total_backups || 0)} backups contabilizados no periodo.`);
-    setText('kpiHintC', `${fmtInt(dashboard.backups_com_falha || 0)} falhas identificadas para tratamento.`);
+    setText('kpiHintC', `${fmtInt(dashboard.backups_com_falha || 0)} ocorrências registradas no período.`);
     setText(
       'kpiHintD',
       dashboard.armazenamento_disponivel === false
@@ -1753,7 +1805,15 @@
 
     mount('statusDonut', {
       ...chartBase(statusHeight),
-      chart: { ...chartBase(statusHeight).chart, type: 'donut', toolbar: { show: false } },
+      chart: {
+        ...chartBase(statusHeight).chart,
+        type: 'donut',
+        toolbar: { show: false },
+        events: {
+          mounted: () => renderStatusDonutCenter(dashboard.total_backups || 0),
+          updated: () => renderStatusDonutCenter(dashboard.total_backups || 0)
+        }
+      },
       series: [completed, failed, other],
       labels: ['Sucesso', 'Falha', 'Outros'],
       colors: ['#19c37d', '#f05d6b', '#7d8ea8'],
@@ -1767,10 +1827,10 @@
             size: '72%',
             background: 'transparent',
             labels: {
-              show: true,
+              show: false,
               name: { show: true, color: c.text, fontSize: '11px', fontWeight: 700, offsetY: 18 },
-              value: { show: true, color: root.dataset.mode === 'light' ? '#101827' : '#f5f7fb', fontSize: '30px', fontWeight: 800, offsetY: -2, formatter: value => fmtInt(value) },
-              total: { show: true, label: 'Total', color: c.text, fontSize: '10px', fontWeight: 700, formatter: () => fmtInt(dashboard.total_backups || 0) }
+              value: { show: false, color: root.dataset.mode === 'light' ? '#101827' : '#f5f7fb', fontSize: '30px', fontWeight: 800, offsetY: -8, formatter: value => fmtInt(value) },
+              total: { show: false, label: 'TOTAL', color: c.text, fontSize: '11px', fontWeight: 700, offsetY: 14, formatter: () => fmtInt(dashboard.total_backups || 0) }
             }
           }
         }
@@ -2114,7 +2174,7 @@
   });
 
   const sectionLoaders = {
-    overview: [loadMe, loadDashboard],
+    overview: [loadMe, loadDashboard, loadAlerts],
     executions: [loadMe, loadDevices],
     storage: [() => loadDashboard({ full: true })],
     summary: [loadMe, loadDashboard],
@@ -2483,7 +2543,7 @@
   });
   document.getElementById('manageWindowRules')?.addEventListener('click', async () => {
     const dialog = document.getElementById('windowRulesDialog');
-    if (!canManageAccounts()) {
+    if (!canManageAdmin()) {
       notify('Somente administradores podem editar janelas.');
       return;
     }
@@ -2509,8 +2569,19 @@
     notify('Busca aplicada nas execucoes.');
   });
   document.getElementById('accountRoleSelect')?.addEventListener('change', event => {
+    const isAdmin = event.currentTarget.value === 'admin';
+    const globalToggle = document.getElementById('accountGlobalAdmin');
+    if (globalToggle) {
+      globalToggle.disabled = !isAdmin;
+      if (!isAdmin) globalToggle.checked = false;
+    }
     setText('accountPermissionHint', accountRoleHint(event.currentTarget.value));
   });
+  document.getElementById('accountGlobalAdmin')?.addEventListener('change', event => {
+    const companyPicker = document.querySelector('#accountCompanyOptions')?.closest('.account-company-picker');
+    if (companyPicker) companyPicker.hidden = event.currentTarget.checked;
+  });
+  document.getElementById('accountsCompanyFilter')?.addEventListener('change', () => safeRun(renderAccounts));
   document.getElementById('accountCompanyOptions')?.addEventListener('click', event => {
     const addButton = event.target.closest('[data-add-company]');
     const removeButton = event.target.closest('[data-remove-company]');
@@ -2534,7 +2605,7 @@
     const button = event.target.closest('button');
     if (!button) return;
 
-    const id = button.dataset.accountSave || button.dataset.accountAccess || button.dataset.accountToggle || button.dataset.accountPassword;
+    const id = button.dataset.accountSave || button.dataset.accountAccess || button.dataset.accountToggle || button.dataset.accountPassword || button.dataset.accountDelete;
     if (!id) return;
 
     button.disabled = true;
@@ -2550,9 +2621,19 @@
         const selectedIds = Array.from(selected);
         const rows = selectedIds.length ? selectedIds : [0];
         const companyOptions = ['<option value="">Selecione uma empresa</option>'].concat(companies.map(company => `<option value="${Number(company.id)}">${escapeHtml(cleanLabel(company.nome))}</option>`)).join('');
-        options.innerHTML = companies.length
+        const globalAdminOption = state.accountsMeta.administrador_geral && account.perfil === 'admin'
+          ? `<label class="account-checkbox account-global-edit"><input type="checkbox" name="administrador_geral" ${account.administrador_geral ? 'checked' : ''}><span>Administrador geral (acesso a todas as empresas)</span></label>`
+          : '';
+        const companyRows = companies.length
           ? rows.map((selectedId, index) => `<div class="account-company-row"><select name="permission_empresa_ids[]">${companyOptions.replace(`value="${selectedId}"`, `value="${selectedId}" selected`)}</select>${index > 0 ? '<button type="button" data-remove-permission-company aria-label="Remover empresa">−</button>' : ''}${index === rows.length - 1 ? '<button type="button" data-add-permission-company aria-label="Adicionar empresa">+</button>' : ''}</div>`).join('')
           : '<small>Nenhuma empresa Acronis sincronizada.</small>';
+        options.innerHTML = globalAdminOption + `<div data-company-permissions="true">${companyRows}</div>`;
+        const globalAdminInput = options.querySelector('input[name="administrador_geral"]');
+        const companyPermissions = options.querySelector('[data-company-permissions]');
+        if (globalAdminInput && companyPermissions) {
+          companyPermissions.hidden = globalAdminInput.checked;
+          companyPermissions.querySelectorAll('select, button').forEach(field => { field.disabled = globalAdminInput.checked; });
+        }
         dialog.dataset.accountId = id;
         dialog.showModal();
       } else if (button.dataset.accountSave) {
@@ -2565,6 +2646,14 @@
         const password = window.prompt('Nova senha temporaria (minimo 8 caracteres):');
         if (password === null) return;
         await updateAccount(id, { senha: password }, 'Senha redefinida.');
+      } else if (button.dataset.accountDelete) {
+        const account = state.accounts.find(item => Number(item.id) === Number(id));
+        if (!account || !window.confirm(`Excluir definitivamente a conta de ${account.nome}?`)) return;
+        const senha = window.prompt('Digite sua senha para confirmar a exclusao:');
+        if (!senha) return;
+        await fetchJson('contas.php', { method: 'DELETE', body: { id: Number(id), senha_confirmacao: senha } });
+        await refreshAccountsAndAudit();
+        notify('Conta excluida com sucesso.');
       }
     } catch (error) {
       notify(error.message || 'Falha ao atualizar conta.');
@@ -2591,14 +2680,32 @@
     container.querySelectorAll('[data-add-permission-company]').forEach(button => { button.hidden = true; });
     container.append(row);
   });
+  document.getElementById('accountPermissionsOptions')?.addEventListener('change', event => {
+    const globalAdmin = event.target.closest('input[name="administrador_geral"]');
+    if (!globalAdmin) return;
+    const companyPermissions = document.querySelector('#accountPermissionsOptions [data-company-permissions]');
+    if (!companyPermissions) return;
+    companyPermissions.hidden = globalAdmin.checked;
+    companyPermissions.querySelectorAll('select, button').forEach(field => { field.disabled = globalAdmin.checked; });
+  });
   document.getElementById('accountPermissionsForm')?.addEventListener('submit', async event => {
     event.preventDefault();
     const dialog = document.getElementById('accountPermissionsDialog');
     const id = Number(dialog?.dataset.accountId || 0);
     if (!id) return;
     const empresaIds = Array.from(document.querySelectorAll('#accountPermissionsOptions select[name="permission_empresa_ids[]"]')).map(select => Number(select.value)).filter(Boolean);
+    const globalAdmin = document.querySelector('#accountPermissionsOptions input[name="administrador_geral"]');
+    let senhaConfirmacao = '';
+    const account = state.accounts.find(item => Number(item.id) === id);
+    if (globalAdmin && account && globalAdmin.checked !== Boolean(account.administrador_geral)) {
+      senhaConfirmacao = window.prompt('Digite sua senha para confirmar a alteração de administrador geral:') || '';
+      if (!senhaConfirmacao) return;
+    }
     try {
-      await updateAccount(id, { empresa_ids: empresaIds }, 'Permissões atualizadas.');
+      await updateAccount(id, {
+        empresa_ids: empresaIds,
+        ...(globalAdmin ? { administrador_geral: globalAdmin.checked, senha_confirmacao: senhaConfirmacao } : {})
+      }, 'Permissões atualizadas.');
       dialog.close();
     } catch (error) {
       notify(error.message || 'Falha ao atualizar permissões.');
@@ -2608,7 +2715,7 @@
     event.preventDefault();
     const form = event.currentTarget;
     if (!canManageAccounts()) {
-      notify('Somente administradores podem criar contas.');
+      notify('Voce nao tem permissao para criar contas.');
       return;
     }
     const submitButton = document.getElementById('accountSubmitButton');
@@ -2618,6 +2725,7 @@
       nome: String(data.get('nome') || '').trim(),
       email: String(data.get('email') || '').trim(),
       perfil: String(data.get('perfil') || 'leitura').trim(),
+      administrador_geral: data.get('administrador_geral') !== null,
       senha: String(data.get('senha') || ''),
       ativo: data.get('ativo') !== null,
       empresa_ids: Array.from(document.querySelectorAll('#accountCompanyOptions select[name="empresa_ids[]"]'))
@@ -2636,6 +2744,10 @@
       form.reset();
       const roleSelect = document.getElementById('accountRoleSelect');
       if (roleSelect) roleSelect.value = 'leitura';
+      const globalToggle = document.getElementById('accountGlobalAdmin');
+      if (globalToggle) { globalToggle.checked = false; globalToggle.disabled = true; }
+      const companyPicker = document.querySelector('#accountCompanyOptions')?.closest('.account-company-picker');
+      if (companyPicker) companyPicker.hidden = false;
       setText('accountPermissionHint', accountRoleHint('leitura'));
       if (message) message.textContent = 'Conta criada com sucesso.';
       notify('Nova conta criada no painel.');
@@ -2691,7 +2803,7 @@
   });
   document.getElementById('integrationForm')?.addEventListener('submit', async event => {
     event.preventDefault();
-    if (!canManageAccounts()) {
+    if (!canManageAdmin()) {
       notify('Somente administradores podem gerenciar integracoes.');
       return;
     }

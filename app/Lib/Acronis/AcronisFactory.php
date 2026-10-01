@@ -26,10 +26,7 @@ final class AcronisFactory
         }
 
         $all = [];
-        $storePath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'acronis_accounts.json';
-        if (is_file($storePath)) {
-            $data = json_decode((string) file_get_contents($storePath), true);
-            foreach ((array) ($data['accounts'] ?? []) as $account) {
+        foreach ((array) ($config['accounts'] ?? []) as $account) {
                 if (!is_array($account) || !in_array((string) ($account['id'] ?? ''), $ids, true)) {
                     continue;
                 }
@@ -52,7 +49,6 @@ final class AcronisFactory
                     'endpoints' => $config['endpoints'] ?? [],
                     'cache_ttl' => $config['cache_ttl'] ?? [],
                 ];
-            }
         }
 
         if ($all !== []) {

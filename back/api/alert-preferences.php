@@ -13,13 +13,36 @@ $usuario = exigirAutenticacao($pdo);
 
 try {
     if ($method === 'GET') {
-        $stmt = $pdo->query('SELECT dados FROM alertas_preferencias WHERE id = 1 LIMIT 1');
-        $raw = $stmt->fetchColumn();
+        $usuarioId = (int) ($usuario['id'] ?? 0);
+        if (normalizarPerfil((string) ($usuario['perfil'] ?? '')) === 'leitura') {
+            // Leitura acompanha o operador responsável por pelo menos uma mesma empresa.
+            $stmt = $pdo->prepare(
+                'SELECT ap.dados
+                 FROM alertas_preferencias ap
+                 INNER JOIN usuario operador ON operador.id = ap.usuario_id AND operador.perfil = \'operador\'
+                 INNER JOIN usuario_empresa operador_empresa ON operador_empresa.usuario_id = operador.id
+                 INNER JOIN usuario_empresa leitura_empresa ON leitura_empresa.empresa_id = operador_empresa.empresa_id
+                 WHERE leitura_empresa.usuario_id = :usuario_id
+                 ORDER BY ap.atualizado_em DESC
+                 LIMIT 1'
+            );
+            $stmt->execute(['usuario_id' => $usuarioId]);
+            $raw = $stmt->fetchColumn();
+            if ($raw === false) {
+                $stmt = $pdo->query('SELECT dados FROM alertas_preferencias WHERE usuario_id = 0 LIMIT 1');
+                $raw = $stmt->fetchColumn();
+            }
+        } else {
+            $stmt = $pdo->prepare('SELECT dados FROM alertas_preferencias WHERE usuario_id IN (0, :usuario_id) ORDER BY usuario_id DESC LIMIT 1');
+            $stmt->execute(['usuario_id' => $usuarioId]);
+            $raw = $stmt->fetchColumn();
+        }
         $data = is_string($raw) ? json_decode($raw, true) : $raw;
         apiResponse(true, is_array($data) ? $data : []);
     }
 
-    if (normalizarPerfil((string) ($usuario['perfil'] ?? '')) === 'leitura') {
+    $perfil = normalizarPerfil((string) ($usuario['perfil'] ?? ''));
+    if ($perfil === 'leitura') {
         apiResponse(false, new stdClass(), [], 'O perfil somente leitura nao pode alterar preferencias.', 403);
     }
 
@@ -54,15 +77,22 @@ try {
     }
 
     $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
-    if ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql') {
-        $sql = 'INSERT INTO alertas_preferencias (id, dados, atualizado_em) VALUES (1, CAST(:dados AS jsonb), NOW())
-                ON CONFLICT (id) DO UPDATE SET dados = EXCLUDED.dados, atualizado_em = NOW()';
-    } else {
-        $sql = 'INSERT INTO alertas_preferencias (id, dados) VALUES (1, CAST(:dados AS JSON))
-                ON DUPLICATE KEY UPDATE dados = VALUES(dados), atualizado_em = CURRENT_TIMESTAMP';
+    $usuarioId = $perfil === 'admin' ? 0 : (int) ($usuario['id'] ?? 0);
+    if ($usuarioId <= 0 && $perfil !== 'admin') {
+        apiResponse(false, new stdClass(), [], 'Usuario invalido para salvar preferencias.', 422);
     }
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute(['dados' => $json]);
+
+    $pdo->beginTransaction();
+    if ($perfil === 'admin') {
+        // A configuração do administrador é a nova base compartilhada.
+        $pdo->exec('DELETE FROM alertas_preferencias WHERE usuario_id <> 0');
+    }
+    $stmt = $pdo->prepare(
+        'INSERT INTO alertas_preferencias (usuario_id, dados) VALUES (:usuario_id, CAST(:dados AS JSON))
+         ON DUPLICATE KEY UPDATE dados = VALUES(dados), atualizado_em = CURRENT_TIMESTAMP'
+    );
+    $stmt->execute(['usuario_id' => $usuarioId, 'dados' => $json]);
+    $pdo->commit();
 
     apiResponse(true, $data, [], 'Preferencias salvas.');
 } catch (Throwable $e) {

@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS acronis_integracao (
+    id VARCHAR(120) PRIMARY KEY,
+    nome VARCHAR(150) NOT NULL,
+    regiao VARCHAR(20) NOT NULL DEFAULT 'BR',
+    base_url VARCHAR(255) NOT NULL,
+    client_id VARCHAR(255) NOT NULL,
+    client_secret_encrypted TEXT NOT NULL,
+    ativo BOOLEAN NOT NULL DEFAULT FALSE,
+    criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX ix_acronis_integracao_ativo (ativo)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

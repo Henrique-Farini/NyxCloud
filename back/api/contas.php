@@ -4,36 +4,50 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/_bootstrap.php';
 
-$usuario = exigirPerfilAdministrador($pdo);
-$administradorGeral = usuarioEhAdministradorGeral($pdo, $usuario);
+$usuario = exigirAutenticacao($pdo);
+$perfilViewer = normalizarPerfil((string) ($usuario['perfil'] ?? ''));
+if (!usuarioPodeAcessarContas($usuario)) {
+    apiResponse(false, new stdClass(), [], 'Permissao insuficiente para gerenciar contas.', 403);
+}
+$administradorGeral = $perfilViewer === 'admin' && usuarioEhAdministradorGeral($pdo, $usuario);
 
 try {
     sincronizarEmpresasAcronis($pdo);
     $hasPerfil = tabelaUsuarioTemPerfil($pdo);
+    $hasAdminFlag = tabelaUsuarioTemAdministradorGeral($pdo);
     $mysql = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql';
     $contaColumns = 'id, nome, email, ' . ($hasPerfil ? 'perfil' : "'admin' AS perfil")
-        . ', ativo, ultimo_login_em, criado_em, atualizado_em';
+        . ', ' . ($hasAdminFlag ? 'administrador_geral' : 'FALSE AS administrador_geral') . ', ativo, ultimo_login_em, criado_em, atualizado_em';
     $returning = $mysql ? '' : ' RETURNING ' . $contaColumns;
 
     if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
         $perfilSelect = $hasPerfil ? 'perfil' : "'admin' AS perfil";
-        $scope = $administradorGeral
-            ? ''
-            : ' AND (u.id = :viewer_id OR EXISTS (
+        if ($administradorGeral) {
+            $scope = '';
+        } elseif ($perfilViewer === 'operador') {
+            $scope = ' AND u.perfil = \'leitura\' AND EXISTS (
                     SELECT 1 FROM usuario_empresa ue_viewer
                     INNER JOIN usuario_empresa ue_target ON ue_target.empresa_id = ue_viewer.empresa_id
                     WHERE ue_viewer.usuario_id = :viewer_id_scope AND ue_target.usuario_id = u.id
-                ))';
+                )';
+        } else {
+            $scope = ' AND (u.id = :viewer_id OR (u.perfil IN (\'operador\', \'leitura\') AND EXISTS (
+                    SELECT 1 FROM usuario_empresa ue_viewer
+                    INNER JOIN usuario_empresa ue_target ON ue_target.empresa_id = ue_viewer.empresa_id
+                    WHERE ue_viewer.usuario_id = :viewer_id_scope AND ue_target.usuario_id = u.id
+                )))';
+        }
         $stmt = $pdo->prepare(
-            "SELECT u.id, u.nome, u.email, {$perfilSelect}, u.ativo, u.ultimo_login_em, u.criado_em, u.atualizado_em
+            "SELECT u.id, u.nome, u.email, {$perfilSelect}, " . ($hasAdminFlag ? 'u.administrador_geral' : 'FALSE') . " AS administrador_geral, u.ativo, u.ultimo_login_em, u.criado_em, u.atualizado_em
              FROM usuario u
              WHERE 1 = 1 {$scope}
              ORDER BY u.ativo DESC, u.nome ASC, u.email ASC"
         );
-        $stmt->execute($administradorGeral ? [] : [
-            'viewer_id' => (int) $usuario['id'],
-            'viewer_id_scope' => (int) $usuario['id'],
-        ]);
+        $scopeParams = $administradorGeral ? [] : ['viewer_id_scope' => (int) $usuario['id']];
+        if (!$administradorGeral && $perfilViewer !== 'operador') {
+            $scopeParams['viewer_id'] = (int) $usuario['id'];
+        }
+        $stmt->execute($scopeParams);
         $contas = array_map(static function (array $item): array {
             $item['id'] = (int) $item['id'];
             $item['perfil'] = normalizarPerfil((string) ($item['perfil'] ?? ''));
@@ -48,8 +62,15 @@ try {
              INNER JOIN empresa e ON e.id = ue.empresa_id
              ORDER BY e.nome ASC'
         );
+        $empresasPermitidas = array_fill_keys(
+            array_map('intval', array_column(empresasAcessiveis($pdo, $usuario), 'id')),
+            true
+        );
         $empresasPorUsuario = [];
         foreach ($empresaStmt->fetchAll() ?: [] as $empresa) {
+            if (!$administradorGeral && !isset($empresasPermitidas[(int) $empresa['id']])) {
+                continue;
+            }
             $empresasPorUsuario[(int) $empresa['usuario_id']][] = [
                 'id' => (int) $empresa['id'],
                 'nome' => $empresa['nome'],
@@ -74,13 +95,55 @@ try {
     }
 
     $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
-    if (!in_array($method, ['POST', 'PATCH'], true)) {
-        apiMethod('POST');
+    if (!in_array($method, ['POST', 'PATCH', 'DELETE'], true)) {
+        apiMethod('POST, PATCH ou DELETE');
     }
     apiMutationGuard();
 
     $payload = json_decode(file_get_contents('php://input'), true);
     $payload = is_array($payload) ? $payload : $_POST;
+
+    if ($method === 'DELETE') {
+        $id = (int) ($payload['id'] ?? 0);
+        $senhaConfirmacao = (string) ($payload['senha_confirmacao'] ?? '');
+        if ($id <= 0) {
+            apiResponse(false, new stdClass(), [], 'Conta invalida.', 422);
+        }
+        if ((int) $usuario['id'] === $id) {
+            apiResponse(false, new stdClass(), [], 'A propria conta nao pode ser excluida.', 422);
+        }
+
+        $stmt = $pdo->prepare('SELECT id, nome, email, perfil, ' . ($hasAdminFlag ? 'administrador_geral' : 'FALSE AS administrador_geral') . ' FROM usuario WHERE id = :id LIMIT 1');
+        $stmt->execute(['id' => $id]);
+        $contaExcluir = $stmt->fetch();
+        if (!$contaExcluir) {
+            apiResponse(false, new stdClass(), [], 'Conta nao encontrada.', 404);
+        }
+        if (!$administradorGeral) {
+            if ($perfilViewer !== 'admin' || !in_array(normalizarPerfil((string) $contaExcluir['perfil']), ['operador', 'leitura'], true)) {
+                apiResponse(false, new stdClass(), [], 'Seu nivel de acesso nao permite excluir esta conta.', 403);
+            }
+            if (!contaEstaNoEscopo($pdo, $usuario, $contaExcluir, false)) {
+                apiResponse(false, new stdClass(), [], 'Esta conta nao esta disponivel no seu nivel de acesso.', 403);
+            }
+        }
+        if ($senhaConfirmacao === '') {
+            apiResponse(false, new stdClass(), [], 'Digite sua senha para confirmar a exclusao.', 422);
+        }
+        $senhaStmt = $pdo->prepare('SELECT senha_hash FROM usuario WHERE id = :id LIMIT 1');
+        $senhaStmt->execute(['id' => (int) ($usuario['id'] ?? 0)]);
+        if (!password_verify($senhaConfirmacao, (string) $senhaStmt->fetchColumn())) {
+            apiResponse(false, new stdClass(), [], 'Senha de confirmacao incorreta.', 422);
+        }
+
+        registrarAuditoriaConta($pdo, (int) $usuario['id'], $id, 'conta_excluida', [
+            'perfil' => $contaExcluir['perfil'] ?? null,
+            'email' => $contaExcluir['email'] ?? null,
+        ]);
+        $delete = $pdo->prepare('DELETE FROM usuario WHERE id = :id');
+        $delete->execute(['id' => $id]);
+        apiResponse(true, ['id' => $id], [], 'Conta excluida com sucesso.');
+    }
 
     if ($method === 'PATCH') {
         if (!$hasPerfil) {
@@ -90,6 +153,9 @@ try {
         $id = (int) ($payload['id'] ?? 0);
         $nome = trim((string) ($payload['nome'] ?? ''));
         $perfil = normalizarPerfil((string) ($payload['perfil'] ?? 'leitura'));
+        $adminGeralInformado = array_key_exists('administrador_geral', $payload);
+        $adminGeral = filter_var($payload['administrador_geral'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $senhaConfirmacao = (string) ($payload['senha_confirmacao'] ?? '');
         $ativo = array_key_exists('ativo', $payload)
             ? filter_var($payload['ativo'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
             : null;
@@ -117,11 +183,59 @@ try {
             }
         }
 
-        $stmt = $pdo->prepare('SELECT id, nome, email, perfil, ativo FROM usuario WHERE id = :id LIMIT 1');
+        $stmt = $pdo->prepare('SELECT id, nome, email, perfil, ' . ($hasAdminFlag ? 'administrador_geral' : 'FALSE AS administrador_geral') . ', ativo FROM usuario WHERE id = :id LIMIT 1');
         $stmt->execute(['id' => $id]);
         $contaAtual = $stmt->fetch();
         if (!$contaAtual) {
             apiResponse(false, new stdClass(), [], 'Conta nao encontrada.', 404);
+        }
+
+        if (!$administradorGeral && !contaEstaNoEscopo($pdo, $usuario, $contaAtual, $self)) {
+            apiResponse(false, new stdClass(), [], 'Esta conta nao esta disponivel no seu nivel de acesso.', 403);
+        }
+
+        if ($perfilViewer === 'operador') {
+            if (($contaAtual['perfil'] ?? 'leitura') !== 'leitura' || $perfil !== 'leitura' || $self) {
+                apiResponse(false, new stdClass(), [], 'Operadores podem alterar somente usuarios de leitura da sua empresa.', 403);
+            }
+            if (!$temEmpresas) {
+                $empresaIds = idsDasEmpresasDoUsuario($pdo, $id);
+                $temEmpresas = true;
+            }
+        }
+
+        if (!$adminGeralInformado) {
+            $adminGeral = filter_var($contaAtual['administrador_geral'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        }
+        $adminGeralAtual = filter_var($contaAtual['administrador_geral'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        if ($adminGeralInformado && $adminGeral !== $adminGeralAtual) {
+            if ($senhaConfirmacao === '') {
+                apiResponse(false, new stdClass(), [], 'Digite sua senha para alterar o acesso de administrador geral.', 422);
+            }
+            $senhaStmt = $pdo->prepare('SELECT senha_hash FROM usuario WHERE id = :id LIMIT 1');
+            $senhaStmt->execute(['id' => (int) ($usuario['id'] ?? 0)]);
+            if (!password_verify($senhaConfirmacao, (string) $senhaStmt->fetchColumn())) {
+                apiResponse(false, new stdClass(), [], 'Senha de confirmacao incorreta.', 422);
+            }
+        }
+        if ($adminGeral && !$administradorGeral) {
+            apiResponse(false, new stdClass(), [], 'Somente um administrador geral pode conceder acesso global.', 403);
+        }
+        if ($perfil === 'admin' && !$administradorGeral && ($contaAtual['perfil'] ?? '') !== 'admin') {
+            apiResponse(false, new stdClass(), [], 'Somente um administrador geral pode criar administradores de empresa.', 403);
+        }
+        if ($perfil !== 'admin') {
+            $adminGeral = false;
+        }
+        if ($adminGeral) {
+            $empresaIds = [];
+            $temEmpresas = true;
+        }
+        if (!$adminGeral && $temEmpresas && $empresaIds === []) {
+            apiResponse(false, new stdClass(), [], 'Associe pelo menos uma empresa ou marque Administrador geral.', 422);
+        }
+        if (!$adminGeral && $adminGeralInformado && filter_var($contaAtual['administrador_geral'] ?? false, FILTER_VALIDATE_BOOLEAN) && !$temEmpresas) {
+            apiResponse(false, new stdClass(), [], 'Associe pelo menos uma empresa ou marque Administrador geral.', 422);
         }
 
         if ($self && ($perfil !== 'admin' || $ativo === false)) {
@@ -130,6 +244,10 @@ try {
 
         $sets = ['perfil = :perfil', 'atualizado_em = NOW()'];
         $params = ['id' => $id, 'perfil' => $perfil];
+        if ($hasAdminFlag) {
+            $sets[] = 'administrador_geral = :administrador_geral';
+            $params['administrador_geral'] = $adminGeral ? '1' : '0';
+        }
         if ($nome !== '') {
             $sets[] = 'nome = :nome';
             $params['nome'] = $nome;
@@ -171,6 +289,7 @@ try {
     $email = strtolower(trim((string) ($payload['email'] ?? '')));
     $senha = (string) ($payload['senha'] ?? '');
     $perfil = normalizarPerfil((string) ($payload['perfil'] ?? 'leitura'));
+    $adminGeral = filter_var($payload['administrador_geral'] ?? false, FILTER_VALIDATE_BOOLEAN);
     $empresaIds = normalizarEmpresaIds($payload['empresa_ids'] ?? []);
     $ativo = array_key_exists('ativo', $payload)
         ? filter_var($payload['ativo'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
@@ -188,8 +307,23 @@ try {
     if (!array_key_exists($perfil, perfisDisponiveis())) {
         apiResponse(false, new stdClass(), [], 'Perfil invalido.', 422);
     }
+    if ($perfilViewer === 'operador') {
+        $perfil = 'leitura';
+        $adminGeral = false;
+    }
+    if ($perfil !== 'admin') {
+        $adminGeral = false;
+    }
+    if ($perfil === 'admin' && !$administradorGeral) {
+        apiResponse(false, new stdClass(), [], 'Somente um administrador geral pode criar administradores de empresa.', 403);
+    }
+    if ($adminGeral && !$administradorGeral) {
+        apiResponse(false, new stdClass(), [], 'Somente um administrador geral pode criar outro administrador geral.', 403);
+    }
     validarEmpresasAcessiveis($pdo, $usuario, $empresaIds);
-    if ($empresaIds === []) {
+    if ($adminGeral) {
+        $empresaIds = [];
+    } elseif ($empresaIds === []) {
         apiResponse(false, new stdClass(), [], 'Selecione pelo menos uma empresa para este usuario.', 422);
     }
 
@@ -206,14 +340,15 @@ try {
 
     if ($hasPerfil) {
         $insert = $pdo->prepare(
-            'INSERT INTO usuario (nome, email, senha_hash, perfil, ativo, criado_em, atualizado_em)
-             VALUES (:nome, :email, :senha_hash, :perfil, :ativo, NOW(), NOW())' . $returning
+            'INSERT INTO usuario (nome, email, senha_hash, perfil, administrador_geral, ativo, criado_em, atualizado_em)
+             VALUES (:nome, :email, :senha_hash, :perfil, :administrador_geral, :ativo, NOW(), NOW())' . $returning
         );
         $insert->execute([
             'nome' => $nome,
             'email' => $email,
             'senha_hash' => $hash,
             'perfil' => $perfil,
+            'administrador_geral' => $adminGeral ? '1' : '0',
             'ativo' => $ativo !== false ? '1' : '0',
         ]);
     } else {
@@ -260,6 +395,7 @@ function formatarConta(array $conta): array
     $conta['perfil'] = normalizarPerfil((string) ($conta['perfil'] ?? ''));
     $conta['perfil_nome'] = nomePerfil($conta['perfil']);
     $conta['ativo'] = filter_var($conta['ativo'] ?? true, FILTER_VALIDATE_BOOLEAN);
+    $conta['administrador_geral'] = filter_var($conta['administrador_geral'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
     return $conta;
 }
@@ -331,4 +467,40 @@ function salvarEmpresasDoUsuario(PDO $pdo, int $usuarioId, array $empresaIds): v
         }
         throw $e;
     }
+}
+
+function idsDasEmpresasDoUsuario(PDO $pdo, int $usuarioId): array
+{
+    $stmt = $pdo->prepare('SELECT empresa_id FROM usuario_empresa WHERE usuario_id = :usuario_id');
+    $stmt->execute(['usuario_id' => $usuarioId]);
+    return array_values(array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN) ?: []));
+}
+
+function contaEstaNoEscopo(PDO $pdo, array $usuario, array $conta, bool $self): bool
+{
+    if ($self) {
+        return true;
+    }
+
+    $viewerPerfil = normalizarPerfil((string) ($usuario['perfil'] ?? ''));
+    $targetPerfil = normalizarPerfil((string) ($conta['perfil'] ?? ''));
+    if ($viewerPerfil === 'operador' && $targetPerfil !== 'leitura') {
+        return false;
+    }
+    if ($viewerPerfil === 'admin' && !in_array($targetPerfil, ['operador', 'leitura'], true)) {
+        return false;
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT 1
+         FROM usuario_empresa viewer_empresa
+         INNER JOIN usuario_empresa target_empresa ON target_empresa.empresa_id = viewer_empresa.empresa_id
+         WHERE viewer_empresa.usuario_id = :viewer_id AND target_empresa.usuario_id = :target_id
+         LIMIT 1'
+    );
+    $stmt->execute([
+        'viewer_id' => (int) ($usuario['id'] ?? 0),
+        'target_id' => (int) ($conta['id'] ?? 0),
+    ]);
+    return (bool) $stmt->fetchColumn();
 }

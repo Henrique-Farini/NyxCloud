@@ -60,6 +60,21 @@ function tabelaUsuarioTemIdioma(PDO $pdo): bool
     return $hasIdioma;
 }
 
+function tabelaUsuarioTemAdministradorGeral(PDO $pdo): bool
+{
+    static $hasFlag = null;
+    if ($hasFlag !== null) {
+        return $hasFlag;
+    }
+
+    $stmt = $pdo->query(
+        "SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'usuario' AND column_name = 'administrador_geral' LIMIT 1"
+    );
+    $hasFlag = (bool) $stmt->fetchColumn();
+    return $hasFlag;
+}
+
 function usuarioAutenticado(PDO $pdo): ?array
 {
     $payload = null;
@@ -76,8 +91,9 @@ function usuarioAutenticado(PDO $pdo): ?array
 
     $perfilSelect = tabelaUsuarioTemPerfil($pdo) ? 'perfil' : "'admin' AS perfil";
     $idiomaSelect = tabelaUsuarioTemIdioma($pdo) ? 'idioma' : "'pt-BR' AS idioma";
+    $adminGeralSelect = tabelaUsuarioTemAdministradorGeral($pdo) ? 'administrador_geral' : 'FALSE AS administrador_geral';
     $stmt = $pdo->prepare(
-        "SELECT id, nome, email, {$perfilSelect}, {$idiomaSelect}, ativo, criado_em, ultimo_login_em
+        "SELECT id, nome, email, {$perfilSelect}, {$idiomaSelect}, {$adminGeralSelect}, ativo, criado_em, ultimo_login_em
          FROM usuario WHERE id = :id AND ativo = TRUE"
     );
     $stmt->execute(['id' => (int) $payload['sub']]);
@@ -109,15 +125,17 @@ function usuarioPodeGerenciarContas(array $usuario): bool
     return normalizarPerfil((string) ($usuario['perfil'] ?? '')) === 'admin';
 }
 
+function usuarioPodeAcessarContas(array $usuario): bool
+{
+    return in_array(normalizarPerfil((string) ($usuario['perfil'] ?? '')), ['admin', 'operador'], true);
+}
+
 function usuarioEhAdministradorGeral(PDO $pdo, array $usuario): bool
 {
-    if (!usuarioPodeGerenciarContas($usuario)) {
+    if (!usuarioPodeGerenciarContas($usuario) || !tabelaUsuarioTemAdministradorGeral($pdo)) {
         return false;
     }
-
-    $stmt = $pdo->prepare('SELECT COUNT(*) FROM usuario_empresa WHERE usuario_id = :usuario_id');
-    $stmt->execute(['usuario_id' => (int) ($usuario['id'] ?? 0)]);
-    return (int) $stmt->fetchColumn() === 0;
+    return filter_var($usuario['administrador_geral'] ?? false, FILTER_VALIDATE_BOOLEAN);
 }
 
 function empresasAcessiveis(PDO $pdo, array $usuario): array

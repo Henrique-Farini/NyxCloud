@@ -8,7 +8,28 @@ $activeAccount = [];
 $accounts = [];
 $activeIds = [];
 $storePath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'acronis_accounts.json';
-if (is_file($storePath)) {
+$databaseConfig = [];
+global $pdo;
+if ($pdo instanceof PDO && class_exists(\NyxCloud\Services\AcronisCredentialStore::class)) {
+    $databaseConfig = (new \NyxCloud\Services\AcronisCredentialStore())->config();
+}
+
+if ($databaseConfig !== []) {
+    $activeIds = (array) ($databaseConfig['active_ids'] ?? []);
+    foreach ((array) ($databaseConfig['accounts'] ?? []) as $account) {
+        if (!is_array($account)) {
+            continue;
+        }
+        $accounts[] = $account;
+        if ($activeAccount === [] && in_array((string) ($account['id'] ?? ''), $activeIds, true)) {
+            $activeAccount = $account;
+        }
+    }
+    if ($activeAccount === [] && $accounts !== []) {
+        $activeAccount = $accounts[0];
+        $activeIds = [(string) ($activeAccount['id'] ?? '')];
+    }
+} elseif (is_file($storePath)) {
     $data = json_decode((string) file_get_contents($storePath), true);
     $rawActiveIds = is_array($data) ? ($data['active_ids'] ?? ($data['active_id'] ?? [])) : [];
     if (is_string($rawActiveIds)) {

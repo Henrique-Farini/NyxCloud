@@ -5,6 +5,8 @@ $cleanPanelRoute = preg_match('#/painel(?:/|$)#i', $requestPath) === 1;
 $panelAssetPrefix = $cleanPanelRoute ? '../painel-demo/' : '';
 $panelAlertsPath = $cleanPanelRoute ? '../alertas/' : 'alertas.php';
 $podeGerenciarPainel = usuarioPodeGerenciarContas($usuarioPainel);
+$podeAcessarContas = usuarioPodeAcessarContas($usuarioPainel);
+$administradorGeralPainel = $podeGerenciarPainel && usuarioEhAdministradorGeral($pdo, $usuarioPainel);
 ?>
 <!doctype html>
 <html lang="pt-BR">
@@ -42,8 +44,10 @@ $podeGerenciarPainel = usuarioPodeGerenciarContas($usuarioPainel);
           <a class="rail-item" href="#windows" data-section="windows"><i data-lucide="waypoints"></i><span>Janelas de execução</span></a>
           <span class="rail-caption">Ambiente</span>
           <a class="rail-item" href="#clients" data-section="clients"><i data-lucide="building-2"></i><span>Clientes</span></a>
-          <?php if ($podeGerenciarPainel): ?>
+          <?php if ($podeAcessarContas): ?>
           <a class="rail-item" href="#accounts" data-section="accounts"><i data-lucide="users-round"></i><span>Contas</span></a>
+          <?php endif; ?>
+          <?php if ($podeGerenciarPainel): ?>
           <a class="rail-item" href="#integrations" data-section="integrations"><i data-lucide="key-round"></i><span>Integrações</span></a>
           <?php endif; ?>
           <a class="rail-item" href="#infrastructure" data-section="infrastructure"><i data-lucide="server-cog"></i><span>Execuções por dispositivo</span></a>
@@ -95,7 +99,7 @@ $podeGerenciarPainel = usuarioPodeGerenciarContas($usuarioPainel);
         <section class="kpi-layout" aria-label="Indicadores principais" data-panel-section="overview">
           <article class="kpi-tile"><div class="kpi-heading"><span class="kpi-glyph violet"><i data-lucide="database-backup"></i></span><span class="trend up" id="trendA">AO VIVO</span></div><span class="kpi-name">Backups concluídos</span><strong class="kpi-number">--</strong><small id="kpiHintA">Carregando dados da Acronis...</small><div class="micro-chart" id="microA"></div></article>
           <article class="kpi-tile"><div class="kpi-heading"><span class="kpi-glyph cyan"><i data-lucide="database"></i></span><span class="trend up" id="trendB">TOTAL</span></div><span class="kpi-name">Backups processados</span><strong class="kpi-number">--</strong><small id="kpiHintB">Carregando dados da Acronis...</small><div class="micro-chart" id="microB"></div></article>
-          <article class="kpi-tile"><div class="kpi-heading"><span class="kpi-glyph amber"><i data-lucide="triangle-alert"></i></span><span class="trend warn" id="trendC">ATENCAO</span></div><span class="kpi-name">Backups com falha</span><strong class="kpi-number">--</strong><small id="kpiHintC">Carregando dados da Acronis...</small><div class="micro-chart" id="microC"></div></article>
+          <article class="kpi-tile"><div class="kpi-heading"><span class="kpi-glyph amber"><i data-lucide="triangle-alert"></i></span><span class="trend warn" id="trendC">ATENCAO</span></div><span class="kpi-name">Falhas no período</span><strong class="kpi-number">--</strong><small id="kpiHintC">Carregando dados da Acronis...</small><div class="micro-chart" id="microC"></div></article>
           <article class="kpi-tile"><div class="kpi-heading"><span class="kpi-glyph teal"><i data-lucide="cloud"></i></span><span class="trend up" id="trendD">CAPACIDADE</span></div><span class="kpi-name">Espaço protegido</span><strong class="kpi-number">--</strong><small id="kpiHintD">Carregando dados da Acronis...</small><div class="micro-chart" id="microD"></div></article>
         </section>
         <section class="visual-grid" data-section-container>
@@ -160,7 +164,7 @@ $podeGerenciarPainel = usuarioPodeGerenciarContas($usuarioPainel);
         </section>
         <section class="surface daily-devices-surface" id="daily-devices" data-panel-section="infrastructure"><div class="surface-head"><div><span class="surface-eyebrow">EXECUCOES POR DISPOSITIVO</span><h2>Hoje e ontem em ordem alfabetica</h2><small class="surface-note">Uma linha por dispositivo e plano, usando a ultima execucao de cada dia</small></div><span class="health-badge"><i></i> Atualizacao automatica</span></div><div class="daily-device-columns"><article><div class="daily-device-head"><div><small>HOJE</small><b id="todayExecutionDate">--</b></div><strong id="todayExecutionCount">--</strong></div><div class="daily-device-list" id="todayExecutionRows"><div class="daily-device-empty">Carregando execucoes de hoje...</div></div></article><article><div class="daily-device-head"><div><small>ONTEM</small><b id="yesterdayExecutionDate">--</b></div><strong id="yesterdayExecutionCount">--</strong></div><div class="daily-device-list" id="yesterdayExecutionRows"><div class="daily-device-empty">Carregando execucoes de ontem...</div></div></article></div></section>
         <section class="immersive-alerts" data-panel-section="alerts"><iframe src="<?= htmlspecialchars($panelAlertsPath, ENT_QUOTES, 'UTF-8') ?>?inside=1&v=20260915-alert-visibility-5" title="Central de alertas" loading="lazy"></iframe></section>
-         <?php if ($podeGerenciarPainel): ?><nav class="account-view-tabs" aria-label="Gestão de contas"><button type="button" class="is-active" data-account-tab="management" aria-selected="true"><i data-lucide="users-round"></i> Contas do painel</button><button type="button" data-account-tab="create" aria-selected="false"><i data-lucide="user-plus"></i> Criar usuário</button></nav><section class="accounts-grid accounts-management-layout" data-panel-section="accounts">
+         <?php if ($podeAcessarContas): ?><nav class="account-view-tabs" data-panel-section="accounts" aria-label="Gestão de contas"><button type="button" class="is-active" data-account-tab="management" aria-selected="true"><i data-lucide="users-round"></i> Contas do painel</button><button type="button" data-account-tab="create" aria-selected="false"><i data-lucide="user-plus"></i> Criar usuário</button></nav><section class="accounts-grid accounts-management-layout" data-panel-section="accounts">
           <article class="surface accounts-surface" data-account-panel="management">
             <div class="surface-head">
               <div>
@@ -171,6 +175,7 @@ $podeGerenciarPainel = usuarioPodeGerenciarContas($usuarioPainel);
               <span class="health-badge"><i></i> Controle interno</span>
             </div>
             <div id="accountsAccessNotice" class="accounts-empty" hidden>Voce nao tem permissao para gerenciar contas.</div>
+            <div class="clients-toolbar accounts-filter-toolbar" id="accountsCompanyFilterWrap" hidden><label class="compact-select"><span>Filtrar empresa</span><select id="accountsCompanyFilter"><option value="all">Todas as empresas</option></select></label></div>
             <div class="data-scroll accounts-table-wrap">
               <table class="accounts-table">
                 <thead>
@@ -193,11 +198,12 @@ $podeGerenciarPainel = usuarioPodeGerenciarContas($usuarioPainel);
             <form id="accountForm" class="account-form">
               <label><span>Nome</span><input type="text" name="nome" minlength="3" maxlength="150" placeholder="Ex.: Equipe Operacional" required></label>
               <label><span>E-mail</span><input type="email" name="email" placeholder="usuario@empresa.com" required></label>
-              <label><span>Perfil</span><select name="perfil" id="accountRoleSelect"><option value="leitura">Somente leitura</option><option value="operador">Operador</option><option value="admin">Administrador</option></select></label>
+              <label><span>Perfil</span><select name="perfil" id="accountRoleSelect"><option value="leitura">Somente leitura</option><?php if ($podeGerenciarPainel): ?><option value="operador">Operador</option><?php endif; ?><?php if ($administradorGeralPainel): ?><option value="admin">Administrador</option><?php endif; ?></select></label>
               <div class="account-company-picker" aria-describedby="accountCompanyHint">
                 <span>Empresas permitidas</span>
                 <div id="accountCompanyOptions"></div>
               </div>
+              <?php if ($administradorGeralPainel): ?><label class="account-checkbox"><input type="checkbox" name="administrador_geral" id="accountGlobalAdmin" disabled><span>Administrador geral (acesso a todas as empresas)</span></label><?php endif; ?>
               <small class="surface-note" id="accountCompanyHint">Empresas sincronizadas da Acronis. Selecione uma ou mais; o usuario verá somente esses dados.</small>
               <label><span>Senha inicial</span><input type="password" name="senha" minlength="8" placeholder="Minimo de 8 caracteres" required></label>
               <label class="account-checkbox"><input type="checkbox" name="ativo" checked><span>Conta ativa ao criar</span></label>
@@ -214,7 +220,7 @@ $podeGerenciarPainel = usuarioPodeGerenciarContas($usuarioPainel);
              <div class="account-permissions-actions"><button type="button" class="text-action" id="cancelAccountPermissions">Cancelar</button><button type="submit" class="solid-action" id="saveAccountPermissions">Salvar permissões</button></div>
            </form>
          </dialog>
-         <section class="accounts-grid integrations-grid" data-panel-section="integrations">
+         <?php endif; ?><?php if ($podeGerenciarPainel): ?><section class="accounts-grid integrations-grid" data-panel-section="integrations">
           <article class="surface accounts-surface">
             <div class="surface-head">
               <div>
@@ -289,6 +295,6 @@ $podeGerenciarPainel = usuarioPodeGerenciarContas($usuarioPainel);
   <div id="toast" class="console-toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.1"></script>
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-<script src="<?= htmlspecialchars($panelAssetPrefix, ENT_QUOTES, 'UTF-8') ?>app.js?v=20260928-language-5"></script>
+<script src="<?= htmlspecialchars($panelAssetPrefix, ENT_QUOTES, 'UTF-8') ?>app.js?v=20261001-period-failures-3"></script>
 </body>
 </html>

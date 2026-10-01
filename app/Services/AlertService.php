@@ -9,7 +9,7 @@ use DateTimeZone;
 
 final class AlertService extends AbstractAcronisService
 {
-    private const CACHE_VERSION = 'v26';
+    private const CACHE_VERSION = 'v28';
     private ?array $windowRulesCache = null;
     private ?DateTimeZone $timezoneCache = null;
 
@@ -59,7 +59,6 @@ final class AlertService extends AbstractAcronisService
             $alerts = array_values(array_filter(
                 array_merge($missingBackups, $operational, $native),
                 fn (array $alert): bool => !$this->shouldHideAlertByPlan($alert)
-                    && !$this->isIgnoredAlertMachine((string) ($alert['maquina'] ?? ''))
             ));
             usort($alerts, static fn (array $a, array $b): int => strcmp(
                 (string) ($b['data'] ?? '') . (string) ($b['hora'] ?? ''),
@@ -219,9 +218,6 @@ final class AlertService extends AbstractAcronisService
             $cliente = $this->firstString($task, ['tenant.name'], 'Cliente nao identificado');
             $maquina = $this->firstString($task, ['resource.name', 'context.Persistent.Name', 'context.MachineName']);
             $plano = $this->firstString($task, ['policy.name', 'context.BackupPlanName'], 'Sem plano');
-            if ($this->isIgnoredAlertMachine($maquina)) {
-                continue;
-            }
             $completedAt = $this->firstString($task, ['completedAt', 'updatedAt', 'startedAt']);
             if ($maquina === '' || $completedAt === '' || strtotime($completedAt) === false) {
                 continue;
@@ -328,13 +324,6 @@ final class AlertService extends AbstractAcronisService
             if ($hostname === '') {
                 continue;
             }
-            if ($this->isIgnoredAlertMachine($hostname)) {
-                continue;
-            }
-            if ($this->ignoreMissingBackupDevice($hostname)) {
-                continue;
-            }
-
             $tenantId = $this->firstString($workload, ['tenant_id', 'tenant.id', 'tenant.uuid']);
             $cliente = $tenantMap[$tenantId] ?? $this->firstString($workload, ['tenant.name'], 'Cliente nao identificado');
             $plans = $this->workloadPlans($workload);
@@ -358,7 +347,7 @@ final class AlertService extends AbstractAcronisService
             ]);
 
             foreach ($plans as $plan) {
-                if ($this->ignoreMissingBackupPlan($plan)) {
+                if ($this->isDisabledPlan($plan)) {
                     continue;
                 }
                 $schedule = $this->backupScheduleStatus($cliente, $hostname, $plan, $now, $defaultMinimumTimestamp);
@@ -580,7 +569,7 @@ final class AlertService extends AbstractAcronisService
     {
         foreach (['plano', 'recurso'] as $field) {
             $value = trim((string) ($alert[$field] ?? ''));
-            if ($value !== '' && ($this->isDataPlan($value) || $this->isDisabledPlan($value))) {
+            if ($value !== '' && $this->isDisabledPlan($value)) {
                 return true;
             }
         }

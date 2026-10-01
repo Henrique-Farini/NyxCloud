@@ -1566,3 +1566,4 @@ body[data-mode="light"] .alert-status{background:#f1f5f9}
 body[data-mode="light"] .alert-status.status-failed{color:#b4233d}
 body[data-mode="light"] .alert-status.status-success{color:#16714a}
 body[data-mode="light"] .alert-status.status-running{color:#8a5a00}
+.visibility-panel-actions{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}.visibility-category-filter{display:grid;gap:4px;color:var(--dim);font-size:9px;font-weight:700}.visibility-category-filter select{min-width:150px;height:35px;padding:0 9px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:inherit;font-size:10px;outline:0}
