@@ -13,14 +13,9 @@ final class DashboardService extends AbstractAcronisService
         $fast = filter_var($filters['fast'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $cacheKey = 'acronis.dashboard.' . self::CACHE_VERSION . '.' . $this->escopoCacheKey() . '.' . md5(json_encode($filters));
 
-        if ($fast) {
-            $cached = $this->cache->getStale($cacheKey);
-            if (is_array($cached)) {
-                $cached['cache_stale'] = true;
-                return $cached;
-            }
-        }
-
+        // Nunca devolva cache expirado: o painel pode exibir uma mensagem de
+        // indisponibilidade e permitir nova tentativa, mas nao deve tratar
+        // dados antigos como se fossem o estado atual da Acronis.
         return $this->remember($cacheKey, (int) $this->config['cache_ttl']['dashboard'], function () use ($filters, $fast): array {
             $tenantFilters = $filters;
             unset($tenantFilters['fast']);

@@ -41,8 +41,8 @@ Habilite a extensao PHP `pdo_mysql` e execute:
 As migrations MySQL ficam em `database/migrations/mysql`, criam `usuario` e
 `usuario_auditoria` e registram as versoes em `schema_migrations` no banco MySQL.
 O executor usa um lock por banco para impedir execucoes simultaneas. Como DDL
-MySQL faz commit implicito, cada arquivo deve conter uma unica instrucao
-idempotente; em caso de falha, corrija a causa e execute novamente.
+MySQL faz commit implicito, as instrucoes de cada arquivo sao executadas
+separadamente; em caso de falha, corrija a causa e execute novamente.
 Este schema destina-se a um banco novo; tabelas existentes nao sao reconciliadas.
 As migrations nao copiam dados nem alteram `DB_CONNECTION`.
 O login e a sessao suportam MySQL; consultas administrativas com SQL especifico

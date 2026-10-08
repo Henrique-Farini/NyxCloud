@@ -29,15 +29,36 @@ function jwtSecret(): string
     return $secret;
 }
 
+function nyxcloudJwtTtl(bool $remember = false): int
+{
+    $configured = (int) env($remember ? 'JWT_REMEMBER_TTL' : 'JWT_TTL', $remember ? '2592000' : '900');
+
+    return $remember
+        ? min(2592000, max(3600, $configured))
+        : min(3600, max(300, $configured));
+}
+
+function nyxcloudCookieSameSite(): string
+{
+    $configured = strtolower(trim((string) env('COOKIE_SAMESITE', 'Strict')));
+
+    return match ($configured) {
+        'lax' => 'Lax',
+        'strict' => 'Strict',
+        default => 'Strict',
+    };
+}
+
 function criarTokenJwt(array $claims, ?int $ttl = null): string
 {
     $agora = time();
-    $ttl = max(60, $ttl ?? (int) env('JWT_TTL', '3600'));
+    $ttl = min(2592000, max(60, $ttl ?? (int) env('JWT_TTL', '3600')));
 
     $payload = array_merge([
         'iss' => env('JWT_ISSUER', 'nyxcloud'),
         'iat' => $agora,
         'exp' => $agora + $ttl,
+        'jti' => bin2hex(random_bytes(16)),
     ], $claims);
 
     $header = base64UrlEncode(json_encode(['typ' => 'JWT', 'alg' => 'HS256'], JSON_THROW_ON_ERROR));
@@ -77,12 +98,12 @@ function definirCookieJwt(string $token, ?int $ttl = null, bool $persistente = f
 {
     $options = [
         'path' => '/',
-        'secure' => filter_var(env('COOKIE_SECURE', 'false'), FILTER_VALIDATE_BOOLEAN),
+        'secure' => nyxcloudCookieSecure(),
         'httponly' => true,
-        'samesite' => 'Strict',
+        'samesite' => nyxcloudCookieSameSite(),
     ];
     if ($persistente) {
-        $options['expires'] = time() + max(60, $ttl ?? (int) env('JWT_TTL', '3600'));
+        $options['expires'] = time() + min(2592000, max(60, $ttl ?? (int) env('JWT_TTL', '3600')));
     }
 
     setcookie('access_token', $token, $options);
@@ -93,9 +114,9 @@ function limparCookieJwt(): void
     setcookie('access_token', '', [
         'expires' => time() - 3600,
         'path' => '/',
-        'secure' => filter_var(env('COOKIE_SECURE', 'false'), FILTER_VALIDATE_BOOLEAN),
+        'secure' => nyxcloudCookieSecure(),
         'httponly' => true,
-        'samesite' => 'Strict',
+        'samesite' => nyxcloudCookieSameSite(),
     ]);
     limparCookieCsrf();
 }
@@ -125,6 +146,12 @@ function obterTokensDaRequisicao(): array
     return array_values(array_unique(array_filter($tokens)));
 }
 
+function invalidarTokensDoUsuario(PDO $pdo, int $usuarioId): void
+{
+    $stmt = $pdo->prepare('UPDATE usuario SET token_version = token_version + 1, atualizado_em = CURRENT_TIMESTAMP WHERE id = :id');
+    $stmt->execute(['id' => $usuarioId]);
+}
+
 function criarTokenCsrf(): string
 {
     return bin2hex(random_bytes(32));
@@ -136,9 +163,9 @@ function definirCookieCsrf(?string $token = null, ?int $ttl = null): string
     setcookie('csrf_token', $token, [
         'expires' => time() + max(60, $ttl ?? (int) env('JWT_REMEMBER_TTL', '2592000')),
         'path' => '/',
-        'secure' => filter_var(env('COOKIE_SECURE', 'false'), FILTER_VALIDATE_BOOLEAN),
+        'secure' => nyxcloudCookieSecure(),
         'httponly' => false,
-        'samesite' => 'Strict',
+        'samesite' => nyxcloudCookieSameSite(),
     ]);
 
     return $token;
@@ -149,9 +176,9 @@ function limparCookieCsrf(): void
     setcookie('csrf_token', '', [
         'expires' => time() - 3600,
         'path' => '/',
-        'secure' => filter_var(env('COOKIE_SECURE', 'false'), FILTER_VALIDATE_BOOLEAN),
+        'secure' => nyxcloudCookieSecure(),
         'httponly' => false,
-        'samesite' => 'Strict',
+        'samesite' => nyxcloudCookieSameSite(),
     ]);
 }
 

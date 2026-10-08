@@ -165,6 +165,8 @@
     node.dataset.state = stateName;
     const label = node.querySelector('span');
     if (label) label.textContent = message;
+    const retry = document.getElementById('retryAlerts');
+    if (retry) retry.hidden = stateName !== 'warning';
   };
 
   const uiLocale = () => localStorage.getItem('nyxcloud_language') === 'en-US' ? 'en-US' : 'pt-BR';
@@ -305,7 +307,9 @@
   const isHiddenAlert = row => hasStoredAlert(hiddenAlertKeys(), row);
   const isResolvedAlert = row => hasStoredAlert(resolvedAlertKeys(), row);
   const scopeKey = (...values) => values.map(value => cleanText(value).toLocaleLowerCase('pt-BR')).join('||');
-  const isFilteredByVisibility = row => readStoredSet(hiddenClientVisibilityKey).has(scopeKey(row.client))
+  const isFilteredByVisibility = row => (window.NyxCloudAlertData?.isHiddenByVisibility
+    ? window.NyxCloudAlertData.isHiddenByVisibility(row)
+    : readStoredSet(hiddenClientVisibilityKey).has(scopeKey(row.client)))
     || readStoredSet(hiddenDeviceVisibilityKey).has(scopeKey(row.client, row.server))
     || readStoredSet(hiddenPlanVisibilityKey).has(scopeKey(row.client, row.server, row.plan))
     || (readStoredMap(deviceAlertCategoriesKey)[scopeKey(row.client, row.server)] || []).includes(alertCategoryGroup(row));
@@ -587,6 +591,7 @@
   };
 
   const deduplicateRows = rows => {
+    if (window.NyxCloudAlertData?.deduplicate) return window.NyxCloudAlertData.deduplicate(rows);
     const seen = new Set();
     return rows.filter(row => {
       const fallback = [row.client, row.server, row.code, row.sortTime, row.plan, row.error].join('|');
@@ -889,10 +894,8 @@
       tbody.append(tr);
     });
 
-    const pending = document.getElementById('statusFilter')?.value === 'all'
-      ? data.length
-      : data.filter(row => !['success', 'resolved', 'running'].includes(effectiveStatus(row))).length;
-    document.getElementById('failureBadge').textContent = `${pending} ${pending === 1 ? 'pendência' : 'pendências'}`;
+    const pending = data.filter(row => effectiveStatus(row) === 'failed' && !isResolvedAlert(row)).length;
+    document.getElementById('failureBadge').textContent = `${pending} ${pending === 1 ? 'pendência aberta' : 'pendências abertas'}`;
     document.getElementById('resultSummary').textContent = data.length
       ? `Mostrando ${(page - 1) * pageSize + 1} a ${Math.min(page * pageSize, data.length)} de ${data.length} resultados`
       : 'Nenhum alerta encontrado';
@@ -956,13 +959,18 @@
     const inventory = state.inventoryRows.length ? state.inventoryRows : state.rows.map(row => ({ client: row.client, server: row.server, plan: row.plan }));
     const clients = visibilityValues(inventory.map(row => row.client));
     const selectedCategory = document.getElementById('visibilityCategoryFilter')?.value || 'all';
+    const search = String(document.getElementById('visibilityClientSearch')?.value || '').trim().toLocaleLowerCase('pt-BR');
+    const visibleClients = clients.filter(client => {
+      if (!search) return true;
+      return inventory.some(row => row.client === client && [row.client, row.server, row.plan].some(value => String(value || '').toLocaleLowerCase('pt-BR').includes(search)));
+    });
     container.replaceChildren();
-    if (!clients.length) {
+    if (!visibleClients.length) {
       container.append(cell('small', 'Nenhum cliente encontrado.', 'visibility-empty'));
       return;
     }
 
-    clients.forEach(client => {
+    visibleClients.forEach(client => {
       const clientKey = scopeKey(client);
       const clientRows = inventory.filter(row => row.client === client);
       const clientSection = document.createElement('section');
@@ -1063,6 +1071,7 @@
     writeStoredMap(deviceAlertCategoriesKey, categories);
     persistPreferencesQuietly();
     page = 1;
+    updateKpis();
     renderRows();
     setAlertTab('events');
     notify('Seleção por cliente, máquina e plano aplicada.');
@@ -1076,6 +1085,7 @@
     persistPreferencesQuietly();
     renderVisibilityOptions();
     page = 1;
+    updateKpis();
     renderRows();
     notify('Todos os dispositivos e planos foram reativados.');
   };
@@ -1109,8 +1119,7 @@
       element.textContent = Number(values[index] || 0).toLocaleString(uiLocale());
     });
     const dangerCount = document.querySelector('.danger-count');
-    const sidebarRows = state.rawRows.filter(isInsidePeriod);
-    if (dangerCount) dangerCount.textContent = Number(sidebarRows.length || 0).toLocaleString(uiLocale());
+    if (dangerCount) dangerCount.textContent = Number(pendingRows.length || 0).toLocaleString(uiLocale());
   };
 
   const updateActivityCount = dashboard => {
@@ -1186,14 +1195,15 @@
       setSyncStatus(syncTimeLabel(), 'ready');
       if (announce) notify('Alertas atualizados.');
 
-      Promise.all([
-        fetchJson('devices.php').catch(() => []),
-        fetchJson('dashboard.php').catch(() => ({}))
-      ]).then(([devices, dashboard]) => {
-        updateActivityCount(dashboard);
-        state.inventoryRows = inventoryFromDevices(devices);
-        renderVisibilityOptions();
-      }).catch(() => {});
+      fetchJson('dashboard.php')
+        .then(updateActivityCount)
+        .catch(() => {});
+      fetchJson('devices.php')
+        .then(devices => {
+          state.inventoryRows = inventoryFromDevices(devices);
+          renderVisibilityOptions();
+        })
+        .catch(() => {});
     } catch (error) {
       setSyncStatus('Falha na sincronizacao', 'warning');
       throw error;
@@ -1286,6 +1296,7 @@
   document.getElementById('applyAlertVisibility')?.addEventListener('click', applyVisibilitySelection);
   document.getElementById('resetAlertVisibility')?.addEventListener('click', resetVisibilitySelection);
   document.getElementById('visibilityCategoryFilter')?.addEventListener('change', renderVisibilityOptions);
+  document.getElementById('visibilityClientSearch')?.addEventListener('input', renderVisibilityOptions);
   document.querySelectorAll('.quick-alert-filters [data-quick-filter]').forEach(button => {
     button.addEventListener('click', () => {
       state.quickFilter = button.dataset.quickFilter || 'all';
@@ -1403,6 +1414,11 @@
   });
   detailsDialog?.addEventListener('close', () => {
     currentDetailRow = null;
+  });
+  document.getElementById('retryAlerts')?.addEventListener('click', () => {
+    loadPreferences()
+      .then(() => loadRows({ announce: true }))
+      .catch(error => notify(error.message || 'Falha ao atualizar alertas.'));
   });
 
   if (window.parent !== window) {

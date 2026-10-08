@@ -6,7 +6,7 @@ namespace NyxCloud\Services;
 
 final class CustomerService extends AbstractAcronisService
 {
-    private const CACHE_VERSION = 'v16';
+    private const CACHE_VERSION = 'v18';
 
     public function listCustomers(array $filters = []): array
     {
@@ -89,7 +89,10 @@ final class CustomerService extends AbstractAcronisService
             $deviceCount = count($tenantDevices);
         }
 
-        $lastBackup = $this->latestDate($tenantTasks, ['completedAt', 'updatedAt', 'startedAt']);
+        $latestTask = $this->latestTask($tenantTasks, ['completedAt', 'updatedAt', 'startedAt']);
+        $lastBackup = $latestTask !== null ? $this->taskDate($latestTask, ['completedAt', 'updatedAt', 'startedAt']) : '';
+        $lastBackupStatus = $latestTask !== null ? $this->taskStatus($latestTask) : 'unknown';
+        $summaryTasks = $tenantTasks;
         if ($lastBackup === '') {
             $targetName = mb_strtolower(trim((string) $this->firstString($tenant, ['name', 'customer_name'])));
             $targetName = preg_replace('/\s*\([^)]*\)/u', '', $targetName) ?? $targetName;
@@ -102,18 +105,79 @@ final class CustomerService extends AbstractAcronisService
                     }
                 }
             }
-            $lastBackup = $this->latestDate($nameMatchedTasks, ['completedAt', 'updatedAt', 'startedAt']);
+            $summaryTasks = array_merge($summaryTasks, $nameMatchedTasks);
+            $latestTask = $this->latestTask($nameMatchedTasks, ['completedAt', 'updatedAt', 'startedAt']);
+            $lastBackup = $latestTask !== null ? $this->taskDate($latestTask, ['completedAt', 'updatedAt', 'startedAt']) : '';
+            $lastBackupStatus = $latestTask !== null ? $this->taskStatus($latestTask) : 'unknown';
         }
+        $taskSummary = $this->taskSummary($summaryTasks);
 
         return [
             'nome' => $this->firstString($tenant, ['name', 'customer_name'], 'Sem nome'),
             'tenant' => $tenantId,
             'quantidade_dispositivos' => $deviceCount,
+            'quantidade_planos' => $taskSummary['quantidade_planos'],
+            'execucoes_hoje' => $taskSummary['execucoes_hoje'],
+            'execucoes_ontem' => $taskSummary['execucoes_ontem'],
+            'media_execucoes_dia' => $taskSummary['media_execucoes_dia'],
+            'dias_com_execucao' => $taskSummary['dias_com_execucao'],
             'dispositivos' => array_map(fn (array $device): array => $this->mapDeviceSummary($device, $tenantTasks), $tenantDevices),
             'plano' => $this->firstString($tenant, ['edition', 'pricing_mode', 'kind', 'type']),
             'ultimo_backup' => $lastBackup,
+            'ultimo_backup_status' => $lastBackupStatus,
             'raw' => $tenant,
         ];
+    }
+
+    private function taskSummary(array $tasks): array
+    {
+        $plans = [];
+        $daily = [];
+
+        foreach ($tasks as $task) {
+            if (!is_array($task) || !$this->isBackupTask($task)) {
+                continue;
+            }
+
+            $plan = $this->firstString($task, ['policy.name', 'context.BackupPlanName']);
+            if ($plan !== '') {
+                $plans[$this->normalizeLookupText($plan)] = true;
+            }
+
+            $timestamp = strtotime($this->firstString($task, ['completedAt', 'updatedAt', 'startedAt']));
+            if ($timestamp === false) {
+                continue;
+            }
+
+            $day = date('Y-m-d', $timestamp);
+            $daily[$day] = ($daily[$day] ?? 0) + 1;
+        }
+
+        $dailyValues = array_values($daily);
+        $today = date('Y-m-d');
+        $yesterday = date('Y-m-d', strtotime('-1 day'));
+
+        return [
+            'quantidade_planos' => count($plans),
+            'execucoes_hoje' => (int) ($daily[$today] ?? 0),
+            'execucoes_ontem' => (int) ($daily[$yesterday] ?? 0),
+            'media_execucoes_dia' => $dailyValues === [] ? 0 : round(array_sum($dailyValues) / count($dailyValues), 1),
+            'dias_com_execucao' => count($dailyValues),
+        ];
+    }
+
+    private function isBackupTask(array $task): bool
+    {
+        if (($task['policy']['type'] ?? '') === 'backup') {
+            return true;
+        }
+
+        if ($this->firstString($task, ['context.BackupPlanName']) !== '') {
+            return true;
+        }
+
+        $title = strtolower(trim((string) ($task['context']['title'] ?? '')));
+        return str_starts_with($title, 'backup plan');
     }
 
     private function mapDeviceSummary(array $device, array $tasks): array
@@ -242,19 +306,50 @@ final class CustomerService extends AbstractAcronisService
         return number_format($bytes, $index === 0 ? 0 : 2, ',', '.') . ' ' . $units[$index];
     }
 
-    private function latestDate(array $items, array $fields): string
+    private function latestTask(array $items, array $fields): ?array
     {
-        $latest = 0;
+        $latestTimestamp = 0;
+        $latestTask = null;
         foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
             foreach ($fields as $field) {
                 $timestamp = strtotime((string) ($item[$field] ?? ''));
-                if ($timestamp !== false) {
-                    $latest = max($latest, $timestamp);
+                if ($timestamp !== false && $timestamp > $latestTimestamp) {
+                    $latestTimestamp = $timestamp;
+                    $latestTask = $item;
                 }
             }
         }
 
-        return $latest > 0 ? date('c', $latest) : '';
+        return $latestTask;
+    }
+
+    private function taskDate(array $task, array $fields): string
+    {
+        $latestTimestamp = 0;
+        foreach ($fields as $field) {
+            $timestamp = strtotime((string) ($task[$field] ?? ''));
+            if ($timestamp !== false) {
+                $latestTimestamp = max($latestTimestamp, $timestamp);
+            }
+        }
+
+        return $latestTimestamp > 0 ? date('c', $latestTimestamp) : '';
+    }
+
+    private function taskStatus(array $task): string
+    {
+        $result = is_array($task['result'] ?? null) ? $task['result'] : [];
+        $status = strtolower(trim((string) ($result['code'] ?? $task['state'] ?? $task['status'] ?? '')));
+
+        return match ($status) {
+            'ok', 'success', 'successful', 'completed', 'complete' => 'success',
+            'error', 'failed', 'fail', 'failure' => 'failed',
+            'running', 'in_progress', 'processing', 'queued', 'pending' => 'running',
+            default => 'unknown',
+        };
     }
 
     private function tenantFamilyMap(array $tenants): array

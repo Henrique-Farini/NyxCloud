@@ -18,8 +18,8 @@ $podeGerenciarAlertas = normalizarPerfil((string) ($usuarioPainel['perfil'] ?? '
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= htmlspecialchars($alertsAssetPrefix, ENT_QUOTES, 'UTF-8') ?>styles.css?v=20261001-page-transition-1">
-  <link rel="stylesheet" href="<?= htmlspecialchars($alertsAssetPrefix, ENT_QUOTES, 'UTF-8') ?>alertas.css?v=20261001-panel-aligned-1">
+  <link rel="stylesheet" href="<?= htmlspecialchars($alertsAssetPrefix, ENT_QUOTES, 'UTF-8') ?>styles.css?v=20261008-notifications-5">
+  <link rel="stylesheet" href="<?= htmlspecialchars($alertsAssetPrefix, ENT_QUOTES, 'UTF-8') ?>alertas.css?v=20261006-visibility-search-1">
 </head>
 <body data-mode="dark">
   <a class="skip-link" href="#alert-events">Pular para os alertas</a>
@@ -35,7 +35,7 @@ $podeGerenciarAlertas = normalizarPerfil((string) ($usuarioPainel['perfil'] ?? '
           <span class="rail-caption">Monitoramento</span>
           <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#overview"><i data-lucide="layout-dashboard"></i><span>Visão geral</span></a>
           <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#executions"><i data-lucide="database-zap"></i><span>Atividade recente</span><em>--</em></a>
-          <a class="rail-item is-current" href="<?= htmlspecialchars($alertsSelfPath, ENT_QUOTES, 'UTF-8') ?>"><i data-lucide="siren"></i><span>Alertas</span><em class="danger-count">--</em></a>
+          <a class="rail-item is-current" href="<?= htmlspecialchars($alertsSelfPath, ENT_QUOTES, 'UTF-8') ?>"><i data-lucide="siren"></i><span>Alertas abertos</span><em class="danger-count">--</em></a>
           <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#storage"><i data-lucide="hard-drive"></i><span>Armazenamento</span></a>
           <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#schedules"><i data-lucide="calendar-clock"></i><span>Resumo</span></a>
           <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#windows"><i data-lucide="waypoints"></i><span>Janelas de execução</span></a>
@@ -44,10 +44,12 @@ $podeGerenciarAlertas = normalizarPerfil((string) ($usuarioPainel['perfil'] ?? '
            <?php if (usuarioPodeGerenciarContas($usuarioPainel)): ?>
            <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#accounts"><i data-lucide="users-round"></i><span>Contas</span></a>
            <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#integrations"><i data-lucide="key-round"></i><span>Integrações</span></a>
+           <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#notifications"><i data-lucide="mail-check"></i><span>Notificações</span></a>
            <?php endif; ?>
           <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#infrastructure"><i data-lucide="server-cog"></i><span>Execuções por dispositivo</span></a>
           <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#analytics"><i data-lucide="chart-no-axes-combined"></i><span>Análises</span></a>
            <?php if (usuarioPodeGerenciarContas($usuarioPainel)): ?><a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#audit"><i data-lucide="scroll-text"></i><span>Auditoria administrativa</span></a><?php endif; ?>
+           <?php if (usuarioEhAdministradorGeral($pdo, $usuarioPainel)): ?><a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#admin"><i data-lucide="shield-check"></i><span>Administração</span></a><?php endif; ?>
           <span class="rail-caption">Usuário</span>
           <a class="rail-item" href="<?= htmlspecialchars($alertsPanelPath, ENT_QUOTES, 'UTF-8') ?>#profile"><i data-lucide="circle-user-round"></i><span>Meu perfil</span></a>
         </nav>
@@ -63,7 +65,7 @@ $podeGerenciarAlertas = normalizarPerfil((string) ($usuarioPainel['perfil'] ?? '
       <header class="command-bar">
         <div class="command-left"><button class="mobile-trigger" id="railOpen" aria-label="Abrir menu" aria-expanded="true"><i data-lucide="menu"></i></button><div class="crumb"><span>Painel</span><i data-lucide="chevron-right"></i><b>Alertas</b></div></div>
         <div class="command-right">
-          <span class="sync-status" id="alertsSyncStatus" role="status" aria-live="polite"><i data-lucide="refresh-cw"></i><span>Sincronizando</span></span>
+          <span class="sync-status" id="alertsSyncStatus" role="status" aria-live="polite"><i data-lucide="refresh-cw"></i><span>Sincronizando</span></span><button class="sync-retry" id="retryAlerts" type="button" hidden>Tentar novamente</button>
           <label class="global-search"><i data-lucide="search"></i><input id="globalAlertSearch" type="search" placeholder="Buscar cliente, dispositivo ou erro" aria-label="Pesquisar alertas"></label>
           <a class="command-icon" href="#alert-events" aria-label="Ir para lista de alertas" title="Ir para lista de alertas"><i data-lucide="bell"></i><span></span></a>
           <button class="mode-switch" id="modeSwitch" type="button" aria-label="Alternar tema"><i data-lucide="sun"></i><span></span><i data-lucide="moon"></i></button>
@@ -83,7 +85,7 @@ $podeGerenciarAlertas = normalizarPerfil((string) ($usuarioPainel['perfil'] ?? '
         </nav>
 
         <section class="alert-visibility-panel" id="alertVisibilityPanel" hidden>
-          <div class="visibility-panel-head"><div><span class="surface-eyebrow">CONFIGURAÇÃO DE EXIBIÇÃO</span><h2>Escolha o que deve gerar alertas</h2><p>Selecione clientes, máquinas, planos e os tipos de alerta de cada máquina.</p></div><div class="visibility-panel-actions"><label class="visibility-category-filter"><span>Ver categoria</span><select id="visibilityCategoryFilter"><option value="all">Todas as categorias</option><option value="failedbackup">Falha de backup</option><option value="missing">Não executou</option><option value="nofiles">Sem arquivos</option><option value="offline">Máquina offline</option><option value="size">Tamanho anormal</option><option value="backup">Outros de backup</option></select></label><button class="apply-filter" id="applyAlertVisibility" type="button"><i data-lucide="check"></i> Salvar seleção</button></div></div>
+          <div class="visibility-panel-head"><div><span class="surface-eyebrow">CONFIGURAÇÃO DE EXIBIÇÃO</span><h2>Escolha o que deve gerar alertas</h2><p>Selecione clientes, máquinas, planos e os tipos de alerta de cada máquina.</p></div><div class="visibility-panel-actions"><label class="visibility-search"><span>Pesquisar cliente</span><i data-lucide="search"></i><input id="visibilityClientSearch" type="search" placeholder="Nome do cliente, máquina ou plano" autocomplete="off"></label><label class="visibility-category-filter"><span>Ver categoria</span><select id="visibilityCategoryFilter"><option value="all">Todas as categorias</option><option value="failedbackup">Falha de backup</option><option value="missing">Não executou</option><option value="nofiles">Sem arquivos</option><option value="offline">Máquina offline</option><option value="size">Tamanho anormal</option><option value="backup">Outros de backup</option></select></label><button class="apply-filter" id="applyAlertVisibility" type="button"><i data-lucide="check"></i> Salvar seleção</button></div></div>
           <div class="alert-scope-tree" id="alertScopeOptions"></div>
           <div class="visibility-panel-foot"><span>Itens desmarcados ficam fora da lista de alertas, mas não são removidos da Acronis.</span><button class="clear-filter" id="resetAlertVisibility" type="button">Mostrar todos</button></div>
         </section>
@@ -133,7 +135,8 @@ $podeGerenciarAlertas = normalizarPerfil((string) ($usuarioPainel['perfil'] ?? '
   </dialog>
   <div class="alerts-toast" id="alertsToast" role="status" aria-live="polite"></div>
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script src="<?= htmlspecialchars($alertsAssetPrefix, ENT_QUOTES, 'UTF-8') ?>alertas.js?v=20261001-dashboard-count-1"></script>
+  <script src="<?= htmlspecialchars($alertsAssetPrefix, ENT_QUOTES, 'UTF-8') ?>alertas-data.js?v=20261006-shared-1"></script>
+  <script src="<?= htmlspecialchars($alertsAssetPrefix, ENT_QUOTES, 'UTF-8') ?>alertas.js?v=20261006-open-count-1"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="<?= htmlspecialchars($alertsAssetPrefix, ENT_QUOTES, 'UTF-8') ?>alertas-react.js?v=20260928-language-5"></script>

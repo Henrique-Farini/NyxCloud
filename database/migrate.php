@@ -38,7 +38,12 @@ try {
     );
 
     $files = glob($migrationsPath . DIRECTORY_SEPARATOR . '*.sql') ?: [];
-    sort($files, SORT_NATURAL);
+    if ($driver === 'mysql') {
+        $files[] = __DIR__ . '/migrations/016_create_alert_email_settings_mysql.sql';
+    } else {
+        $files = array_values(array_filter($files, static fn (string $file): bool => !str_ends_with(strtolower($file), '_mysql.sql')));
+    }
+    usort($files, static fn (string $left, string $right): int => strnatcasecmp(basename($left), basename($right)));
 
     foreach ($files as $file) {
         $version = basename($file);
@@ -54,12 +59,18 @@ try {
             throw new RuntimeException("Nao foi possivel ler {$version}.");
         }
 
-        // MySQL DDL faz commit implicito; cada arquivo MySQL contem uma instrucao idempotente.
+        // MySQL DDL faz commit implicito. Execute statements simples separadamente
+        // para que uma migration possa criar/ajustar mais de um objeto.
         if ($driver === 'pgsql') {
             $pdo->beginTransaction();
         }
         try {
-            $pdo->exec($sql);
+            $statements = $driver === 'mysql'
+                ? array_values(array_filter(array_map('trim', preg_split('/;\s*(?:\r?\n|$)/', $sql) ?: [])))
+                : [$sql];
+            foreach ($statements as $statement) {
+                $pdo->exec($statement);
+            }
             $insert = $pdo->prepare('INSERT INTO schema_migrations (version) VALUES (:version)');
             $insert->execute(['version' => $version]);
             if ($driver === 'pgsql') {

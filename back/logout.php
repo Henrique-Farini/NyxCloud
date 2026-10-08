@@ -3,6 +3,22 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/auth/jwt.php';
+require_once __DIR__ . '/auth/audit.php';
+
+try {
+    require_once __DIR__ . '/conexao.php';
+    foreach (obterTokensDaRequisicao() as $rawToken) {
+        $payload = lerTokenJwt($rawToken);
+        if ($payload !== null && ctype_digit((string) ($payload['sub'] ?? ''))) {
+            $usuarioId = (int) $payload['sub'];
+            invalidarTokensDoUsuario($pdo, $usuarioId);
+            registrarAuditoriaAdministrativa($pdo, $usuarioId, 'logout', [], $usuarioId);
+            break;
+        }
+    }
+} catch (Throwable $e) {
+    error_log('Falha ao invalidar sessao no logout: ' . $e->getMessage());
+}
 
 limparCookieJwt();
 

@@ -42,8 +42,8 @@ try {
     }
 
     $perfil = normalizarPerfil((string) ($usuario['perfil'] ?? ''));
-    if ($perfil === 'leitura') {
-        apiResponse(false, new stdClass(), [], 'O perfil somente leitura nao pode alterar preferencias.', 403);
+    if (!usuarioPodeAcao($usuario, 'alerts.preferences')) {
+        apiResponse(false, new stdClass(), [], 'Este perfil nao pode alterar preferencias de alertas.', 403);
     }
 
     apiMutationGuard();

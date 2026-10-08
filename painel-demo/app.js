@@ -39,6 +39,13 @@
     accountsError: '',
     integrations: [],
     integrationsError: '',
+    adminOverview: null,
+    adminOverviewError: '',
+    adminHealth: null,
+    alertNotifications: null,
+    alertNotificationsError: '',
+    alertNotificationUserIds: [],
+    alertNotificationEmails: [],
     audit: [],
     auditError: '',
     auditPagination: { page: 1, pages: 1, total: 0, limit: 25, period: 30 },
@@ -55,6 +62,7 @@
   };
 
   const dataRequests = new Map();
+  const dataRequestVersions = new Map();
   let sectionActivationId = 0;
 
   const theme = {
@@ -312,6 +320,10 @@
 
   const uiLocale = () => localStorage.getItem('nyxcloud_language') === 'en-US' ? 'en-US' : 'pt-BR';
   const fmtInt = value => Number(value || 0).toLocaleString(uiLocale());
+  const fmtDecimal = value => {
+    const number = Number(value);
+    return Number.isFinite(number) ? number.toLocaleString(uiLocale(), { maximumFractionDigits: 1 }) : '--';
+  };
   const fmtPercent = value => `${Number(value || 0).toFixed(2)}%`;
   const profileInitial = value => (String(value || '').trim().charAt(0) || 'U').toUpperCase();
   const formatDateTime = value => {
@@ -485,7 +497,7 @@
       return { className: 'queued', label: 'Em andamento' };
     }
     if (status.includes('success') || status.includes('ok') || status.includes('idle')) {
-      return { className: 'success', label: 'Concluido' };
+      return { className: 'success', label: 'Concluído' };
     }
 
     return { className: 'queued', label: 'Indefinido' };
@@ -570,18 +582,19 @@
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
 
-  const canManageAccounts = () => Boolean(state.me?.pode_acessar_contas || state.me?.pode_gerenciar_contas);
-  const canManageAdmin = () => Boolean(state.me?.pode_gerenciar_contas);
+  const canPerform = action => state.me?.permissoes?.[action] === true;
+  const canManageAccounts = () => canPerform('users.view') || Boolean(state.me?.pode_acessar_contas || state.me?.pode_gerenciar_contas);
+  const canManageAdmin = () => canPerform('users.manage_roles') || Boolean(state.me?.pode_gerenciar_contas);
   const sectionPermissions = {
-    admin: new Set(['overview', 'executions', 'alerts', 'storage', 'summary', 'windows', 'clients', 'accounts', 'integrations', 'infrastructure', 'analytics', 'audit', 'profile']),
+    admin: new Set(['overview', 'executions', 'alerts', 'storage', 'summary', 'windows', 'clients', 'accounts', 'integrations', 'notifications', 'infrastructure', 'analytics', 'audit', 'admin', 'profile']),
     operador: new Set(['overview', 'executions', 'alerts', 'storage', 'summary', 'windows', 'clients', 'accounts', 'infrastructure', 'analytics', 'profile']),
     leitura: new Set(['overview', 'executions', 'alerts', 'storage', 'summary', 'windows', 'clients', 'infrastructure', 'analytics', 'profile'])
   };
   const uiTranslations = {
     'Visão geral': 'Overview', 'Atividade recente': 'Recent activity', 'Alertas': 'Alerts', 'Armazenamento': 'Storage',
     'Resumo': 'Summary', 'Janelas de execução': 'Execution windows', 'Clientes': 'Clients', 'Contas': 'Accounts',
-    'Integrações': 'Integrations', 'Execuções por dispositivo': 'Executions by device', 'Análises': 'Analytics',
-    'Auditoria administrativa': 'Administrative audit', 'Meu perfil': 'My profile', 'Monitoramento': 'Monitoring',
+    'Integrações': 'Integrations', 'Notificações': 'Notifications', 'Execuções por dispositivo': 'Executions by device', 'Análises': 'Analytics',
+    'Auditoria administrativa': 'Administrative audit', 'Notificações': 'Notifications', 'Meu perfil': 'My profile', 'Monitoramento': 'Monitoring',
     'Ambiente': 'Environment', 'Usuário': 'User', 'Atualizar dados': 'Refresh data', 'Dados reais': 'Real data',
     'Buscar cliente ou maquina': 'Search client or machine', 'Pesquisar cliente na aba Janelas': 'Search client in Windows',
     'Pesquisar nas execuções': 'Search executions', 'Status': 'Status', 'Todos': 'All', 'Concluído': 'Completed',
@@ -615,6 +628,7 @@
     'Hostname': 'Hostname', 'Ultimo backup': 'Latest backup', 'Dias': 'Days', 'Aguardando API': 'Waiting for API', 'Aguardando': 'Waiting',
     'Hoje e ontem em ordem alfabetica': 'Today and yesterday in alphabetical order', 'Uma linha por dispositivo e plano, usando a ultima execucao de cada dia': 'One row per device and plan, using the latest execution of each day',
     'Atualizacao automatica': 'Automatic update', 'Contas do painel': 'Panel accounts', 'Crie acessos para administradores, operadores ou usuarios com somente leitura.': 'Create access for administrators, operators or read-only users.',
+    'RECEBIMENTO DE ALERTAS': 'ALERT DELIVERY', 'Escolha quem recebe os alertas por e-mail, sem misturar empresas.': 'Choose who receives alerts by email without mixing companies.', 'Alertas por e-mail': 'Email alerts', 'Ativar envio': 'Enable delivery', 'O que receber': 'What to receive', 'Somente alertas que exigem ação': 'Only alerts that require action', 'Todos os alertas': 'All alerts', 'Frequência': 'Frequency', 'Imediatamente': 'Immediately', 'Resumo a cada hora': 'Hourly summary', 'Resumo diário': 'Daily summary', 'Quem deve receber': 'Who should receive', 'Adicionar e-mail externo': 'Add external email', 'Adicionar': 'Add', 'Enviar teste': 'Send test', 'Salvar configuração': 'Save configuration',
     'Controle interno': 'Internal control', 'Voce nao tem permissao para gerenciar contas.': 'You do not have permission to manage accounts.', 'Ultimo login': 'Last login', 'Criado em': 'Created at',
     'Criar usuario com permissao menor': 'Create a lower-permission user', 'Senha inicial': 'Initial password', 'Conta ativa ao criar': 'Active account on creation',
     'Somente leitura: visualiza indicadores sem acesso administrativo.': 'Read-only: view indicators without administrative access.', 'Criar conta': 'Create account',
@@ -679,20 +693,26 @@
     languageObserver = new MutationObserver(() => applyLanguage());
     languageObserver.observe(document.body, { childList: true, subtree: true });
   };
-  const canAccessSection = section => sectionPermissions[String(state.me?.perfil || '').toLowerCase()]?.has(section) ?? false;
+  const canAccessSection = section => {
+    if (section === 'admin') return Boolean(state.me?.administrador_geral) && state.me?.permissoes?.['admin.view'] === true;
+    if (section === 'notifications') return String(state.me?.perfil || '').toLowerCase() === 'admin' && state.me?.permissoes?.['alerts.notifications'] === true;
+    return sectionPermissions[String(state.me?.perfil || '').toLowerCase()]?.has(section) ?? false;
+  };
   const applyRoleVisibility = () => {
     if (!state.me) return;
-    const restricted = String(state.me?.perfil || '').toLowerCase() === 'admin'
-      ? new Set()
-      : new Set(['accounts', 'integrations', 'audit']);
+    const activeSection = root.dataset.activeSection || 'overview';
     document.querySelectorAll('.rail-item[data-section]').forEach(item => {
       item.hidden = !canAccessSection(item.dataset.section || '');
     });
     document.querySelectorAll('[data-panel-section]').forEach(panel => {
       const sections = `${panel.dataset.panelSection || ''} ${panel.dataset.panelExtraSections || ''}`.split(/\s+/).filter(Boolean);
-      if (sections.some(section => restricted.has(section))) {
-        panel.hidden = true;
-      }
+      const allowed = sections.length > 0 && sections.some(section => canAccessSection(section));
+      panel.hidden = !allowed || !panelMatchesSection(panel, activeSection);
+    });
+    document.querySelectorAll('[data-section-container]').forEach(container => {
+      const visibleChildren = [...container.children].filter(child => child.dataset?.panelSection && !child.hidden);
+      container.hidden = visibleChildren.length === 0;
+      container.classList.toggle('is-single-section', visibleChildren.length === 1);
     });
     if (root.dataset.activeSection && !canAccessSection(root.dataset.activeSection)) {
       activateSection('overview', false);
@@ -798,11 +818,15 @@
       companyFilter.value = selectedCompany;
     }
     const selectedCompany = companyFilter?.value || 'all';
+    const operatorView = state.accountsMeta.viewer?.perfil === 'operador';
+    const accountsInRoleScope = operatorView
+      ? state.accounts.filter(account => account.perfil !== 'admin' && !Boolean(account.administrador_geral))
+      : state.accounts;
     const visibleAccounts = selectedCompany === 'all'
-      ? state.accounts
+      ? accountsInRoleScope
       : selectedCompany === 'global-admin'
-        ? state.accounts.filter(account => Boolean(account.administrador_geral))
-        : state.accounts.filter(account => (account.empresa_ids || []).map(Number).includes(Number(selectedCompany)));
+        ? accountsInRoleScope.filter(account => Boolean(account.administrador_geral))
+        : accountsInRoleScope.filter(account => (account.empresa_ids || []).map(Number).includes(Number(selectedCompany)));
 
     if (!visibleAccounts.length) {
       body.innerHTML = '<tr><td colspan="8">Nenhuma conta encontrada para esta empresa.</td></tr>';
@@ -811,7 +835,6 @@
 
     visibleAccounts.forEach(account => {
       const row = document.createElement('tr');
-      const operatorView = state.accountsMeta.viewer?.perfil === 'operador';
       const companyAdminView = state.accountsMeta.viewer?.perfil === 'admin' && !state.accountsMeta.administrador_geral;
       const readOnlyTarget = account.perfil === 'leitura';
       const statusClass = account.ativo ? 'success' : 'failed';
@@ -953,6 +976,98 @@
     });
   };
 
+  const renderAdminOverview = () => {
+    const data = state.adminOverview;
+    if (!data) return;
+    setText('adminUsersActive', fmtInt(data.users?.active));
+    setText('adminUsersTotal', `${fmtInt(data.users?.total)} usuários cadastrados`);
+    setText('adminCompaniesTotal', fmtInt(data.companies?.total));
+    setText('adminIntegrationsActive', fmtInt(data.integrations?.active));
+    setText('adminIntegrationsTotal', `${fmtInt(data.integrations?.total)} integrações cadastradas`);
+    setText('adminAuditTotal', fmtInt(data.audit?.total));
+    const usersTotal = Number(data.users?.total || 0);
+    const usersActive = Number(data.users?.active || 0);
+    const usersInactive = Number(data.users?.inactive || 0);
+    const usersNeverAccessed = Number(data.users?.never_logged_in || 0);
+    const administrators = Number(data.users?.administrators || 0);
+    const inactiveCompanies = Number(data.companies?.inactive || 0);
+    const accessRate = usersTotal > 0 ? Math.round((usersActive / usersTotal) * 100) : 100;
+    setText('adminPostureTitle', usersInactive === 0 && usersNeverAccessed === 0 ? 'Acesso sob controle' : 'Revisão recomendada');
+    setText('adminPostureText', usersTotal > 0
+      ? `${fmtInt(usersActive)} de ${fmtInt(usersTotal)} contas estão ativas no ambiente.`
+      : 'Nenhuma conta cadastrada para analisar.');
+    setText('adminPosturePercent', `${accessRate}%`);
+    setText('adminPostureHint', `${fmtInt(usersInactive)} inativas · ${fmtInt(usersNeverAccessed)} sem primeiro acesso · ${fmtInt(administrators)} administradores`);
+    const postureMeter = document.getElementById('adminPostureMeter');
+    if (postureMeter) postureMeter.style.width = `${Math.max(0, Math.min(100, accessRate))}%`;
+    const attentionList = document.getElementById('adminAttentionList');
+    if (attentionList) {
+      const attention = [];
+      const healthStatus = String(data.health?.status || '').toLowerCase();
+      if (healthStatus === 'offline') attention.push({ tone: 'critical', icon: 'cloud-off', title: 'Acronis indisponível', text: 'A integração não respondeu à verificação atual.' });
+      else if (!data.integrations?.configured) attention.push({ tone: 'warning', icon: 'key-round', title: 'Integração não configurada', text: 'Cadastre uma conexão para consultar a saúde da Acronis.' });
+      if (usersInactive > 0) attention.push({ tone: 'warning', icon: 'user-round-x', title: `${fmtInt(usersInactive)} conta${usersInactive === 1 ? '' : 's'} inativa${usersInactive === 1 ? '' : 's'}`, text: 'Revise acessos que não devem continuar habilitados.' });
+      if (usersNeverAccessed > 0) attention.push({ tone: 'info', icon: 'user-round-search', title: `${fmtInt(usersNeverAccessed)} sem primeiro acesso`, text: 'Confira convites ou contas criadas que ainda não foram utilizadas.' });
+      if (inactiveCompanies > 0) attention.push({ tone: 'info', icon: 'building-2', title: `${fmtInt(inactiveCompanies)} empresa${inactiveCompanies === 1 ? '' : 's'} inativa${inactiveCompanies === 1 ? '' : 's'}`, text: 'Confirme se o escopo ainda deve permanecer cadastrado.' });
+      if (!attention.length) attention.push({ tone: 'healthy', icon: 'circle-check', title: 'Nenhum ponto crítico encontrado', text: 'A leitura atual não identificou pendências administrativas.' });
+      attentionList.innerHTML = attention.map(item => `<div class="admin-attention-item is-${item.tone}"><span><i data-lucide="${item.icon}"></i></span><div><b>${escapeHtml(item.title)}</b><small>${escapeHtml(item.text)}</small></div></div>`).join('');
+    }
+    setText('adminAcronisStatus', data.integrations?.configured ? 'Configurada' : 'Não configurada');
+    setText('adminCacheFiles', fmtInt(data.cache?.files));
+    setText('adminCacheSize', formatBytes(Number(data.cache?.bytes || 0)));
+    setText('adminCacheWritable', data.cache?.writable ? 'Sim' : 'Não');
+    setText('adminOverviewUpdated', data.updated_at ? `Última leitura: ${formatDateTime(data.updated_at)}` : 'Atualização concluída.');
+    const badge = document.getElementById('adminHealthBadge');
+    if (badge) {
+      const healthOk = data.health?.status === 'online' && data.cache?.writable;
+      badge.innerHTML = `<i></i> ${healthOk ? 'Operacional' : 'Revisar configuração'}`;
+      badge.classList.toggle('is-warning', !healthOk);
+    }
+    setText('adminAcronisStatus', data.health?.status === 'online'
+      ? `Online · ${fmtInt(data.health.latency_ms)} ms`
+      : (data.health?.status === 'offline' ? 'Indisponível' : (data.integrations?.configured ? 'Configurada' : 'Não configurada')));
+    const usersBody = document.getElementById('adminUsersRows');
+    const userSearch = String(document.getElementById('adminUserSearch')?.value || '').trim().toLocaleLowerCase('pt-BR');
+    const roleFilter = document.getElementById('adminUserRoleFilter')?.value || 'all';
+    const users = (Array.isArray(data.users?.items) ? data.users.items : []).filter(user => {
+      const matchesSearch = !userSearch || `${user.nome} ${user.email}`.toLocaleLowerCase('pt-BR').includes(userSearch);
+      return matchesSearch && (roleFilter === 'all' || user.perfil === roleFilter);
+    });
+    if (usersBody) {
+      usersBody.replaceChildren();
+      if (!users.length) usersBody.innerHTML = '<tr><td colspan="4">Nenhum usuário encontrado.</td></tr>';
+      users.forEach(user => {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td><b>${escapeHtml(cleanLabel(user.nome))}</b><small>${escapeHtml(cleanLabel(user.email))}</small></td><td>${escapeHtml(cleanLabel(user.perfil_nome))}</td><td><em class="job-state ${user.ativo ? 'success' : 'failed'}">${user.ativo ? 'Ativa' : 'Inativa'}</em></td><td>${formatDateTime(user.ultimo_login_em)}</td>`;
+        usersBody.append(row);
+      });
+    }
+    const companiesBody = document.getElementById('adminCompaniesRows');
+    const companySearch = String(document.getElementById('adminCompanySearch')?.value || '').trim().toLocaleLowerCase('pt-BR');
+    const companies = (Array.isArray(data.companies?.items) ? data.companies.items : []).filter(company => !companySearch || String(company.nome || '').toLocaleLowerCase('pt-BR').includes(companySearch));
+    if (companiesBody) {
+      companiesBody.replaceChildren();
+      if (!companies.length) companiesBody.innerHTML = '<span>Nenhuma empresa encontrada.</span>';
+      companies.forEach(company => {
+        const item = document.createElement('span');
+        item.innerHTML = `<b>${escapeHtml(cleanLabel(company.nome))}</b><em class="job-state ${company.ativo ? 'success' : 'failed'}">${company.ativo ? 'Ativa' : 'Inativa'}</em>`;
+        companiesBody.append(item);
+      });
+    }
+    const auditBody = document.getElementById('adminAuditRows');
+    if (auditBody) {
+      auditBody.replaceChildren();
+      const recent = Array.isArray(data.audit?.recent) ? data.audit.recent : [];
+      if (!recent.length) auditBody.innerHTML = '<tr><td colspan="4">Nenhum evento recente.</td></tr>';
+      recent.forEach(event => {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${formatDateTime(event.criado_em)}</td><td>${escapeHtml(cleanLabel(event.acao))}</td><td>${escapeHtml(cleanLabel(event.ator_nome || event.ator_email))}</td><td class="mono">${escapeHtml(cleanLabel(event.ip))}</td>`;
+        auditBody.append(row);
+      });
+    }
+    window.lucide?.createIcons();
+  };
+
   const excelCompanyLabels = {
     'aziz': 'AZIZ',
     'caelmomococa': 'CAELMO',
@@ -1040,11 +1155,48 @@
   const alertLocation = alert => cleanLabel(alert.origem || alert.maquina || alert.raw?.resourceName || 'Local nao informado');
   const alertCause = alert => cleanLabel(alert.causa || alert.mensagem || 'Causa nao informada');
   const alertResource = alert => cleanLabel(alert.recurso || alert.maquina || 'Recurso nao informado');
+  const deduplicateAlerts = alerts => {
+    const seen = new Set();
+    return alerts.filter(alert => {
+      const raw = alert?.raw || {};
+      const sourceId = raw.id || raw.uuid || raw.alertId || '';
+      const code = alert?.codigo || raw.code || alert?.tipo || raw.type || '';
+      const date = String(alert?.data || '').trim();
+      const time = String(alert?.hora || '00:00:00').trim();
+      const plan = alert?.plano || alert?.recurso || '';
+      const fallback = [alert?.cliente, alert?.maquina, code, date, time, plan, alert?.causa || alert?.mensagem].join('|');
+      const key = [sourceId || fallback, code, date, time, plan].join('|').toLocaleLowerCase('pt-BR');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+  const readAlertVisibilitySet = key => {
+    try {
+      const values = JSON.parse(localStorage.getItem(key) || '[]');
+      return new Set(Array.isArray(values) ? values : []);
+    } catch {
+      return new Set();
+    }
+  };
+  const alertVisibilityKey = (...values) => values.map(value => cleanLabel(value).toLocaleLowerCase('pt-BR')).join('||');
+  const isAlertHiddenByVisibility = alert => {
+    if (window.NyxCloudAlertData?.isHiddenByVisibility) {
+      return window.NyxCloudAlertData.isHiddenByVisibility(alert);
+    }
+    const client = alert?.cliente || '';
+    const server = alert?.maquina || alert?.origem || '';
+    const plan = alert?.plano || alert?.recurso || '';
+    return readAlertVisibilitySet('nyxcloud-hidden-alert-clients-v2').has(alertVisibilityKey(client))
+      || readAlertVisibilitySet('nyxcloud-hidden-alert-devices-v2').has(alertVisibilityKey(client, server))
+      || readAlertVisibilitySet('nyxcloud-hidden-alert-plans-v2').has(alertVisibilityKey(client, server, plan));
+  };
   const alertsInLastDays = (days = 30) => {
     const today = new Date();
     const end = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
     const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (days - 1));
     return state.alerts.filter(alert => {
+      if (isAlertHiddenByVisibility(alert)) return false;
       const dateText = String(alert.data || '').trim();
       const timeText = String(alert.hora || '00:00:00').trim();
       if (!dateText) return true;
@@ -1052,6 +1204,10 @@
       return !Number.isNaN(eventDate.getTime()) && eventDate >= start && eventDate < end;
     });
   };
+  const openAlertsInLastDays = (days = 30) => alertsInLastDays(days).filter(alert => {
+    const status = String(alert?.status || '').trim().toLowerCase();
+    return !['dismissed', 'resolved', 'closed', 'running', 'in_progress', 'processing'].includes(status);
+  });
 
   const resolveCustomer = device => {
     const raw = device?.raw || {};
@@ -1157,7 +1313,8 @@
       const title = state.devicesLoading ? 'Carregando dispositivos' : state.devicesError ? 'Falha ao carregar' : query ? 'Nenhum resultado' : 'Sem dispositivos';
       const detail = state.devicesLoading ? 'Consultando inventario e tarefas no Acronis' : state.devicesError || (query ? 'Nenhuma maquina corresponde a pesquisa.' : 'Nenhum equipamento retornado pela API');
       const status = state.devicesLoading ? 'Carregando' : state.devicesError ? 'Falha' : 'Sem dados';
-      tr.innerHTML = `<td><b>${title}</b><small>${detail}</small></td><td>--</td><td>--</td><td class="mono">--</td><td><em class="job-state ${state.devicesError ? 'failed' : 'queued'}">${status}</em></td><td>--</td><td>--</td><td>--</td>`;
+      const retry = state.devicesError ? '<button type="button" class="sync-retry table-retry" data-retry-devices="1">Tentar novamente</button>' : '';
+      tr.innerHTML = `<td><b>${title}</b><small>${detail}</small>${retry}</td><td>--</td><td>--</td><td class="mono">--</td><td><em class="job-state ${state.devicesError ? 'failed' : 'queued'}">${status}</em></td><td>--</td><td>--</td><td>--</td>`;
       tbody.append(tr);
       return;
     }
@@ -1255,14 +1412,31 @@
       const aggregateTimestamp = Date.parse(customer.ultimo_backup || '') || 0;
       const hasDetailedSource = Boolean(latest && detailedTimestamp >= aggregateTimestamp);
       const lastBackup = detailedTimestamp >= aggregateTimestamp ? (latest?.ultimo_backup || '') : (customer.ultimo_backup || '');
+      const aggregateStatus = String(customer.ultimo_backup_status || '').toLowerCase();
       const deviceCount = Math.max(Number(customer.quantidade_dispositivos || 0), customerDevices.length);
+      const planNames = new Set(backupEntries.map(entry => normalizeText(entry.plano || '')).filter(plan => plan && plan !== '--'));
+      if (!planNames.size && normalizeText(customer.plano || '') && normalizeText(customer.plano || '') !== '--') {
+        planNames.add(normalizeText(customer.plano));
+      }
+      const planCount = Math.max(Number(customer.quantidade_planos || 0), planNames.size);
+      const activeDays = Number(customer.dias_com_execucao || 0);
+      const hasDailySummary = activeDays > 0 && Number.isFinite(Number(customer.media_execucoes_dia));
+      const dailyAverageLabel = hasDailySummary ? fmtDecimal(customer.media_execucoes_dia) : '--';
+      const dailyHint = hasDailySummary
+        ? `média/dia ativo · hoje: ${fmtInt(customer.execucoes_hoje)}`
+        : 'sem histórico diário';
       const status = hasDetailedSource
         ? statusMeta(latest.status || latest.deviceStatus)
-        : { className: lastBackup ? 'queued' : 'failed', label: lastBackup ? 'Registrado' : 'Sem histórico' };
+        : (['success', 'failed', 'running'].includes(aggregateStatus)
+          ? statusMeta(aggregateStatus)
+          : { className: lastBackup ? 'queued' : 'failed', label: lastBackup ? 'Registrado' : 'Sem histórico' });
       return {
         customer,
         customerName,
         deviceCount,
+        planCount,
+        dailyAverageLabel,
+        dailyHint,
         lastBackup,
         hostname: hasDetailedSource ? (latest?.hostname || '--') : '--',
         plan: hasDetailedSource ? (latest?.plano || '--') : (customer.plano || '--'),
@@ -1298,19 +1472,17 @@
     }
     const heading = document.createElement('div');
     heading.className = 'client-directory-head';
-    heading.innerHTML = '<span>Cliente</span><span>Dispositivos</span><span>Último backup</span><span>Origem</span><span>Status</span><span>Volume</span><span>Ações</span>';
+    heading.innerHTML = '<span>Cliente</span><span>Dispositivos</span><span>Planos</span><span>Ritmo diário</span><span>Status</span><span>Ações</span>';
     node.append(heading);
     items.forEach(item => {
       const row = document.createElement('div');
       row.className = 'client-directory-row';
-      const relativeBackup = item.lastBackup ? (backupDaysFromEntry({ ultimo_backup: item.lastBackup }) === '0 dias' ? 'hoje' : `há ${backupDaysFromEntry({ ultimo_backup: item.lastBackup })}`) : 'sem histórico';
       row.innerHTML = [
         `<div class="client-identity" data-label="Cliente"><span class="client-avatar">${escapeHtml(profileInitial(item.customerName))}</span><span><b>${escapeHtml(item.customerName)}</b><small>${state.accountsMeta.administrador_geral || state.me?.administrador_geral ? escapeHtml(item.customer.tenant || 'Ambiente protegido') : 'Ambiente protegido'}</small></span></div>`,
         `<div class="client-device-total" data-label="Dispositivos"><strong>${fmtInt(item.deviceCount)}</strong><small>protegidos</small></div>`,
-        `<div class="client-last-backup" data-label="Último backup"><time>${escapeHtml(toShortTime(item.lastBackup))}</time><small>${escapeHtml(relativeBackup)}</small></div>`,
-        `<div class="client-backup-source" data-label="Origem"><b>${escapeHtml(item.hostname)}</b><small>${escapeHtml(displayPlanName(item.plan))}</small></div>`,
+        `<div class="client-plan-total" data-label="Planos"><strong>${fmtInt(item.planCount)}</strong><small>configurados</small></div>`,
+        `<div class="client-daily-total" data-label="Ritmo diário"><strong>${escapeHtml(item.dailyAverageLabel)}</strong><small>${escapeHtml(item.dailyHint)}</small></div>`,
         `<div data-label="Status"><em class="job-state ${item.status.className}">${escapeHtml(item.lastBackup ? item.status.label : 'Sem backup')}</em></div>`,
-        `<div class="client-backup-size" data-label="Volume"><b>${escapeHtml(item.size)}</b></div>`,
         `<div class="client-activity-action"><button type="button" class="text-action client-activity-button" data-client-activity="${escapeHtml(customerActivityKey(item.customer))}">Ver atividades <i data-lucide="arrow-up-right"></i></button></div>`
       ].join('');
       node.append(row);
@@ -1356,17 +1528,39 @@
       const date = item.timestamp ? new Date(item.timestamp) : null;
       const now = new Date();
       item.today = Boolean(date && !Number.isNaN(date.getTime()) && date.toDateString() === now.toDateString());
+      item.volumeReference = item.averageBytes > 0 && item.currentBytes > 0
+        ? (item.currentBytes < item.averageBytes * 0.8 ? 'Abaixo do histórico' : item.currentBytes > item.averageBytes * 1.2 ? 'Acima do histórico' : 'Próximo do histórico')
+        : 'Sem histórico suficiente';
     });
     const withActivity = devices.filter(item => item.entries.some(entry => entry.ultimo_backup || item.fallbackTimestamp)).length;
+    const planCount = new Set(activityRows.map(item => item.plan).filter(plan => plan && plan !== '--')).size;
+    const completedCount = activityRows.filter(item => item.status.className === 'success').length;
+    const failedCount = activityRows.filter(item => item.status.className === 'failed').length;
+    const runningCount = activityRows.filter(item => item.status.className === 'queued').length;
+    const totalKnownBytes = activityRows.reduce((total, item) => total + Math.max(0, item.currentBytes), 0);
+    const latestActivity = activityRows.find(item => item.timestamp) || null;
+    const missingCount = Math.max(0, devices.length - withActivity);
+    const pendingCount = failedCount + runningCount + missingCount;
+    const healthLabel = failedCount > 0 ? 'Ação necessária' : missingCount > 0 ? 'Cobertura incompleta' : runningCount > 0 ? 'Atualização em andamento' : 'Proteção normal';
+    const healthDescription = failedCount > 0
+      ? `${fmtInt(failedCount)} plano${failedCount === 1 ? '' : 's'} com falha na última leitura.`
+      : missingCount > 0
+        ? `${fmtInt(missingCount)} dispositivo${missingCount === 1 ? '' : 's'} ainda sem execução registrada.`
+        : runningCount > 0
+          ? `${fmtInt(runningCount)} plano${runningCount === 1 ? '' : 's'} em andamento. Os dados podem mudar quando a execução terminar.`
+          : 'Todos os dispositivos têm execução registrada e nenhum plano apresentou falha na última leitura.';
+    const healthClass = failedCount > 0 ? 'is-warning' : missingCount > 0 || runningCount > 0 ? 'is-info' : 'is-healthy';
     panel.hidden = false;
     panel.innerHTML = `
       <div class="client-activity-head">
-        <div><span class="surface-eyebrow">ATIVIDADE DA EMPRESA</span><h3>${escapeHtml(displayCompanyName(customer.nome || 'Cliente'))}</h3><small>Última atividade disponível de cada dispositivo, mesmo fora do dia atual.</small></div>
+        <div><span class="surface-eyebrow">PERFIL OPERACIONAL DO CLIENTE</span><h3>${escapeHtml(displayCompanyName(customer.nome || 'Cliente'))}</h3><small>Resumo de proteção, cobertura e volume por dispositivo e plano.</small></div>
         <button type="button" class="surface-menu" data-client-activity-close aria-label="Fechar atividades"><i data-lucide="x"></i></button>
       </div>
-      <div class="client-activity-summary"><span><b>${fmtInt(devices.length)}</b> dispositivos</span><span><b>${fmtInt(withActivity)}</b> com atividade</span><span><b>${fmtInt(devices.length - withActivity)}</b> sem histórico</span></div>
+      <div class="client-activity-health ${healthClass}"><span><i data-lucide="${failedCount > 0 ? 'triangle-alert' : missingCount > 0 ? 'shield-alert' : runningCount > 0 ? 'loader-circle' : 'shield-check'}"></i></span><div><span class="client-activity-health-label">Status da proteção</span><b>${healthLabel}</b><small>${escapeHtml(healthDescription)}</small></div></div>
+      <div class="client-activity-summary"><span><b>${fmtInt(devices.length)}</b><small>dispositivos</small></span><span><b>${fmtInt(planCount)}</b><small>planos</small></span><span><b>${fmtInt(completedCount)}</b><small>planos concluídos</small></span><span><b>${fmtInt(failedCount)}</b><small>planos com falha</small></span><span><b>${escapeHtml(formatBytes(totalKnownBytes))}</b><small>volume registrado</small></span></div>
+      <div class="client-activity-meta"><span><b>Último backup</b><strong>${escapeHtml(latestActivity?.timestamp ? toShortTime(latestActivity.timestamp) : 'Sem histórico')}</strong></span><span><b>Cobertura</b><strong>${fmtInt(withActivity)} de ${fmtInt(devices.length)} dispositivos</strong></span><span><b>Pendências</b><strong class="${pendingCount > 0 ? 'is-pending' : 'is-clear'}">${pendingCount > 0 ? escapeHtml(`${fmtInt(pendingCount)} pendência${pendingCount === 1 ? '' : 's'}`) : 'Nenhuma'}</strong></span></div>
       <div class="client-activity-list">
-        ${activityRows.length ? activityRows.map(item => `<div class="client-activity-row"><div><b>${escapeHtml(item.hostname)}</b><small>${escapeHtml(item.plan)} · IP ${escapeHtml(item.ip)}</small></div><time>${escapeHtml(item.timestamp ? `${toShortTime(item.timestamp)}${item.today ? '' : ' · sem execução hoje'}` : 'Sem atividade registrada')}</time><span class="client-activity-size"><b>Último</b>${escapeHtml(item.size)}</span><span class="client-activity-average"><b>Padrão mediano</b>${escapeHtml(item.average)}</span><em class="job-state ${item.timestamp ? item.status.className : 'failed'}">${escapeHtml(item.timestamp ? (item.today ? item.status.label : 'Sem execução hoje') : 'Sem histórico')}</em></div>`).join('') : `<div class="client-activity-empty">O inventário ainda não retornou os detalhes dos ${fmtInt(Number(customer.quantidade_dispositivos || 0))} dispositivos desta empresa. Nenhum dispositivo será ocultado por não executar backup hoje.</div>`}
+        ${activityRows.length ? activityRows.map(item => `<div class="client-activity-row"><div><b>${escapeHtml(item.hostname)}</b><small>${escapeHtml(item.plan)} · IP ${escapeHtml(item.ip)}</small></div><time>${escapeHtml(item.timestamp ? `${toShortTime(item.timestamp)}${item.today ? ' · hoje' : ' · última execução'}` : 'Sem atividade registrada')}</time><span class="client-activity-size"><b>Último volume</b>${escapeHtml(item.size)}<small>${escapeHtml(item.volumeReference)}</small></span><span class="client-activity-average"><b>Volume típico</b>${escapeHtml(item.average)}<small>mediana das execuções anteriores</small></span><em class="job-state ${item.timestamp ? item.status.className : 'failed'}">${escapeHtml(item.timestamp ? item.status.label : 'Sem histórico')}</em></div>`).join('') : `<div class="client-activity-empty">O inventário ainda não retornou os detalhes dos ${fmtInt(Number(customer.quantidade_dispositivos || 0))} dispositivos desta empresa. Nenhum dispositivo será ocultado por não executar backup hoje.</div>`}
       </div>`;
     window.lucide?.createIcons();
   };
@@ -1656,7 +1850,7 @@
     }
 
     const failures = Number(dashboard.backups_com_falha || 0);
-    const recentAlerts = alertsInLastDays();
+    const recentAlerts = openAlertsInLastDays();
     const principalAlerta = recentAlerts[0] || null;
     setText('signalTitle', failures > 0 ? 'Operação com pontos de atenção' : 'Operação estável');
     setText(
@@ -1809,7 +2003,7 @@
       }
     }
     setText('summarySuccess', fmtInt(completed));
-    setText('summaryAlerts', state.alertsLoaded ? fmtInt(alertsInLastDays().length) : '--');
+    setText('summaryAlerts', state.alertsLoaded ? fmtInt(openAlertsInLastDays().length) : '--');
     setText('summaryClients', fmtInt(dashboard.total_clientes || state.customers.length || 0));
     setText('summaryDevices', fmtInt(dashboard.total_dispositivos || state.devices.length || 0));
     setText('fleetClients', fmtInt(dashboard.total_clientes || state.customers.length || 0));
@@ -2129,7 +2323,9 @@
 
   const requestOnce = (key, request) => {
     if (!dataRequests.has(key)) {
-      const pending = request().catch(error => {
+      const version = (dataRequestVersions.get(key) || 0) + 1;
+      dataRequestVersions.set(key, version);
+      const pending = request(version).catch(error => {
         dataRequests.delete(key);
         throw error;
       });
@@ -2139,11 +2335,17 @@
     return dataRequests.get(key);
   };
 
-  const loadDashboard = ({ full = false } = {}) => requestOnce(full ? 'dashboard-full' : 'dashboard-fast', async () => {
+  const isCurrentRequest = (key, version) => dataRequestVersions.get(key) === version;
+
+  const loadDashboard = ({ full = false } = {}) => requestOnce(full ? 'dashboard-full' : 'dashboard-fast', async requestVersion => {
+    const requestKey = full ? 'dashboard-full' : 'dashboard-fast';
     try {
-      state.dashboard = await fetchJson(full ? 'dashboard.php' : 'dashboard.php?fast=1', { timeout: full ? 18000 : 10000 }) || {};
+      const dashboard = await fetchJson(full ? 'dashboard.php' : 'dashboard.php?fast=1', { timeout: full ? 18000 : 10000 }) || {};
+      if (!isCurrentRequest(requestKey, requestVersion)) return;
+      state.dashboard = dashboard;
       renderData();
     } catch (error) {
+      if (!isCurrentRequest(requestKey, requestVersion)) return;
       if (!state.dashboard) markDashboardUnavailable();
       notify(error.message || 'Falha ao carregar dashboard.');
       throw error;
@@ -2166,15 +2368,17 @@
     }
   });
 
-  const loadDevices = () => requestOnce('devices', async () => {
+  const loadDevices = () => requestOnce('devices', async requestVersion => {
     state.devicesLoading = true;
     state.devicesError = '';
     try {
       const devices = await fetchJson('devices.php');
+      if (!isCurrentRequest('devices', requestVersion)) return;
       state.devices = Array.isArray(devices) ? devices : [];
       state.devicesLoading = false;
       renderPartialData();
     } catch (error) {
+      if (!isCurrentRequest('devices', requestVersion)) return;
       state.devicesLoading = false;
       state.devicesError = error.message || 'Falha ao carregar dispositivos.';
       notify(state.devicesError);
@@ -2183,14 +2387,18 @@
     }
   });
 
-  const loadAlerts = ({ foreground = true } = {}) => requestOnce('alerts', async () => {
+  const loadAlerts = ({ foreground = true } = {}) => requestOnce('alerts', async requestVersion => {
     try {
       const alerts = await fetchJson('alertas.php', { timeout: foreground ? 12000 : 9000 });
-      state.alerts = Array.isArray(alerts) ? alerts : [];
+      if (!isCurrentRequest('alerts', requestVersion)) return;
+      state.alerts = window.NyxCloudAlertData?.deduplicate
+        ? window.NyxCloudAlertData.deduplicate(alerts)
+        : deduplicateAlerts(Array.isArray(alerts) ? alerts : []);
       state.alertsLoaded = true;
       renderPartialData();
       if (state.dashboard) safeRun(buildCharts);
     } catch (error) {
+      if (!isCurrentRequest('alerts', requestVersion)) return;
       state.alertsLoaded = false;
       notify(error.message || 'Falha ao carregar alertas.');
       throw error;
@@ -2302,6 +2510,106 @@
     }
   });
 
+  const loadAdminOverview = () => requestOnce('admin-overview', async () => {
+    state.adminOverviewError = '';
+    try {
+      state.adminOverview = await fetchJson('admin-overview.php', { timeout: 10000 }) || {};
+      state.adminHealth = await fetchJson('admin-health.php', { timeout: 12000 }).catch(() => ({ status: 'offline', message: 'Verificação indisponível.' }));
+      state.adminOverview.health = state.adminHealth;
+      renderAdminOverview();
+    } catch (error) {
+      state.adminOverview = null;
+      state.adminOverviewError = error.message || 'Falha ao carregar a administração.';
+      setText('adminOverviewUpdated', state.adminOverviewError);
+      setText('adminUsersActive', '--');
+      setText('adminCompaniesTotal', '--');
+      setText('adminIntegrationsActive', '--');
+      setText('adminAuditTotal', '--');
+      setText('adminPostureTitle', 'Leitura indisponível');
+      setText('adminPostureText', 'Não foi possível consultar a postura de acesso agora.');
+      setText('adminPosturePercent', '--');
+      setText('adminPostureHint', 'Tente atualizar a Administração.');
+      const postureMeter = document.getElementById('adminPostureMeter');
+      if (postureMeter) postureMeter.style.width = '0%';
+      const attentionList = document.getElementById('adminAttentionList');
+      if (attentionList) attentionList.innerHTML = '<div class="admin-attention-empty"><i data-lucide="triangle-alert"></i><span>Não foi possível gerar recomendações.</span></div>';
+      const healthBadge = document.getElementById('adminHealthBadge');
+      if (healthBadge) {
+        healthBadge.innerHTML = '<i></i> Indisponível';
+        healthBadge.classList.add('is-warning');
+      }
+      window.lucide?.createIcons();
+      notify(state.adminOverviewError);
+      throw error;
+    }
+  });
+
+  const renderAlertNotifications = () => {
+    const payload = state.alertNotifications;
+    if (!payload) return;
+
+    const scope = payload.scope || {};
+    const config = payload.config || {};
+    const users = Array.isArray(payload.usuarios) ? payload.usuarios : [];
+    const selectedIds = new Set((state.alertNotificationUserIds || []).map(Number));
+    const emails = Array.isArray(state.alertNotificationEmails) ? state.alertNotificationEmails : [];
+    const badge = document.getElementById('notificationScopeBadge');
+    if (badge) {
+      badge.classList.remove('is-warning');
+      badge.innerHTML = '<i></i> ' + escapeHtml(scope.tipo === 'global' ? 'Ambiente inteiro' : 'Empresa isolada');
+    }
+    setText('notificationRecipientHint', scope.tipo === 'global'
+      ? 'Somente sua conta recebe alertas gerais do ambiente.'
+      : 'Selecione usuários ativos desta empresa ou adicione um e-mail externo.');
+
+    const enabled = document.getElementById('notificationEnabled');
+    const mode = document.getElementById('notificationMode');
+    const frequency = document.getElementById('notificationFrequency');
+    if (enabled) enabled.checked = Boolean(config.ativo);
+    if (mode) mode.value = ['all', 'actionable'].includes(config.modo) ? config.modo : 'actionable';
+    if (frequency) frequency.value = ['instant', 'hourly', 'daily'].includes(config.frequencia) ? config.frequencia : 'instant';
+
+    const userOptions = document.getElementById('notificationUserOptions');
+    if (userOptions) {
+      if (!users.length) {
+        userOptions.innerHTML = '<div class="accounts-empty">Nenhum usuário ativo disponível neste escopo.</div>';
+      } else {
+        userOptions.innerHTML = users.map(user => {
+          const id = Number(user.id);
+          const checked = selectedIds.has(id) ? ' checked' : '';
+          return `<label class="notification-user-option"><input type="checkbox" data-notification-user="${id}"${checked}><span><b>${escapeHtml(cleanLabel(user.nome || user.email))}</b><small>${escapeHtml(cleanLabel(user.email))}</small></span></label>`;
+        }).join('');
+      }
+    }
+
+    const emailList = document.getElementById('notificationEmailList');
+    if (emailList) {
+      emailList.innerHTML = emails.map(email => `<span class="notification-email-chip"><span>${escapeHtml(email)}</span><button type="button" data-remove-alert-email="${escapeHtml(email)}" aria-label="Remover ${escapeHtml(email)}">×</button></span>`).join('');
+    }
+    window.lucide?.createIcons();
+  };
+
+  const loadAlertNotifications = () => requestOnce('alert-notifications', async () => {
+    state.alertNotificationsError = '';
+    try {
+      const payload = await fetchJson('alert-notifications.php', { timeout: 10000 }) || {};
+      state.alertNotifications = payload;
+      state.alertNotificationUserIds = Array.isArray(payload?.config?.usuario_ids) ? payload.config.usuario_ids.map(Number) : [];
+      state.alertNotificationEmails = Array.isArray(payload?.config?.emails) ? payload.config.emails.map(email => String(email).toLowerCase()) : [];
+      renderAlertNotifications();
+    } catch (error) {
+      state.alertNotificationsError = error.message || 'Falha ao carregar notificacoes.';
+      const badge = document.getElementById('notificationScopeBadge');
+      if (badge) {
+        badge.classList.add('is-warning');
+        badge.innerHTML = '<i></i> Indisponível';
+      }
+      setText('notificationMessage', state.alertNotificationsError);
+      notify(state.alertNotificationsError);
+      throw error;
+    }
+  });
+
   const sectionLoaders = {
     overview: [loadMe, loadDashboard, loadAlerts],
     executions: [loadMe, loadDevices],
@@ -2311,10 +2619,12 @@
     clients: [loadMe, loadDashboard, loadCustomers, loadDevices],
     accounts: [loadMe, loadAccounts],
     integrations: [loadMe, loadIntegrations],
+    notifications: [loadMe, loadAlertNotifications],
     infrastructure: [loadMe, loadDailyExecutions],
     analytics: [loadMe, () => loadDashboard({ full: true }), loadCustomers, loadAlerts],
     alerts: [loadMe],
     audit: [loadMe, loadAudit],
+    admin: [loadMe, loadAdminOverview],
     profile: [loadMe]
   };
 
@@ -2338,10 +2648,12 @@
     clients: 'Clientes',
     accounts: 'Contas',
     integrations: 'Integrações',
+    notifications: 'Notificações',
     infrastructure: 'Execuções por dispositivo',
     analytics: 'Análises',
     alerts: 'Alertas',
     audit: 'Auditoria administrativa',
+    admin: 'Administração',
     profile: 'Meu perfil'
   };
 
@@ -2353,10 +2665,12 @@
     clients: 'Distribuicao dos dispositivos protegidos e concentracao da carga por cliente.',
     accounts: 'Gerencie usuarios internos do painel e crie acessos com menos privilegios.',
     integrations: 'Gerencie credenciais da Acronis BR, US ou outro ambiente.',
+    notifications: 'Configure o recebimento de alertas do ambiente ou da sua empresa.',
     infrastructure: 'Execucoes de hoje e ontem organizadas por dispositivo para verificacao operacional.',
     analytics: 'Investigue tendências, compare períodos, identifique causas recorrentes e priorize ações.',
     alerts: 'Central de alertas operacionais.',
     audit: 'Eventos administrativos de criacao, edicao e seguranca de contas.',
+    admin: 'Controle de usuários, empresas, integrações, auditoria e saúde técnica.',
     profile: 'Informacoes gerais, permissoes e seguranca da sua conta.'
   };
 
@@ -2366,6 +2680,8 @@
     node.dataset.state = stateName;
     const label = node.querySelector('span');
     if (label) label.textContent = message;
+    const retry = document.getElementById('retryAcronis');
+    if (retry) retry.hidden = stateName !== 'warning';
   };
 
   const syncTimeLabel = () => `${uiLocale() === 'en-US' ? 'Updated' : 'Atualizado'} ${new Date().toLocaleTimeString(uiLocale(), { hour: '2-digit', minute: '2-digit' })}`;
@@ -2441,6 +2757,12 @@
   };
 
   const activateSection = (section, updateHistory = true) => {
+    if (section !== 'overview' && !state.me) {
+      loadMe()
+        .then(() => activateSection(section, updateHistory))
+        .catch(() => activateSection('overview', updateHistory));
+      return;
+    }
     const selected = sectionLabels[section] && canAccessSection(section) ? section : 'overview';
     const activationId = ++sectionActivationId;
     root.dataset.activeSection = selected;
@@ -2602,6 +2924,12 @@
     loadBackgroundData(selected, activationId);
     notify(hasFailure ? 'Atualizacao concluida com dados parciais.' : 'Dados atualizados.');
   });
+  document.getElementById('retryAcronis')?.addEventListener('click', () => document.getElementById('refreshDashboard')?.click());
+  document.querySelector('#recent tbody')?.addEventListener('click', event => {
+    if (!event.target.closest('[data-retry-devices]')) return;
+    dataRequests.delete('devices');
+    loadDevices().catch(() => {});
+  });
   const permissionsByRole = { Administrador: 'Acesso total ao painel, contas, integrações, auditoria e configurações.', Operador: 'Consulta dados operacionais e executa rotinas permitidas.', 'Somente leitura': 'Consulta indicadores, clientes, alertas e relatórios.' };
   const openProfile = () => {
     activateSection('profile');
@@ -2681,6 +3009,113 @@
   document.getElementById('clientsSort')?.addEventListener('change', event => {
     state.clientsSort = event.currentTarget.value || 'name';
     safeRun(buildClientDirectory);
+  });
+  document.getElementById('adminUserSearch')?.addEventListener('input', () => safeRun(renderAdminOverview));
+  document.getElementById('adminUserRoleFilter')?.addEventListener('change', () => safeRun(renderAdminOverview));
+  document.getElementById('adminCompanySearch')?.addEventListener('input', () => safeRun(renderAdminOverview));
+  document.getElementById('notificationUserOptions')?.addEventListener('change', event => {
+    const input = event.target.closest('[data-notification-user]');
+    if (!input) return;
+    state.alertNotificationUserIds = [...document.querySelectorAll('#notificationUserOptions [data-notification-user]:checked')]
+      .map(item => Number(item.dataset.notificationUser || 0))
+      .filter(Boolean);
+  });
+  document.getElementById('notificationAddEmail')?.addEventListener('click', () => {
+    const input = document.getElementById('notificationEmailInput');
+    const email = String(input?.value || '').trim().toLowerCase();
+    if (!input || email === '') {
+      setText('notificationMessage', 'Digite um e-mail para adicionar.');
+      return;
+    }
+    if (!input.checkValidity()) {
+      setText('notificationMessage', 'Digite um e-mail válido.');
+      input.focus();
+      return;
+    }
+    state.alertNotificationEmails = [...new Set([...(state.alertNotificationEmails || []), email])];
+    input.value = '';
+    setText('notificationMessage', 'E-mail adicionado. Salve a configuração para confirmar.');
+    renderAlertNotifications();
+  });
+  document.getElementById('notificationEmailInput')?.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      document.getElementById('notificationAddEmail')?.click();
+    }
+  });
+  document.getElementById('notificationEmailList')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-remove-alert-email]');
+    if (!button) return;
+    const email = String(button.dataset.removeAlertEmail || '').toLowerCase();
+    state.alertNotificationEmails = (state.alertNotificationEmails || []).filter(item => item !== email);
+    renderAlertNotifications();
+  });
+  document.getElementById('saveAlertNotifications')?.addEventListener('click', async event => {
+    if (!canPerform('alerts.notifications')) {
+      notify('Somente administradores podem configurar notificacoes.');
+      return;
+    }
+    const button = event.currentTarget;
+    const message = document.getElementById('notificationMessage');
+    const enabled = Boolean(document.getElementById('notificationEnabled')?.checked);
+    const payload = {
+      ativo: enabled,
+      modo: document.getElementById('notificationMode')?.value || 'actionable',
+      frequencia: document.getElementById('notificationFrequency')?.value || 'instant',
+      usuario_ids: state.alertNotificationUserIds || [],
+      emails: state.alertNotificationEmails || []
+    };
+    button.disabled = true;
+    if (message) message.textContent = 'Salvando configuração...';
+    try {
+      const saved = await fetchJson('alert-notifications.php', { method: 'PUT', body: payload });
+      state.alertNotifications = { ...(state.alertNotifications || {}), config: saved };
+      state.alertNotificationUserIds = Array.isArray(saved?.usuario_ids) ? saved.usuario_ids.map(Number) : [];
+      state.alertNotificationEmails = Array.isArray(saved?.emails) ? saved.emails : [];
+      renderAlertNotifications();
+      if (message) message.textContent = 'Configuração salva com sucesso.';
+      notify('Notificações salvas.');
+    } catch (error) {
+      if (message) message.textContent = error.message || 'Falha ao salvar notificações.';
+      notify(error.message || 'Falha ao salvar notificações.');
+    } finally {
+      button.disabled = false;
+    }
+  });
+  document.getElementById('testAlertNotifications')?.addEventListener('click', async event => {
+    if (!canPerform('alerts.notifications')) {
+      notify('Somente administradores podem testar notificacoes.');
+      return;
+    }
+    const savedConfig = state.alertNotifications?.config || {};
+    const currentUserIds = [...(state.alertNotificationUserIds || [])].map(Number).sort((a, b) => a - b).join(',');
+    const savedUserIds = [...(savedConfig.usuario_ids || [])].map(Number).sort((a, b) => a - b).join(',');
+    const currentEmails = [...(state.alertNotificationEmails || [])].map(email => String(email).toLowerCase()).sort().join(',');
+    const savedEmails = [...(savedConfig.emails || [])].map(email => String(email).toLowerCase()).sort().join(',');
+    const hasUnsavedChanges = Boolean(document.getElementById('notificationEnabled')?.checked) !== Boolean(savedConfig.ativo)
+      || (document.getElementById('notificationMode')?.value || 'actionable') !== (savedConfig.modo || 'actionable')
+      || (document.getElementById('notificationFrequency')?.value || 'instant') !== (savedConfig.frequencia || 'instant')
+      || currentUserIds !== savedUserIds
+      || currentEmails !== savedEmails;
+    if (hasUnsavedChanges) {
+      setText('notificationMessage', 'Salve a configuração antes de enviar o teste.');
+      return;
+    }
+    const button = event.currentTarget;
+    const message = document.getElementById('notificationMessage');
+    button.disabled = true;
+    if (message) message.textContent = 'Enviando teste...';
+    try {
+      const result = await fetchJson('alert-notifications.php', { method: 'POST', body: { action: 'test' }, timeout: 20000 });
+      const sent = Number(result?.enviados || 0);
+      if (message) message.textContent = `Teste enviado para ${sent} destinatário(s).`;
+      notify('Teste de e-mail enviado.');
+    } catch (error) {
+      if (message) message.textContent = error.message || 'Falha ao enviar teste.';
+      notify(error.message || 'Falha ao enviar teste.');
+    } finally {
+      button.disabled = false;
+    }
   });
   document.getElementById('clientsDirectory')?.addEventListener('click', event => {
     const button = event.target.closest('[data-client-activity]');
@@ -3050,6 +3485,10 @@
     revealTargets.forEach(target => observer.observe(target));
   };
 
+  window.addEventListener('storage', event => {
+    if (!['nyxcloud-hidden-alert-clients-v2', 'nyxcloud-hidden-alert-devices-v2', 'nyxcloud-hidden-alert-plans-v2'].includes(event.key)) return;
+    renderPartialData();
+  });
   const restoreSection = () => activateSection(sectionFromLocation(), false);
   window.addEventListener('popstate', restoreSection);
   window.addEventListener('hashchange', restoreSection);

@@ -30,6 +30,33 @@ function carregarEnv(string $arquivo): void
 
 carregarEnv(dirname(__DIR__) . DIRECTORY_SEPARATOR . '.env');
 
+function nyxcloudCookieSecure(): bool
+{
+    if (filter_var(env('COOKIE_SECURE', 'false'), FILTER_VALIDATE_BOOLEAN)) {
+        return true;
+    }
+
+    return strtolower((string) env('APP_ENV', 'production')) === 'production'
+        || (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off')
+        || (int) ($_SERVER['SERVER_PORT'] ?? 0) === 443;
+}
+
+function nyxcloudSecurityHeaders(): void
+{
+    if (headers_sent()) {
+        return;
+    }
+    header('X-Content-Type-Options: nosniff');
+    header('X-Frame-Options: SAMEORIGIN');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
+    if (nyxcloudCookieSecure()) {
+        header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+    }
+}
+
+nyxcloudSecurityHeaders();
+
 function env(string $chave, ?string $padrao = null): ?string
 {
     if (array_key_exists($chave, $GLOBALS['nyxcloud_env'] ?? [])) {

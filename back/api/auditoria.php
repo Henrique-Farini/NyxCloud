@@ -5,7 +5,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/_bootstrap.php';
 
 apiMethod('GET');
-exigirPerfilAdministrador($pdo);
+$usuario = exigirAutenticacao($pdo);
+exigirPermissaoAcao($pdo, $usuario, 'audit.view');
 
 try {
     $stmt = $pdo->query(

@@ -45,6 +45,91 @@ function tabelaUsuarioTemPerfil(PDO $pdo): bool
     return $hasPerfil;
 }
 
+function permissoesPorAcao(array $usuario): array
+{
+    $perfil = normalizarPerfil((string) ($usuario['perfil'] ?? ''));
+    $comuns = [
+        'dashboard.view' => true,
+        'alerts.view' => true,
+        'clients.view' => true,
+        'reports.view' => true,
+        'windows.view' => true,
+        'profile.edit_self' => true,
+        'profile.change_password' => true,
+    ];
+
+    if ($perfil === 'leitura') {
+        return $comuns + [
+            'admin.view' => false,
+            'admin.cache.view' => false,
+            'alerts.preferences' => false,
+            'alerts.notifications' => false,
+            'users.view' => false,
+            'users.create_readonly' => false,
+            'users.edit_readonly' => false,
+            'users.manage_roles' => false,
+            'integrations.view' => false,
+            'integrations.manage' => false,
+            'audit.view' => false,
+            'windows.manage' => false,
+        ];
+    }
+
+    if ($perfil === 'operador') {
+        return $comuns + [
+            'admin.view' => false,
+            'admin.cache.view' => false,
+            'alerts.preferences' => true,
+            'alerts.notifications' => false,
+            'users.view' => true,
+            'users.create_readonly' => true,
+            'users.edit_readonly' => true,
+            'users.manage_roles' => false,
+            'integrations.view' => false,
+            'integrations.manage' => false,
+            'audit.view' => false,
+            'windows.manage' => false,
+        ];
+    }
+
+    return $comuns + [
+        'admin.view' => true,
+        'admin.cache.view' => true,
+        'alerts.preferences' => true,
+        'alerts.notifications' => true,
+        'users.view' => true,
+        'users.create_readonly' => true,
+        'users.edit_readonly' => true,
+        'users.manage_roles' => true,
+        'integrations.view' => true,
+        'integrations.manage' => true,
+        'audit.view' => true,
+        'windows.manage' => true,
+    ];
+}
+
+function usuarioPodeAcao(array $usuario, string $acao): bool
+{
+    return (bool) (permissoesPorAcao($usuario)[$acao] ?? false);
+}
+
+function exigirPermissaoAcao(PDO $pdo, array $usuario, string $acao): array
+{
+    if (usuarioPodeAcao($usuario, $acao)) {
+        return $usuario;
+    }
+
+    http_response_code(403);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'success' => false,
+        'data' => new stdClass(),
+        'meta' => ['permission' => $acao],
+        'message' => 'Permissao insuficiente para esta acao.',
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
 function tabelaUsuarioTemIdioma(PDO $pdo): bool
 {
     static $hasIdioma = null;
@@ -75,6 +160,16 @@ function tabelaUsuarioTemAdministradorGeral(PDO $pdo): bool
     return $hasFlag;
 }
 
+function tabelaUsuarioTemTokenVersion(PDO $pdo): bool
+{
+    static $hasVersion = null;
+    if ($hasVersion !== null) {
+        return $hasVersion;
+    }
+    $stmt = $pdo->query("SELECT 1 FROM information_schema.columns WHERE table_name = 'usuario' AND column_name = 'token_version' LIMIT 1");
+    return $hasVersion = (bool) $stmt->fetchColumn();
+}
+
 function usuarioAutenticado(PDO $pdo): ?array
 {
     $payload = null;
@@ -92,14 +187,18 @@ function usuarioAutenticado(PDO $pdo): ?array
     $perfilSelect = tabelaUsuarioTemPerfil($pdo) ? 'perfil' : "'admin' AS perfil";
     $idiomaSelect = tabelaUsuarioTemIdioma($pdo) ? 'idioma' : "'pt-BR' AS idioma";
     $adminGeralSelect = tabelaUsuarioTemAdministradorGeral($pdo) ? 'administrador_geral' : 'FALSE AS administrador_geral';
+    $tokenVersionSelect = tabelaUsuarioTemTokenVersion($pdo) ? 'token_version' : '0 AS token_version';
     $stmt = $pdo->prepare(
-        "SELECT id, nome, email, {$perfilSelect}, {$idiomaSelect}, {$adminGeralSelect}, ativo, criado_em, ultimo_login_em
+        "SELECT id, nome, email, {$perfilSelect}, {$idiomaSelect}, {$adminGeralSelect}, {$tokenVersionSelect}, ativo, criado_em, ultimo_login_em
          FROM usuario WHERE id = :id AND ativo = TRUE"
     );
     $stmt->execute(['id' => (int) $payload['sub']]);
     $usuario = $stmt->fetch();
 
-    return $usuario ?: null;
+    if (!$usuario || tabelaUsuarioTemTokenVersion($pdo) && (int) ($usuario['token_version'] ?? 0) !== (int) ($payload['ver'] ?? 0)) {
+        return null;
+    }
+    return $usuario;
 }
 
 function exigirAutenticacao(PDO $pdo): array

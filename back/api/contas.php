@@ -6,7 +6,7 @@ require_once __DIR__ . '/_bootstrap.php';
 
 $usuario = exigirAutenticacao($pdo);
 $perfilViewer = normalizarPerfil((string) ($usuario['perfil'] ?? ''));
-if (!usuarioPodeAcessarContas($usuario)) {
+if (!usuarioPodeAcao($usuario, 'users.view')) {
     apiResponse(false, new stdClass(), [], 'Permissao insuficiente para gerenciar contas.', 403);
 }
 $administradorGeral = $perfilViewer === 'admin' && usuarioEhAdministradorGeral($pdo, $usuario);
@@ -104,6 +104,9 @@ try {
     $payload = is_array($payload) ? $payload : $_POST;
 
     if ($method === 'DELETE') {
+        if (!usuarioPodeAcao($usuario, 'users.manage_roles')) {
+            apiResponse(false, new stdClass(), [], 'Seu perfil nao pode excluir usuarios.', 403);
+        }
         $id = (int) ($payload['id'] ?? 0);
         $senhaConfirmacao = (string) ($payload['senha_confirmacao'] ?? '');
         if ($id <= 0) {
@@ -146,6 +149,9 @@ try {
     }
 
     if ($method === 'PATCH') {
+        if (!usuarioPodeAcao($usuario, 'users.manage_roles') && !usuarioPodeAcao($usuario, 'users.edit_readonly')) {
+            apiResponse(false, new stdClass(), [], 'Seu perfil nao pode editar usuarios.', 403);
+        }
         if (!$hasPerfil) {
             apiResponse(false, new stdClass(), [], 'Atualize o schema antes de editar contas.', 409);
         }
@@ -293,6 +299,10 @@ try {
     $ativo = array_key_exists('ativo', $payload)
         ? filter_var($payload['ativo'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
         : true;
+
+    if (!usuarioPodeAcao($usuario, 'users.create_readonly') && !usuarioPodeAcao($usuario, 'users.manage_roles')) {
+        apiResponse(false, new stdClass(), [], 'Seu perfil nao pode criar usuarios.', 403);
+    }
 
     if ($nome === '' || mb_strlen($nome) < 3) {
         apiResponse(false, new stdClass(), [], 'Informe um nome com pelo menos 3 caracteres.', 422);

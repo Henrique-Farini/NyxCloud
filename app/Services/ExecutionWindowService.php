@@ -17,26 +17,8 @@ final class ExecutionWindowService extends AbstractAcronisService
     public function listWindows(array $filters = []): array
     {
         $requestedDate = $this->normalizeDate((string) ($filters['date'] ?? date('Y-m-d')));
-        $preferStale = filter_var($filters['stale'] ?? false, FILTER_VALIDATE_BOOLEAN);
         unset($filters['stale']);
         $cacheKey = 'acronis.execution_windows.' . self::CACHE_VERSION . '.' . $this->escopoCacheKey() . '.' . $this->windowsConfigVersion() . '.' . md5(json_encode([$filters, $requestedDate]));
-
-        if ($preferStale) {
-            $cached = $this->cache->getStale($cacheKey);
-            if (is_array($cached)) {
-                $cached['cache_stale'] = true;
-                return $cached;
-            }
-
-            return [
-                'date' => $requestedDate,
-                'mode' => 'loading',
-                'rules_count' => count($this->rules()),
-                'items' => [],
-                'cache_stale' => true,
-                'cache_miss' => true,
-            ];
-        }
 
         return $this->remember(
             $cacheKey,

@@ -9,6 +9,7 @@ header('Content-Type: application/json; charset=utf-8');
 try {
     require_once __DIR__ . '/../conexao.php';
     require_once __DIR__ . '/../auth/jwt.php';
+    require_once __DIR__ . '/../auth/audit.php';
     require_once __DIR__ . '/../auth/middleware.php';
 } catch (Throwable $e) {
     error_log('Falha ao inicializar o login: ' . $e->getMessage());
@@ -38,12 +39,14 @@ if ($login === '' || $senha === '') {
     exit;
 }
 
-verificarLimiteLogin($login);
+limparRateLimitExpirado($pdo);
+verificarLimiteLogin($pdo, $login);
 
 $perfilSelect = tabelaUsuarioTemPerfil($pdo) ? 'perfil' : "'admin' AS perfil";
 $idiomaSelect = tabelaUsuarioTemIdioma($pdo) ? 'idioma' : "'pt-BR' AS idioma";
+$tokenVersionSelect = tabelaUsuarioTemTokenVersion($pdo) ? 'token_version' : '0 AS token_version';
 $stmt = $pdo->prepare(
-    "SELECT id, nome, email, {$perfilSelect}, {$idiomaSelect}, senha_hash
+    "SELECT id, nome, email, {$perfilSelect}, {$idiomaSelect}, {$tokenVersionSelect}, senha_hash
      FROM usuario
      WHERE ativo = TRUE
        AND (
@@ -57,24 +60,26 @@ $stmt->execute(['email_login' => $login, 'nome_login' => $login]);
 $usuario = $stmt->fetch();
 
 if (!$usuario || !password_verify($senha, $usuario['senha_hash'])) {
-    registrarFalhaLogin($login);
+    registrarFalhaLogin($pdo, $login);
+    registrarAuditoriaAdministrativa($pdo, $usuario ? (int) $usuario['id'] : null, 'login_falhou', [
+        'identificador_hash' => hash('sha256', strtolower($login)),
+    ], $usuario ? (int) $usuario['id'] : null);
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'Usuario/e-mail ou senha invalidos.']);
     exit;
 }
 
-limparFalhasLogin($login);
+limparFalhasLogin($pdo, $login);
 
 $pdo->prepare('UPDATE usuario SET ultimo_login_em = NOW(), atualizado_em = NOW() WHERE id = :id')
     ->execute(['id' => $usuario['id']]);
 
 try {
-    $ttl = $lembrar
-        ? max(3600, (int) env('JWT_REMEMBER_TTL', '2592000'))
-        : max(60, (int) env('JWT_TTL', '3600'));
+    $ttl = nyxcloudJwtTtl($lembrar);
     $token = criarTokenJwt([
         'sub' => (string) $usuario['id'],
         'email' => $usuario['email'],
+        'ver' => (int) ($usuario['token_version'] ?? 0),
     ], $ttl);
     definirCookieJwt($token, $ttl, $lembrar);
     $csrfToken = definirCookieCsrf(null, $ttl);
@@ -84,6 +89,10 @@ try {
     echo json_encode(['success' => false, 'message' => 'Autenticacao indisponivel.']);
     exit;
 }
+
+registrarAuditoriaAdministrativa($pdo, (int) $usuario['id'], 'login_sucesso', [
+    'lembrar' => $lembrar,
+], (int) $usuario['id']);
 
 echo json_encode([
     'success' => true,
@@ -117,11 +126,16 @@ function lerFalhasLogin(string $login): array
     return is_array($payload) ? array_values(array_filter(array_map('intval', $payload))) : [];
 }
 
-function verificarLimiteLogin(string $login): void
+function verificarLimiteLogin(PDO $pdo, string $login): void
 {
-    $windowStart = time() - 900;
-    $falhas = array_values(array_filter(lerFalhasLogin($login), static fn (int $time): bool => $time >= $windowStart));
-    if (count($falhas) < 5) {
+    $key = hash('sha256', strtolower((string) ($_SERVER['REMOTE_ADDR'] ?? 'cli') . '|' . $login));
+    $stmt = $pdo->prepare('SELECT attempts, window_started_at FROM login_rate_limit WHERE rate_key = :rate_key');
+    $stmt->execute(['rate_key' => $key]);
+    $row = $stmt->fetch() ?: null;
+    if (!$row || strtotime((string) $row['window_started_at']) < time() - 900) {
+        return;
+    }
+    if ((int) $row['attempts'] < 5) {
         return;
     }
 
@@ -130,18 +144,32 @@ function verificarLimiteLogin(string $login): void
     exit;
 }
 
-function registrarFalhaLogin(string $login): void
+function limparRateLimitExpirado(PDO $pdo): void
 {
-    $windowStart = time() - 900;
-    $falhas = array_values(array_filter(lerFalhasLogin($login), static fn (int $time): bool => $time >= $windowStart));
-    $falhas[] = time();
-    @file_put_contents(chaveLimiteLogin($login), json_encode($falhas, JSON_THROW_ON_ERROR), LOCK_EX);
+    $sql = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql'
+        ? "DELETE FROM login_rate_limit WHERE updated_at < CURRENT_TIMESTAMP - INTERVAL 1 DAY"
+        : "DELETE FROM login_rate_limit WHERE updated_at < CURRENT_TIMESTAMP - INTERVAL '1 day'";
+    $pdo->exec($sql);
 }
 
-function limparFalhasLogin(string $login): void
+function registrarFalhaLogin(PDO $pdo, string $login): void
 {
-    $file = chaveLimiteLogin($login);
-    if (is_file($file)) {
-        @unlink($file);
+    $key = hash('sha256', strtolower((string) ($_SERVER['REMOTE_ADDR'] ?? 'cli') . '|' . $login));
+    $stmt = $pdo->prepare('SELECT attempts, window_started_at FROM login_rate_limit WHERE rate_key = :rate_key');
+    $stmt->execute(['rate_key' => $key]);
+    $row = $stmt->fetch() ?: null;
+    if (!$row || strtotime((string) $row['window_started_at']) < time() - 900) {
+        $sql = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql'
+            ? 'INSERT INTO login_rate_limit (rate_key, attempts, window_started_at, updated_at) VALUES (:rate_key, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON DUPLICATE KEY UPDATE attempts = 1, window_started_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP'
+            : 'INSERT INTO login_rate_limit (rate_key, attempts, window_started_at, updated_at) VALUES (:rate_key, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT (rate_key) DO UPDATE SET attempts = 1, window_started_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP';
+    } else {
+        $sql = 'UPDATE login_rate_limit SET attempts = attempts + 1, updated_at = CURRENT_TIMESTAMP WHERE rate_key = :rate_key';
     }
+    $pdo->prepare($sql)->execute(['rate_key' => $key]);
+}
+
+function limparFalhasLogin(PDO $pdo, string $login): void
+{
+    $key = hash('sha256', strtolower((string) ($_SERVER['REMOTE_ADDR'] ?? 'cli') . '|' . $login));
+    $pdo->prepare('DELETE FROM login_rate_limit WHERE rate_key = :rate_key')->execute(['rate_key' => $key]);
 }

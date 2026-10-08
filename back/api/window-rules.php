@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/_bootstrap.php';
 
-$usuario = exigirPerfilAdministrador($pdo);
+$usuario = exigirAutenticacao($pdo);
+exigirPermissaoAcao($pdo, $usuario, 'windows.manage');
 $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
-
-if (in_array($method, ['PUT', 'PATCH'], true)) {
-    apiResponse(false, new stdClass(), [], 'As janelas de execucao sao importadas automaticamente dos planos Acronis.', 409);
-}
 
 try {
     if ($method === 'GET') {
